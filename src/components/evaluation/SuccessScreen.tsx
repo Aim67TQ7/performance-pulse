@@ -19,6 +19,12 @@ export const SuccessScreen = ({ data, onReset }: SuccessScreenProps) => {
 
   return (
     <div className="form-section animate-scale-in text-center py-12">
+      <img 
+        src="/bunting-logo.png" 
+        alt="Bunting Magnetics" 
+        className="h-12 w-auto mx-auto mb-6"
+      />
+      
       <div className="inline-flex items-center justify-center w-20 h-20 rounded-full bg-success/10 mb-6">
         <CheckCircle className="w-10 h-10 text-success" />
       </div>
