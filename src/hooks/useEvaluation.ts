@@ -79,15 +79,7 @@ export const useEvaluation = () => {
         const { data: { user } } = await supabase.auth.getUser();
         
         if (!user) {
-          // Not authenticated, use localStorage fallback
-          const saved = localStorage.getItem(STORAGE_KEY);
-          if (saved) {
-            const parsed = JSON.parse(saved);
-            setData(parsed);
-            if (parsed.lastSavedAt) {
-              setLastSaved(new Date(parsed.lastSavedAt));
-            }
-          }
+          // Not authenticated - AuthGate will handle redirect
           setIsLoading(false);
           return;
         }
