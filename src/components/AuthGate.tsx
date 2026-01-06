@@ -8,17 +8,17 @@ interface AuthGateProps {
 }
 
 export const AuthGate = ({ children }: AuthGateProps) => {
-  const { isLoading, isAuthenticated, redirectToLogin } = useAuth();
+  const { isLoading, isAuthenticated, redirectToLogin, isEmbedded } = useAuth();
 
   useEffect(() => {
-    // Auto-redirect after a brief delay if not authenticated
-    if (!isLoading && !isAuthenticated) {
+    // Auto-redirect after a brief delay if not authenticated and not embedded
+    if (!isLoading && !isAuthenticated && !isEmbedded) {
       const timer = setTimeout(() => {
         redirectToLogin();
       }, 3000);
       return () => clearTimeout(timer);
     }
-  }, [isLoading, isAuthenticated, redirectToLogin]);
+  }, [isLoading, isAuthenticated, isEmbedded, redirectToLogin]);
 
   if (isLoading) {
     return (
@@ -30,7 +30,9 @@ export const AuthGate = ({ children }: AuthGateProps) => {
             className="h-16 w-auto mb-4"
           />
           <Loader2 className="w-8 h-8 animate-spin text-primary" />
-          <p className="text-muted-foreground">Checking authentication...</p>
+          <p className="text-muted-foreground">
+            {isEmbedded ? 'Waiting for authentication...' : 'Checking authentication...'}
+          </p>
         </div>
       </div>
     );
@@ -47,19 +49,26 @@ export const AuthGate = ({ children }: AuthGateProps) => {
           />
           <div>
             <h1 className="text-2xl font-display font-semibold text-foreground mb-2">
-              Authentication Required
+              {isEmbedded ? 'Waiting for Authentication' : 'Authentication Required'}
             </h1>
             <p className="text-muted-foreground">
-              You need to be logged in to access the Performance Self-Evaluation. Redirecting to login...
+              {isEmbedded 
+                ? 'Please ensure you are logged in to the parent application.'
+                : 'You need to be logged in to access the Performance Self-Evaluation. Redirecting to login...'
+              }
             </p>
           </div>
-          <Button onClick={redirectToLogin} className="gap-2">
-            <LogIn className="w-4 h-4" />
-            Go to Login
-          </Button>
-          <p className="text-xs text-muted-foreground">
-            You will be redirected automatically in a few seconds.
-          </p>
+          {!isEmbedded && (
+            <>
+              <Button onClick={redirectToLogin} className="gap-2">
+                <LogIn className="w-4 h-4" />
+                Go to Login
+              </Button>
+              <p className="text-xs text-muted-foreground">
+                You will be redirected automatically in a few seconds.
+              </p>
+            </>
+          )}
         </div>
       </div>
     );
