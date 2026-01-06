@@ -3053,6 +3053,91 @@ export type Database = {
         }
         Relationships: []
       }
+      pep_evaluations: {
+        Row: {
+          created_at: string
+          employee_id: string
+          employee_info_json: Json | null
+          id: string
+          pdf_generated_at: string | null
+          pdf_url: string | null
+          period_year: number
+          qualitative_json: Json | null
+          quantitative_json: Json | null
+          reopen_reason: string | null
+          reopened_at: string | null
+          reopened_by: string | null
+          reviewed_at: string | null
+          reviewed_by: string | null
+          status: string
+          submitted_at: string | null
+          summary_json: Json | null
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          employee_id: string
+          employee_info_json?: Json | null
+          id?: string
+          pdf_generated_at?: string | null
+          pdf_url?: string | null
+          period_year: number
+          qualitative_json?: Json | null
+          quantitative_json?: Json | null
+          reopen_reason?: string | null
+          reopened_at?: string | null
+          reopened_by?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          status?: string
+          submitted_at?: string | null
+          summary_json?: Json | null
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          employee_id?: string
+          employee_info_json?: Json | null
+          id?: string
+          pdf_generated_at?: string | null
+          pdf_url?: string | null
+          period_year?: number
+          qualitative_json?: Json | null
+          quantitative_json?: Json | null
+          reopen_reason?: string | null
+          reopened_at?: string | null
+          reopened_by?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          status?: string
+          submitted_at?: string | null
+          summary_json?: Json | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "pep_evaluations_employee_id_fkey"
+            columns: ["employee_id"]
+            isOneToOne: false
+            referencedRelation: "employees"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pep_evaluations_reopened_by_fkey"
+            columns: ["reopened_by"]
+            isOneToOne: false
+            referencedRelation: "employees"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pep_evaluations_reviewed_by_fkey"
+            columns: ["reviewed_by"]
+            isOneToOne: false
+            referencedRelation: "employees"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       photos: {
         Row: {
           content_type: string
@@ -5595,6 +5680,7 @@ export type Database = {
           userprincipalname: string
         }[]
       }
+      get_current_employee_id: { Args: never; Returns: string }
       get_employee_by_user_id: {
         Args: { user_id_param: string }
         Returns: {
@@ -5645,6 +5731,10 @@ export type Database = {
       }
       is_admin_level: { Args: { _user_id: string }; Returns: boolean }
       is_demo_user: { Args: { user_email: string }; Returns: boolean }
+      is_in_management_chain: {
+        Args: { _target_employee_id: string; _viewer_employee_id: string }
+        Returns: boolean
+      }
       is_manager_level: { Args: { _user_id: string }; Returns: boolean }
       is_notes_board_admin: {
         Args: { _board_id: string; _employee_id: string }

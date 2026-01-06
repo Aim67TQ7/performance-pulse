@@ -1,4 +1,4 @@
-export type EvaluationStatus = 'draft' | 'submitted' | 'reviewed' | 'signed';
+export type EvaluationStatus = 'draft' | 'submitted' | 'reviewed' | 'signed' | 'reopened';
 
 export type OverallRating = 'cannot_evaluate' | 'exceptional' | 'excellent' | 'fully_satisfactory' | 'marginal' | 'unacceptable';
 
@@ -7,6 +7,8 @@ export interface EmployeeInfo {
   title: string;
   department: string;
   periodYear: number;
+  supervisorId?: string;
+  supervisorName?: string;
 }
 
 export interface QuantitativeData {
@@ -56,6 +58,11 @@ export interface EvaluationData {
   submittedAt?: Date;
   supervisorId?: string;
   managerId?: string;
+  pdfUrl?: string;
+  pdfGeneratedAt?: Date;
+  reopenedAt?: Date;
+  reopenedBy?: string;
+  reopenReason?: string;
 }
 
 export interface ErrorLog {
