@@ -17,7 +17,7 @@ export const EmployeeInfoStep = ({ data, onUpdate, isReadOnly = false }: Employe
           Employee Information
         </h2>
         <p className="text-muted-foreground">
-          Please verify your information before proceeding with the self-evaluation.
+          Verify and update your information. Changes will sync to your employee record.
         </p>
       </div>
 
@@ -35,6 +35,9 @@ export const EmployeeInfoStep = ({ data, onUpdate, isReadOnly = false }: Employe
             className="h-12"
             disabled={isReadOnly}
           />
+          <p className="text-xs text-muted-foreground">
+            Updates your employee record
+          </p>
         </div>
 
         <div className="space-y-2">
@@ -50,6 +53,9 @@ export const EmployeeInfoStep = ({ data, onUpdate, isReadOnly = false }: Employe
             className="h-12"
             disabled={isReadOnly}
           />
+          <p className="text-xs text-muted-foreground">
+            Updates your employee record
+          </p>
         </div>
 
         <div className="space-y-2">
@@ -65,6 +71,9 @@ export const EmployeeInfoStep = ({ data, onUpdate, isReadOnly = false }: Employe
             className="h-12"
             disabled={isReadOnly}
           />
+          <p className="text-xs text-muted-foreground">
+            Updates your employee record
+          </p>
         </div>
 
         <div className="space-y-2">

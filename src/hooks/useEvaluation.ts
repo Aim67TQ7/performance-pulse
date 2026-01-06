@@ -233,6 +233,42 @@ export const useEvaluation = () => {
     }
   }, [currentEmployee, isReadOnly, logError]);
 
+  // Sync employee info changes to the employees table
+  const syncEmployeeToDatabase = useCallback(async (updates: Partial<EvaluationData['employeeInfo']>) => {
+    if (!currentEmployee) return;
+
+    try {
+      const employeeUpdates: Record<string, string | null> = {};
+      
+      // Map employeeInfo fields to employees table columns
+      if (updates.name !== undefined) {
+        const nameParts = updates.name.trim().split(/\s+/);
+        employeeUpdates.name_first = nameParts[0] || '';
+        employeeUpdates.name_last = nameParts.slice(1).join(' ') || '';
+      }
+      if (updates.title !== undefined) {
+        employeeUpdates.job_title = updates.title || null;
+      }
+      if (updates.department !== undefined) {
+        employeeUpdates.department = updates.department || null;
+      }
+
+      // Only update if there are changes to sync
+      if (Object.keys(employeeUpdates).length > 0) {
+        const { error } = await supabase
+          .from('employees')
+          .update(employeeUpdates)
+          .eq('id', currentEmployee.id);
+
+        if (error) {
+          logError('save', 'Failed to update employee record', { error });
+        }
+      }
+    } catch (error) {
+      logError('save', 'Failed to sync employee data', { error });
+    }
+  }, [currentEmployee, logError]);
+
   const updateEmployeeInfo = useCallback((updates: Partial<EvaluationData['employeeInfo']>) => {
     if (isReadOnly) return;
     setData(prev => {
@@ -241,9 +277,15 @@ export const useEvaluation = () => {
         employeeInfo: { ...prev.employeeInfo, ...updates },
       };
       saveToDatabase(newData);
+      
+      // Also sync name, title, department changes to employees table
+      if ('name' in updates || 'title' in updates || 'department' in updates) {
+        syncEmployeeToDatabase(updates);
+      }
+      
       return newData;
     });
-  }, [saveToDatabase, isReadOnly]);
+  }, [saveToDatabase, syncEmployeeToDatabase, isReadOnly]);
 
   const updateQuantitative = useCallback((updates: Partial<EvaluationData['quantitative']>) => {
     if (isReadOnly) return;
