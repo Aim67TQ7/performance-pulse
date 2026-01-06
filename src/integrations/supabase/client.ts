@@ -2,16 +2,108 @@
 import { createClient } from '@supabase/supabase-js';
 import type { Database } from './types';
 
-const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
-const SUPABASE_PUBLISHABLE_KEY = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
+const SUPABASE_URL = "https://qzwxisdfwswsrbzvpzlo.supabase.co";
+const SUPABASE_PUBLISHABLE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InF6d3hpc2Rmd3N3c3JienZwemxvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Mzg1OTg2NjYsImV4cCI6MjA1NDE3NDY2Nn0.nVV1d-_BfhfVNOSiusg8zSuvPwS4dSB-cJAMGVjujr4";
+
+// Detect production domain (*.buntinggpt.com)
+const isProductionDomain = 
+  typeof window !== 'undefined' && 
+  (window.location.hostname.endsWith('.buntinggpt.com') || 
+   window.location.hostname === 'buntinggpt.com');
+
+// Detect if running inside an iframe
+export const isEmbedded = typeof window !== 'undefined' && window.self !== window.top;
+
+// Cookie chunk size (3KB is safe margin below 4KB browser limit)
+const COOKIE_CHUNK_SIZE = 3000;
+
+// Custom cookie storage that splits large values across multiple cookies
+// Uses pattern: {key}_chunk_0, {key}_chunk_1, etc.
+const cookieStorage = {
+  getItem: (key: string): string | null => {
+    try {
+      const cookies = document.cookie.split('; ');
+      const chunks: { index: number; value: string }[] = [];
+      
+      // Find all chunks for this key (pattern: key_chunk_N)
+      for (const cookie of cookies) {
+        const [cookieKey, ...valueParts] = cookie.split('=');
+        const cookieValue = valueParts.join('='); // Handle values with = in them
+        
+        // Match pattern: key_chunk_0, key_chunk_1, etc.
+        if (cookieKey.startsWith(`${key}_chunk_`)) {
+          const indexStr = cookieKey.substring(`${key}_chunk_`.length);
+          const index = parseInt(indexStr, 10);
+          if (!isNaN(index)) {
+            chunks.push({ index, value: decodeURIComponent(cookieValue) });
+          }
+        }
+      }
+      
+      if (chunks.length === 0) return null;
+      
+      // CRITICAL: Sort by index before joining
+      chunks.sort((a, b) => a.index - b.index);
+      return chunks.map(c => c.value).join('') || null;
+    } catch (e) {
+      console.error('Cookie read error:', e);
+      return null;
+    }
+  },
+  
+  setItem: (key: string, value: string): void => {
+    try {
+      // Clear existing chunks first
+      cookieStorage.removeItem(key);
+      
+      // Split into 3KB chunks
+      const chunks: string[] = [];
+      for (let i = 0; i < value.length; i += COOKIE_CHUNK_SIZE) {
+        chunks.push(value.substring(i, i + COOKIE_CHUNK_SIZE));
+      }
+      
+      const maxAge = 60 * 60 * 24 * 7; // 7 days
+      
+      chunks.forEach((chunk, index) => {
+        const chunkKey = `${key}_chunk_${index}`;
+        const encodedChunk = encodeURIComponent(chunk);
+        
+        // CRITICAL: domain=.buntinggpt.com (with leading dot) for cross-subdomain sharing
+        document.cookie = `${chunkKey}=${encodedChunk}; path=/; domain=.buntinggpt.com; max-age=${maxAge}; SameSite=Lax; Secure`;
+      });
+    } catch (e) {
+      console.error('Cookie write error:', e);
+    }
+  },
+  
+  removeItem: (key: string): void => {
+    try {
+      const cookies = document.cookie.split('; ');
+      
+      for (const cookie of cookies) {
+        const [cookieKey] = cookie.split('=');
+        if (cookieKey.startsWith(`${key}_chunk_`)) {
+          document.cookie = `${cookieKey}=; path=/; domain=.buntinggpt.com; max-age=0`;
+        }
+      }
+    } catch (e) {
+      console.error('Cookie remove error:', e);
+    }
+  }
+};
+
+// Use localStorage for development (localhost, preview URLs)
+const devStorage = typeof window !== 'undefined' ? window.localStorage : undefined;
 
 // Import the supabase client like this:
 // import { supabase } from "@/integrations/supabase/client";
 
 export const supabase = createClient<Database>(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, {
   auth: {
-    storage: localStorage,
+    storage: isProductionDomain ? cookieStorage : devStorage,
     persistSession: true,
     autoRefreshToken: true,
+    detectSessionInUrl: true,
+    flowType: 'pkce',
   }
 });
