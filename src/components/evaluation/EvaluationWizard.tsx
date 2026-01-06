@@ -173,13 +173,20 @@ export const EvaluationWizard = () => {
       <div className="max-w-3xl mx-auto">
         {/* Header */}
         <div className="flex items-center justify-between mb-6">
-          <div>
-            <h1 className="text-3xl font-display font-semibold text-foreground">
-              Performance Self-Evaluation
-            </h1>
-            <p className="text-muted-foreground mt-1">
-              Bunting Salaried Employees
-            </p>
+          <div className="flex items-center gap-4">
+            <img 
+              src="/bunting-logo.png" 
+              alt="Bunting Magnetics" 
+              className="h-14 w-auto"
+            />
+            <div>
+              <h1 className="text-2xl md:text-3xl font-display font-semibold text-foreground">
+                Performance Self-Evaluation
+              </h1>
+              <p className="text-muted-foreground text-sm">
+                Bunting Magnetics – Salaried Employees
+              </p>
+            </div>
           </div>
           <ErrorLogPanel
             errors={errors}

@@ -164,6 +164,10 @@ function generatePdfHtml(data: EvaluationData): string {
     })
     .join("");
 
+  // Bunting brand colors
+  const buntingRed = "#E31B23";
+  const buntingBurgundy = "#8B1F41";
+
   return `
 <!DOCTYPE html>
 <html>
@@ -179,33 +183,46 @@ function generatePdfHtml(data: EvaluationData): string {
       color: #333;
     }
     .header {
-      text-align: center;
-      border-bottom: 3px solid #0066cc;
+      display: flex;
+      align-items: center;
+      gap: 20px;
+      border-bottom: 3px solid ${buntingRed};
       padding-bottom: 20px;
       margin-bottom: 30px;
     }
-    .logo {
-      font-size: 32px;
+    .header-logo {
+      width: 80px;
+      height: auto;
+    }
+    .header-text {
+      flex: 1;
+    }
+    .company-name {
+      font-size: 28px;
       font-weight: bold;
-      color: #0066cc;
-      letter-spacing: 2px;
+      color: ${buntingRed};
+      letter-spacing: 1px;
+      margin: 0;
     }
     .subtitle {
       font-size: 18px;
       color: #666;
-      margin-top: 10px;
+      margin-top: 5px;
     }
     h1 {
       font-size: 24px;
-      color: #0066cc;
+      color: ${buntingRed};
       margin-top: 0;
     }
     h2 {
       font-size: 18px;
-      color: #0066cc;
+      color: ${buntingRed};
       border-bottom: 1px solid #ccc;
       padding-bottom: 5px;
       margin-top: 30px;
+    }
+    h3 {
+      color: ${buntingBurgundy};
     }
     .info-grid {
       display: grid;
@@ -226,7 +243,7 @@ function generatePdfHtml(data: EvaluationData): string {
     .text-content {
       background: #fafafa;
       padding: 15px;
-      border-left: 3px solid #0066cc;
+      border-left: 3px solid ${buntingRed};
       margin: 10px 0;
       white-space: pre-wrap;
     }
@@ -241,7 +258,7 @@ function generatePdfHtml(data: EvaluationData): string {
       text-align: left;
     }
     th {
-      background: #0066cc;
+      background: ${buntingRed};
       color: white;
     }
     tr:nth-child(even) {
@@ -250,7 +267,7 @@ function generatePdfHtml(data: EvaluationData): string {
     .rating-badge {
       display: inline-block;
       padding: 5px 15px;
-      background: #0066cc;
+      background: ${buntingRed};
       color: white;
       border-radius: 4px;
       font-weight: bold;
@@ -271,15 +288,18 @@ function generatePdfHtml(data: EvaluationData): string {
       text-align: center;
       font-size: 12px;
       color: #999;
-      border-top: 1px solid #ddd;
+      border-top: 1px solid ${buntingRed};
       padding-top: 20px;
     }
   </style>
 </head>
 <body>
   <div class="header">
-    <div class="logo">BUNTING</div>
-    <div class="subtitle">Performance Self-Evaluation</div>
+    <img src="https://self.buntinggpt.com/bunting-logo.png" alt="Bunting Magnetics" class="header-logo" onerror="this.style.display='none'"/>
+    <div class="header-text">
+      <p class="company-name">BUNTING MAGNETICS</p>
+      <div class="subtitle">Performance Self-Evaluation</div>
+    </div>
   </div>
 
   <div class="section">
@@ -355,7 +375,7 @@ function generatePdfHtml(data: EvaluationData): string {
   </div>
 
   <div class="footer">
-    <p>Bunting Performance Evaluation Process (PEP) | Confidential HR Document</p>
+    <p><strong>Bunting Magnetics</strong> – Performance Evaluation Process (PEP) | Confidential HR Document</p>
     <p>Generated on ${new Date().toLocaleString()}</p>
   </div>
 </body>
