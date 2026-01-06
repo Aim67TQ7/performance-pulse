@@ -1,8 +1,25 @@
 import { useState, useCallback, useEffect } from 'react';
-import { EvaluationData, ErrorLog } from '@/types/evaluation';
+import { EvaluationData } from '@/types/evaluation';
 import { useErrorLogger } from './useErrorLogger';
+import { supabase } from '@/integrations/supabase/client';
 
 const STORAGE_KEY = 'pep_evaluation_draft';
+
+interface Employee {
+  id: string;
+  name_first: string;
+  name_last: string;
+  job_title: string | null;
+  department: string | null;
+  reports_to: string;
+  user_id: string | null;
+}
+
+interface ManagerInfo {
+  id: string;
+  name_first: string;
+  name_last: string;
+}
 
 const getInitialData = (): EvaluationData => ({
   employeeInfo: {
@@ -10,6 +27,8 @@ const getInitialData = (): EvaluationData => ({
     title: '',
     department: '',
     periodYear: new Date().getFullYear(),
+    supervisorId: '',
+    supervisorName: '',
   },
   quantitative: {
     performanceObjectives: '',
@@ -47,112 +66,324 @@ export const useEvaluation = () => {
   const [data, setData] = useState<EvaluationData>(getInitialData);
   const [isSaving, setIsSaving] = useState(false);
   const [lastSaved, setLastSaved] = useState<Date | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [currentEmployee, setCurrentEmployee] = useState<Employee | null>(null);
+  const [isReadOnly, setIsReadOnly] = useState(false);
+  const [isManager, setIsManager] = useState(false);
   const { logError } = useErrorLogger();
 
-  // Load from localStorage on mount
+  // Load employee data and existing evaluation
   useEffect(() => {
-    try {
-      const saved = localStorage.getItem(STORAGE_KEY);
-      if (saved) {
-        const parsed = JSON.parse(saved);
-        setData(parsed);
-        if (parsed.lastSavedAt) {
-          setLastSaved(new Date(parsed.lastSavedAt));
+    const loadData = async () => {
+      try {
+        const { data: { user } } = await supabase.auth.getUser();
+        
+        if (!user) {
+          // Not authenticated, use localStorage fallback
+          const saved = localStorage.getItem(STORAGE_KEY);
+          if (saved) {
+            const parsed = JSON.parse(saved);
+            setData(parsed);
+            if (parsed.lastSavedAt) {
+              setLastSaved(new Date(parsed.lastSavedAt));
+            }
+          }
+          setIsLoading(false);
+          return;
         }
+
+        // Get current employee record
+        const { data: employeeData, error: employeeError } = await supabase
+          .from('employees')
+          .select('id, name_first, name_last, job_title, department, reports_to, user_id')
+          .eq('user_id', user.id)
+          .single();
+
+        if (employeeError || !employeeData) {
+          logError('network', 'Could not load employee data', { error: employeeError });
+          setIsLoading(false);
+          return;
+        }
+
+        setCurrentEmployee(employeeData);
+
+        // Get manager info
+        let managerName = '';
+        if (employeeData.reports_to) {
+          const { data: managerData } = await supabase
+            .from('employees')
+            .select('id, name_first, name_last')
+            .eq('id', employeeData.reports_to)
+            .single();
+          
+          if (managerData) {
+            managerName = `${managerData.name_first} ${managerData.name_last}`;
+          }
+        }
+
+        // Check for existing evaluation
+        const currentYear = new Date().getFullYear();
+        const { data: evalData } = await supabase
+          .from('pep_evaluations')
+          .select('*')
+          .eq('employee_id', employeeData.id)
+          .eq('period_year', currentYear)
+          .single();
+
+        if (evalData) {
+          // Load existing evaluation
+          const loadedData: EvaluationData = {
+            id: evalData.id,
+            employeeId: evalData.employee_id,
+            employeeInfo: (evalData.employee_info_json as unknown as EvaluationData['employeeInfo']) || {
+              name: `${employeeData.name_first} ${employeeData.name_last}`,
+              title: employeeData.job_title || '',
+              department: employeeData.department || '',
+              periodYear: currentYear,
+              supervisorId: employeeData.reports_to,
+              supervisorName: managerName,
+            },
+            quantitative: (evalData.quantitative_json as unknown as EvaluationData['quantitative']) || getInitialData().quantitative,
+            qualitative: (evalData.qualitative_json as unknown as EvaluationData['qualitative']) || getInitialData().qualitative,
+            summary: (evalData.summary_json as unknown as EvaluationData['summary']) || getInitialData().summary,
+            status: evalData.status as EvaluationData['status'],
+            lastSavedAt: evalData.updated_at ? new Date(evalData.updated_at) : undefined,
+            submittedAt: evalData.submitted_at ? new Date(evalData.submitted_at) : undefined,
+            pdfUrl: evalData.pdf_url || undefined,
+            pdfGeneratedAt: evalData.pdf_generated_at ? new Date(evalData.pdf_generated_at) : undefined,
+            reopenedAt: evalData.reopened_at ? new Date(evalData.reopened_at) : undefined,
+            reopenedBy: evalData.reopened_by || undefined,
+            reopenReason: evalData.reopen_reason || undefined,
+          };
+          
+          setData(loadedData);
+          setIsReadOnly(evalData.status === 'submitted' || evalData.status === 'reviewed' || evalData.status === 'signed');
+          setLastSaved(evalData.updated_at ? new Date(evalData.updated_at) : null);
+        } else {
+          // Create new evaluation with employee info pre-populated
+          const newData = getInitialData();
+          newData.employeeInfo = {
+            name: `${employeeData.name_first} ${employeeData.name_last}`,
+            title: employeeData.job_title || '',
+            department: employeeData.department || '',
+            periodYear: currentYear,
+            supervisorId: employeeData.reports_to,
+            supervisorName: managerName,
+          };
+          newData.employeeId = employeeData.id;
+          setData(newData);
+        }
+      } catch (error) {
+        logError('network', 'Failed to load evaluation data', { error });
+      } finally {
+        setIsLoading(false);
       }
-    } catch (error) {
-      logError('save', 'Failed to load saved evaluation data', { error });
-    }
+    };
+
+    loadData();
   }, [logError]);
 
-  // Auto-save to localStorage
-  const saveToLocal = useCallback(async (newData: EvaluationData) => {
+  // Save to Supabase
+  const saveToDatabase = useCallback(async (newData: EvaluationData) => {
+    if (isReadOnly) return;
+    
     setIsSaving(true);
     try {
-      const saveData = {
-        ...newData,
-        lastSavedAt: new Date().toISOString(),
+      const { data: { user } } = await supabase.auth.getUser();
+      
+      if (!user || !currentEmployee) {
+        // Fallback to localStorage if not authenticated
+        const saveData = {
+          ...newData,
+          lastSavedAt: new Date().toISOString(),
+        };
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(saveData));
+        setLastSaved(new Date());
+        return;
+      }
+
+      const evalPayload = {
+        employee_id: currentEmployee.id,
+        period_year: newData.employeeInfo.periodYear,
+        status: newData.status,
+        employee_info_json: JSON.parse(JSON.stringify(newData.employeeInfo)),
+        quantitative_json: JSON.parse(JSON.stringify(newData.quantitative)),
+        qualitative_json: JSON.parse(JSON.stringify(newData.qualitative)),
+        summary_json: JSON.parse(JSON.stringify(newData.summary)),
       };
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(saveData));
+
+      if (newData.id) {
+        // Update existing
+        const { error } = await supabase
+          .from('pep_evaluations')
+          .update(evalPayload)
+          .eq('id', newData.id);
+
+        if (error) throw error;
+      } else {
+        // Insert new
+        const { data: insertedData, error } = await supabase
+          .from('pep_evaluations')
+          .insert(evalPayload)
+          .select('id')
+          .single();
+
+        if (error) throw error;
+        
+        setData(prev => ({ ...prev, id: insertedData.id }));
+      }
+      
       setLastSaved(new Date());
     } catch (error) {
-      logError('save', 'Failed to save evaluation data locally', { error });
+      logError('save', 'Failed to save evaluation data', { error });
     } finally {
       setIsSaving(false);
     }
-  }, [logError]);
+  }, [currentEmployee, isReadOnly, logError]);
 
   const updateEmployeeInfo = useCallback((updates: Partial<EvaluationData['employeeInfo']>) => {
+    if (isReadOnly) return;
     setData(prev => {
       const newData = {
         ...prev,
         employeeInfo: { ...prev.employeeInfo, ...updates },
       };
-      saveToLocal(newData);
+      saveToDatabase(newData);
       return newData;
     });
-  }, [saveToLocal]);
+  }, [saveToDatabase, isReadOnly]);
 
   const updateQuantitative = useCallback((updates: Partial<EvaluationData['quantitative']>) => {
+    if (isReadOnly) return;
     setData(prev => {
       const newData = {
         ...prev,
         quantitative: { ...prev.quantitative, ...updates },
       };
-      saveToLocal(newData);
+      saveToDatabase(newData);
       return newData;
     });
-  }, [saveToLocal]);
+  }, [saveToDatabase, isReadOnly]);
 
   const updateQualitative = useCallback((key: keyof EvaluationData['qualitative'], value: number | null) => {
+    if (isReadOnly) return;
     setData(prev => {
       const newData = {
         ...prev,
         qualitative: { ...prev.qualitative, [key]: value },
       };
-      saveToLocal(newData);
+      saveToDatabase(newData);
       return newData;
     });
-  }, [saveToLocal]);
+  }, [saveToDatabase, isReadOnly]);
 
   const updateSummary = useCallback((updates: Partial<EvaluationData['summary']>) => {
+    if (isReadOnly) return;
     setData(prev => {
       const newData = {
         ...prev,
         summary: { ...prev.summary, ...updates },
       };
-      saveToLocal(newData);
+      saveToDatabase(newData);
       return newData;
     });
-  }, [saveToLocal]);
+  }, [saveToDatabase, isReadOnly]);
 
   const submitEvaluation = useCallback(async () => {
     try {
-      setData(prev => {
-        const newData = {
-          ...prev,
-          status: 'submitted' as const,
-          submittedAt: new Date(),
-        };
-        saveToLocal(newData);
-        return newData;
+      if (!data.id || !currentEmployee) {
+        logError('submit', 'Cannot submit: evaluation not saved yet');
+        return false;
+      }
+
+      // Update status to submitted
+      const { error: updateError } = await supabase
+        .from('pep_evaluations')
+        .update({
+          status: 'submitted',
+          submitted_at: new Date().toISOString(),
+        })
+        .eq('id', data.id);
+
+      if (updateError) throw updateError;
+
+      // Call PDF generation edge function
+      const { error: pdfError } = await supabase.functions.invoke('generate-pep-pdf', {
+        body: { evaluationId: data.id },
       });
+
+      if (pdfError) {
+        logError('submit', 'PDF generation failed, but evaluation was submitted', { error: pdfError });
+      }
+
+      setData(prev => ({
+        ...prev,
+        status: 'submitted',
+        submittedAt: new Date(),
+      }));
+      setIsReadOnly(true);
+      
       return true;
     } catch (error) {
       logError('submit', 'Failed to submit evaluation', { error });
       return false;
     }
-  }, [saveToLocal, logError]);
+  }, [data.id, currentEmployee, logError]);
+
+  const reopenEvaluation = useCallback(async (reason: string) => {
+    try {
+      if (!data.id) return false;
+
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return false;
+
+      // Get manager's employee record
+      const { data: managerEmployee } = await supabase
+        .from('employees')
+        .select('id')
+        .eq('user_id', user.id)
+        .single();
+
+      if (!managerEmployee) return false;
+
+      const { error } = await supabase
+        .from('pep_evaluations')
+        .update({
+          status: 'reopened',
+          reopened_at: new Date().toISOString(),
+          reopened_by: managerEmployee.id,
+          reopen_reason: reason,
+        })
+        .eq('id', data.id);
+
+      if (error) throw error;
+
+      setData(prev => ({
+        ...prev,
+        status: 'reopened',
+        reopenedAt: new Date(),
+        reopenedBy: managerEmployee.id,
+        reopenReason: reason,
+      }));
+      setIsReadOnly(false);
+      
+      return true;
+    } catch (error) {
+      logError('save', 'Failed to reopen evaluation', { error });
+      return false;
+    }
+  }, [data.id, logError]);
 
   const resetEvaluation = useCallback(() => {
     localStorage.removeItem(STORAGE_KEY);
     setData(getInitialData());
     setLastSaved(null);
+    setIsReadOnly(false);
   }, []);
 
   const calculateProgress = useCallback(() => {
     const sections = {
-      employeeInfo: Object.values(data.employeeInfo).filter(v => v && v !== '').length / 4,
+      employeeInfo: Object.values(data.employeeInfo).filter(v => v && v !== '').length / 5, // Updated for supervisor
       quantitative: (
         (data.quantitative.performanceObjectives ? 1 : 0) +
         (data.quantitative.workAccomplishments ? 1 : 0) +
@@ -177,11 +408,16 @@ export const useEvaluation = () => {
     data,
     isSaving,
     lastSaved,
+    isLoading,
+    isReadOnly,
+    isManager,
+    currentEmployee,
     updateEmployeeInfo,
     updateQuantitative,
     updateQualitative,
     updateSummary,
     submitEvaluation,
+    reopenEvaluation,
     resetEvaluation,
     calculateProgress,
   };
