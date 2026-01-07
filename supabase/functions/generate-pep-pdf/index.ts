@@ -75,10 +75,15 @@ serve(async (req) => {
 
     console.log(`Generating PDF for evaluation: ${evaluationId}`);
 
-    // Initialize Supabase client
+    // Initialize Supabase client with service role (bypasses RLS)
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-    const supabase = createClient(supabaseUrl, supabaseKey);
+    const supabase = createClient(supabaseUrl, supabaseKey, {
+      auth: {
+        autoRefreshToken: false,
+        persistSession: false,
+      },
+    });
 
     // Fetch evaluation data
     const { data: evaluation, error: fetchError } = await supabase
@@ -92,37 +97,40 @@ serve(async (req) => {
       throw new Error(`Evaluation not found: ${evaluationId}`);
     }
 
+    console.log("Evaluation fetched successfully");
+
     const evalData = evaluation as EvaluationData;
 
     // Generate HTML for PDF
     const html = generatePdfHtml(evalData);
+    console.log("HTML generated successfully");
 
-    // For now, we'll store the HTML as a simple text file
-    // In production, you'd use a PDF generation service
-    const pdfContent = html;
-    const fileName = `pep_${evalData.employee_info_json.name.replace(/\s+/g, "_")}_${evalData.period_year}.html`;
+    // Create a safe filename
+    const safeName = (evalData.employee_info_json?.name || "unknown").replace(/[^a-zA-Z0-9]/g, "_");
+    const fileName = `pep_${safeName}_${evalData.period_year}_${evaluationId.slice(0, 8)}.html`;
 
-    // Upload to storage (create bucket if needed)
+    // Upload to storage using service role
     const { data: uploadData, error: uploadError } = await supabase.storage
       .from("pep-evaluations")
-      .upload(fileName, new Blob([pdfContent], { type: "text/html" }), {
+      .upload(fileName, new Blob([html], { type: "text/html" }), {
         contentType: "text/html",
         upsert: true,
       });
 
     if (uploadError) {
       console.error("Error uploading PDF:", uploadError);
-      // Don't throw, just log - the evaluation is still valid
+      throw new Error(`Failed to upload PDF: ${uploadError.message}`);
     }
 
+    console.log("File uploaded successfully:", uploadData?.path);
+
     // Get public URL
-    let pdfUrl = "";
-    if (uploadData) {
-      const { data: urlData } = supabase.storage
-        .from("pep-evaluations")
-        .getPublicUrl(fileName);
-      pdfUrl = urlData.publicUrl;
-    }
+    const { data: urlData } = supabase.storage
+      .from("pep-evaluations")
+      .getPublicUrl(fileName);
+    
+    const pdfUrl = urlData.publicUrl;
+    console.log("Public URL generated:", pdfUrl);
 
     // Update evaluation with PDF URL
     const { error: updateError } = await supabase
@@ -135,6 +143,7 @@ serve(async (req) => {
 
     if (updateError) {
       console.error("Error updating evaluation with PDF URL:", updateError);
+      throw new Error(`Failed to update evaluation: ${updateError.message}`);
     }
 
     console.log(`PDF generated successfully: ${pdfUrl}`);
@@ -145,7 +154,7 @@ serve(async (req) => {
     );
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : "Unknown error";
-    console.error("Error in generate-pep-pdf:", error);
+    console.error("Error in generate-pep-pdf:", errorMessage);
     return new Response(
       JSON.stringify({ error: errorMessage }),
       { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
