@@ -8,8 +8,12 @@ import { Loader2, Users, CheckCircle2, Clock, FileEdit, ArrowLeft, Download, Mai
 import { Link } from 'react-router-dom';
 import { VersionBadge } from '@/components/version/VersionBadge';
 
-// Due date for self-assessments
-const DUE_DATE = new Date('2026-01-31T23:59:59');
+interface AssessmentDates {
+  open_date: string;
+  close_date: string;
+  period_start: string;
+  period_end: string;
+}
 
 interface SubordinateStatus {
   id: string;
@@ -36,9 +40,26 @@ const TeamStatus = () => {
   const [subordinates, setSubordinates] = useState<SubordinateStatus[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [currentYear] = useState(new Date().getFullYear());
+  const [assessmentDates, setAssessmentDates] = useState<AssessmentDates | null>(null);
 
   useEffect(() => {
-    const loadSubordinates = async () => {
+    const loadData = async () => {
+      // Fetch assessment dates from settings
+      try {
+        const { data: settingsData } = await supabase
+          .from('pep_settings')
+          .select('setting_value')
+          .eq('setting_key', 'assessment_dates')
+          .single();
+        
+        if (settingsData?.setting_value) {
+          setAssessmentDates(settingsData.setting_value as unknown as AssessmentDates);
+        }
+      } catch (error) {
+        console.error('Error fetching settings:', error);
+      }
+
+      // Load subordinates
       try {
         const { data: { user } } = await supabase.auth.getUser();
         if (!user) return;
@@ -107,7 +128,7 @@ const TeamStatus = () => {
       }
     };
 
-    loadSubordinates();
+    loadData();
   }, [currentYear]);
 
   const stats = {
@@ -117,14 +138,20 @@ const TeamStatus = () => {
     notStarted: subordinates.filter(s => s.evaluation_status === 'not_started').length,
   };
 
-  // Calculate days until due date
-  const daysUntilDue = useMemo(() => {
-    const now = new Date();
-    const diffTime = DUE_DATE.getTime() - now.getTime();
-    return Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-  }, []);
+  // Calculate days until due date from settings
+  const dueDate = useMemo(() => {
+    if (!assessmentDates?.close_date) return null;
+    return new Date(assessmentDates.close_date + 'T23:59:59');
+  }, [assessmentDates]);
 
-  const showPokeButton = daysUntilDue <= 7 && daysUntilDue > 0;
+  const daysUntilDue = useMemo(() => {
+    if (!dueDate) return null;
+    const now = new Date();
+    const diffTime = dueDate.getTime() - now.getTime();
+    return Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+  }, [dueDate]);
+
+  const showPokeButton = daysUntilDue !== null && daysUntilDue <= 7 && daysUntilDue > 0;
 
   // Get incomplete team members (not submitted/reviewed/signed)
   const incompleteMembers = useMemo(() => {
@@ -137,13 +164,13 @@ const TeamStatus = () => {
       .map(m => m.email)
       .join(',');
 
-    if (!emails) {
+    if (!emails || !dueDate) {
       return;
     }
 
     const subject = encodeURIComponent('Reminder: Self-Evaluation Due Soon');
     const body = encodeURIComponent(
-      `Hello Team,\n\nThis is a friendly reminder that your self-evaluation is due on ${DUE_DATE.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}.\n\nPlease complete your evaluation as soon as possible.\n\nThank you!`
+      `Hello Team,\n\nThis is a friendly reminder that your self-evaluation is due on ${dueDate.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}.\n\nPlease complete your evaluation as soon as possible.\n\nThank you!`
     );
 
     window.location.href = `mailto:${emails}?subject=${subject}&body=${body}`;
@@ -187,7 +214,7 @@ const TeamStatus = () => {
                   </p>
                   <span className="text-muted-foreground">•</span>
                   <VersionBadge />
-                  {daysUntilDue > 0 && (
+                  {daysUntilDue !== null && daysUntilDue > 0 && (
                     <>
                       <span className="text-muted-foreground">•</span>
                       <span className={`text-sm font-medium ${daysUntilDue <= 7 ? 'text-destructive' : 'text-muted-foreground'}`}>

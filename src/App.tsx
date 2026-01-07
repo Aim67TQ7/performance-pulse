@@ -9,6 +9,7 @@ import { PrivateRoute } from "@/components/PrivateRoute";
 import Dashboard from "./pages/Dashboard";
 import Evaluation from "./pages/Evaluation";
 import TeamStatus from "./pages/TeamStatus";
+import HRAdmin from "./pages/HRAdmin";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -26,6 +27,7 @@ const App = () => (
                 <Route path="/" element={<Dashboard />} />
                 <Route path="/evaluation" element={<Evaluation />} />
                 <Route path="/team-status" element={<TeamStatus />} />
+                <Route path="/hr-admin" element={<HRAdmin />} />
                 {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
                 <Route path="*" element={<NotFound />} />
               </Routes>
