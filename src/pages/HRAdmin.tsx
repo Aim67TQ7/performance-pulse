@@ -1,14 +1,15 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { Helmet } from 'react-helmet-async';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Loader2, Lock, Settings, Calendar, ArrowLeft, Save, Mail } from 'lucide-react';
+import { Loader2, Lock, Settings, Calendar, ArrowLeft, Save, Mail, Users, CheckCircle2, Clock, FileEdit } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { toast } from '@/hooks/use-toast';
 import { VersionBadge } from '@/components/version/VersionBadge';
+import { HierarchyTree, HierarchyMember, buildHierarchyTree, countHierarchyStats } from '@/components/evaluation/HierarchyTree';
 
 const HR_PASSCODE = '4155';
 
@@ -31,10 +32,20 @@ const HRAdmin = () => {
     period_start: '2025-01-01',
     period_end: '2025-12-31',
   });
+  const [companyHierarchy, setCompanyHierarchy] = useState<HierarchyMember[]>([]);
+  const [isLoadingHierarchy, setIsLoadingHierarchy] = useState(false);
+  const [currentYear] = useState(new Date().getFullYear());
 
   useEffect(() => {
     fetchSettings();
   }, []);
+
+  // Load company hierarchy after authentication
+  useEffect(() => {
+    if (isAuthenticated) {
+      loadCompanyHierarchy();
+    }
+  }, [isAuthenticated, currentYear]);
 
   const fetchSettings = async () => {
     try {
@@ -52,6 +63,72 @@ const HRAdmin = () => {
       console.error('Error fetching settings:', error);
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const loadCompanyHierarchy = async () => {
+    setIsLoadingHierarchy(true);
+    try {
+      // Find the top-level employee (reports_to is null or self-referential for root)
+      const { data: allEmployees, error } = await supabase
+        .from('employees')
+        .select('id, name_first, name_last, job_title, department, user_email, reports_to')
+        .eq('is_active', true);
+
+      if (error) throw error;
+
+      if (!allEmployees || allEmployees.length === 0) {
+        setCompanyHierarchy([]);
+        return;
+      }
+
+      // Find root employee(s) - those who don't report to anyone or report to themselves
+      const rootEmployees = allEmployees.filter(emp => 
+        !emp.reports_to || emp.reports_to === emp.id
+      );
+
+      if (rootEmployees.length === 0) {
+        setCompanyHierarchy([]);
+        return;
+      }
+
+      // Get all employee IDs for fetching evaluations
+      const allIds = allEmployees.map(e => e.id);
+
+      // Get evaluations for all employees
+      const { data: evaluations } = await supabase
+        .from('pep_evaluations')
+        .select('employee_id, status, submitted_at, pdf_url')
+        .in('employee_id', allIds)
+        .eq('period_year', currentYear);
+
+      const evalMap = new Map(
+        evaluations?.map(e => [e.employee_id, e]) || []
+      );
+
+      // Build flat list with evaluation data
+      const flatList = allEmployees.map(emp => {
+        const eval_ = evalMap.get(emp.id);
+        return {
+          id: emp.id,
+          name: `${emp.name_first} ${emp.name_last}`,
+          job_title: emp.job_title,
+          department: emp.department,
+          evaluation_status: eval_?.status || 'not_started',
+          submitted_at: eval_?.submitted_at || null,
+          pdf_url: eval_?.pdf_url || null,
+          email: emp.user_email || null,
+          reports_to: emp.reports_to === emp.id ? null : emp.reports_to,
+        };
+      });
+
+      // Build tree starting from null (root level)
+      const tree = buildHierarchyTree(flatList, null);
+      setCompanyHierarchy(tree);
+    } catch (error) {
+      console.error('Error loading company hierarchy:', error);
+    } finally {
+      setIsLoadingHierarchy(false);
     }
   };
 
@@ -125,6 +202,8 @@ Thank you!`
     window.location.href = `mailto:?subject=${subject}&body=${body}`;
   };
 
+  const hierarchyStats = useMemo(() => countHierarchyStats(companyHierarchy), [companyHierarchy]);
+
   if (isLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
@@ -192,7 +271,7 @@ Thank you!`
         <title>HR Admin - Self Evaluation</title>
       </Helmet>
       <div className="min-h-screen bg-background">
-        <div className="container mx-auto px-4 py-6 max-w-2xl">
+        <div className="container mx-auto px-4 py-6 max-w-4xl">
           {/* Header */}
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
             <div className="flex items-center gap-3">
@@ -303,7 +382,7 @@ Thank you!`
           </Card>
 
           {/* Notification Card */}
-          <Card>
+          <Card className="mb-6">
             <CardHeader>
               <CardTitle className="flex items-center gap-2 text-lg">
                 <Mail className="w-5 h-5" />
@@ -321,6 +400,71 @@ Thank you!`
               <p className="text-xs text-muted-foreground mt-2">
                 Opens your email client with a pre-filled message including dates and login instructions
               </p>
+            </CardContent>
+          </Card>
+
+          {/* Company-Wide Status Card */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2 text-lg">
+                <Users className="w-5 h-5" />
+                Company-Wide Evaluation Status
+              </CardTitle>
+              <CardDescription>
+                View evaluation status for all employees in the organization
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              {isLoadingHierarchy ? (
+                <div className="flex items-center justify-center py-8">
+                  <Loader2 className="w-6 h-6 animate-spin text-primary" />
+                </div>
+              ) : (
+                <>
+                  {/* Stats Summary */}
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
+                    <div className="flex items-center gap-2 p-3 bg-muted/50 rounded-lg">
+                      <Users className="w-5 h-5 text-muted-foreground" />
+                      <div>
+                        <p className="text-lg font-bold">{hierarchyStats.total}</p>
+                        <p className="text-xs text-muted-foreground">Total</p>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2 p-3 bg-muted/50 rounded-lg">
+                      <CheckCircle2 className="w-5 h-5 text-green-600" />
+                      <div>
+                        <p className="text-lg font-bold">{hierarchyStats.submitted}</p>
+                        <p className="text-xs text-muted-foreground">Submitted</p>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2 p-3 bg-muted/50 rounded-lg">
+                      <FileEdit className="w-5 h-5 text-primary" />
+                      <div>
+                        <p className="text-lg font-bold">{hierarchyStats.inProgress}</p>
+                        <p className="text-xs text-muted-foreground">In Progress</p>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2 p-3 bg-muted/50 rounded-lg">
+                      <Clock className="w-5 h-5 text-warning" />
+                      <div>
+                        <p className="text-lg font-bold">{hierarchyStats.notStarted}</p>
+                        <p className="text-xs text-muted-foreground">Not Started</p>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Hierarchy Tree */}
+                  {companyHierarchy.length === 0 ? (
+                    <div className="text-center py-8 text-muted-foreground">
+                      No employee data found.
+                    </div>
+                  ) : (
+                    <div className="border rounded-lg p-4 max-h-[600px] overflow-y-auto">
+                      <HierarchyTree data={companyHierarchy} defaultExpanded={false} />
+                    </div>
+                  )}
+                </>
+              )}
             </CardContent>
           </Card>
         </div>
