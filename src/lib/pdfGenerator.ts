@@ -202,45 +202,50 @@ export async function generateEvaluationPdf(data: EvaluationData): Promise<strin
 
     // Convert to blob
     const pdfBlob = pdf.output('blob');
-    
+    const localUrl = URL.createObjectURL(pdfBlob);
+
     // Generate filename
     const sanitizedName = data.employeeInfo.name.replace(/[^a-zA-Z0-9]/g, '_');
     const filename = `PEP_${sanitizedName}_${data.employeeInfo.periodYear}.pdf`;
-    
-    // Upload to Supabase storage
-    const { data: uploadData, error: uploadError } = await supabase.storage
-      .from('pep-evaluations')
-      .upload(`pdfs/${data.id}/${filename}`, pdfBlob, {
-        contentType: 'application/pdf',
-        upsert: true,
-      });
+    const storagePath = `pdfs/${data.id}/${filename}`;
 
-    if (uploadError) {
-      console.error('Upload error:', uploadError);
-      throw new Error(`Failed to upload PDF: ${uploadError.message}`);
+    // Upload to Supabase storage (best-effort)
+    try {
+      const { error: uploadError } = await supabase.storage
+        .from('pep-evaluations')
+        .upload(storagePath, pdfBlob, {
+          contentType: 'application/pdf',
+          upsert: true,
+        });
+
+      if (uploadError) throw uploadError;
+
+      // Get public URL
+      const { data: urlData } = supabase.storage
+        .from('pep-evaluations')
+        .getPublicUrl(storagePath);
+
+      const pdfUrl = urlData.publicUrl;
+
+      // Update evaluation record with PDF URL
+      const { error: updateError } = await supabase
+        .from('pep_evaluations')
+        .update({
+          pdf_url: pdfUrl,
+          pdf_generated_at: new Date().toISOString(),
+        })
+        .eq('id', data.id);
+
+      if (updateError) {
+        console.error('Failed to update evaluation with PDF URL:', updateError);
+      }
+
+      return pdfUrl;
+    } catch (err) {
+      // Still allow the user to download locally even if storage upload fails.
+      console.error('PDF upload failed; returning local download URL instead.', err);
+      return localUrl;
     }
-
-    // Get public URL
-    const { data: urlData } = supabase.storage
-      .from('pep-evaluations')
-      .getPublicUrl(`pdfs/${data.id}/${filename}`);
-
-    const pdfUrl = urlData.publicUrl;
-
-    // Update evaluation record with PDF URL
-    const { error: updateError } = await supabase
-      .from('pep_evaluations')
-      .update({
-        pdf_url: pdfUrl,
-        pdf_generated_at: new Date().toISOString(),
-      })
-      .eq('id', data.id);
-
-    if (updateError) {
-      console.error('Failed to update evaluation with PDF URL:', updateError);
-    }
-
-    return pdfUrl;
   } finally {
     // Clean up
     document.body.removeChild(container);
