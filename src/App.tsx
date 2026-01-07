@@ -6,7 +6,8 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { HelmetProvider } from "react-helmet-async";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { PrivateRoute } from "@/components/PrivateRoute";
-import Index from "./pages/Index";
+import Dashboard from "./pages/Dashboard";
+import Evaluation from "./pages/Evaluation";
 import TeamStatus from "./pages/TeamStatus";
 import NotFound from "./pages/NotFound";
 
@@ -22,7 +23,8 @@ const App = () => (
           <AuthProvider>
             <PrivateRoute>
               <Routes>
-                <Route path="/" element={<Index />} />
+                <Route path="/" element={<Dashboard />} />
+                <Route path="/evaluation" element={<Evaluation />} />
                 <Route path="/team-status" element={<TeamStatus />} />
                 {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
                 <Route path="*" element={<NotFound />} />
