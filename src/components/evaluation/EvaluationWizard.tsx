@@ -14,8 +14,9 @@ import { useEvaluation } from '@/hooks/useEvaluation';
 import { useErrorLogger } from '@/hooks/useErrorLogger';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
-import { Loader2, Lock, RotateCcw, AlertTriangle } from 'lucide-react';
+import { Loader2, Lock, RotateCcw, AlertTriangle, Users } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
+import { Link } from 'react-router-dom';
 
 const STEPS = [
   { id: 1, title: 'Employee Info', shortTitle: 'Info' },
@@ -30,6 +31,7 @@ export const EvaluationWizard = () => {
   const [showReopenDialog, setShowReopenDialog] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [canReopen, setCanReopen] = useState(false);
+  const [hasSubordinates, setHasSubordinates] = useState(false);
 
   const {
     data,
@@ -52,14 +54,9 @@ export const EvaluationWizard = () => {
 
   const { sections, total: progress } = useMemo(() => calculateProgress(), [calculateProgress]);
 
-  // Check if current user is the manager of this evaluation's owner
+  // Check if current user has subordinates and if they can reopen evaluations
   useEffect(() => {
-    const checkManagerAccess = async () => {
-      if (!data.employeeId || data.status === 'draft' || data.status === 'reopened') {
-        setCanReopen(false);
-        return;
-      }
-
+    const checkUserAccess = async () => {
       try {
         const { data: { user } } = await supabase.auth.getUser();
         if (!user) return;
@@ -73,21 +70,33 @@ export const EvaluationWizard = () => {
 
         if (!currentUserEmployee) return;
 
-        // Get the evaluation owner's reports_to
-        const { data: evalOwner } = await supabase
+        // Check if user has any direct reports
+        const { count } = await supabase
           .from('employees')
-          .select('reports_to')
-          .eq('id', data.employeeId)
-          .single();
+          .select('id', { count: 'exact', head: true })
+          .eq('reports_to', currentUserEmployee.id)
+          .eq('is_active', true);
 
-        // Check if current user is the direct manager
-        setCanReopen(evalOwner?.reports_to === currentUserEmployee.id);
+        setHasSubordinates((count || 0) > 0);
+
+        // Check if can reopen (only if viewing a submitted evaluation)
+        if (data.employeeId && data.status !== 'draft' && data.status !== 'reopened') {
+          const { data: evalOwner } = await supabase
+            .from('employees')
+            .select('reports_to')
+            .eq('id', data.employeeId)
+            .single();
+
+          setCanReopen(evalOwner?.reports_to === currentUserEmployee.id);
+        } else {
+          setCanReopen(false);
+        }
       } catch (error) {
-        console.error('Error checking manager access:', error);
+        console.error('Error checking user access:', error);
       }
     };
 
-    checkManagerAccess();
+    checkUserAccess();
   }, [data.employeeId, data.status]);
 
   const completedSteps = useMemo(() => {
@@ -193,11 +202,21 @@ export const EvaluationWizard = () => {
               </div>
             </div>
           </div>
-          <ErrorLogPanel
-            errors={errors}
-            onResolve={resolveError}
-            onClear={clearErrors}
-          />
+          <div className="flex items-center gap-2">
+            {hasSubordinates && (
+              <Button variant="outline" asChild>
+                <Link to="/team-status" className="gap-2">
+                  <Users className="w-4 h-4" />
+                  <span className="hidden sm:inline">Team Status</span>
+                </Link>
+              </Button>
+            )}
+            <ErrorLogPanel
+              errors={errors}
+              onResolve={resolveError}
+              onClear={clearErrors}
+            />
+          </div>
         </div>
 
         {/* Read-only banner */}

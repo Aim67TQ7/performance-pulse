@@ -1376,6 +1376,12 @@ export type Database = {
       }
       employees: {
         Row: {
+          badge_number: string | null
+          badge_pin_attempts: number | null
+          badge_pin_hash: string | null
+          badge_pin_locked_until: string | null
+          badge_verification_code: string | null
+          badge_verification_expires_at: string | null
           benefit_class: string | null
           business_unit: string | null
           created_at: string
@@ -1396,6 +1402,12 @@ export type Database = {
           work_category: string | null
         }
         Insert: {
+          badge_number?: string | null
+          badge_pin_attempts?: number | null
+          badge_pin_hash?: string | null
+          badge_pin_locked_until?: string | null
+          badge_verification_code?: string | null
+          badge_verification_expires_at?: string | null
           benefit_class?: string | null
           business_unit?: string | null
           created_at?: string
@@ -1416,6 +1428,12 @@ export type Database = {
           work_category?: string | null
         }
         Update: {
+          badge_number?: string | null
+          badge_pin_attempts?: number | null
+          badge_pin_hash?: string | null
+          badge_pin_locked_until?: string | null
+          badge_verification_code?: string | null
+          badge_verification_expires_at?: string | null
           benefit_class?: string | null
           business_unit?: string | null
           created_at?: string
