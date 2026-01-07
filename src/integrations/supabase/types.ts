@@ -1379,6 +1379,7 @@ export type Database = {
           badge_number: string | null
           badge_pin_attempts: number | null
           badge_pin_hash: string | null
+          badge_pin_is_default: boolean | null
           badge_pin_locked_until: string | null
           badge_verification_code: string | null
           badge_verification_expires_at: string | null
@@ -1405,6 +1406,7 @@ export type Database = {
           badge_number?: string | null
           badge_pin_attempts?: number | null
           badge_pin_hash?: string | null
+          badge_pin_is_default?: boolean | null
           badge_pin_locked_until?: string | null
           badge_verification_code?: string | null
           badge_verification_expires_at?: string | null
@@ -1431,6 +1433,7 @@ export type Database = {
           badge_number?: string | null
           badge_pin_attempts?: number | null
           badge_pin_hash?: string | null
+          badge_pin_is_default?: boolean | null
           badge_pin_locked_until?: string | null
           badge_verification_code?: string | null
           badge_verification_expires_at?: string | null
