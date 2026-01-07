@@ -1,12 +1,15 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { Helmet } from 'react-helmet-async';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Loader2, Users, CheckCircle2, Clock, FileEdit, ArrowLeft, Download } from 'lucide-react';
+import { Loader2, Users, CheckCircle2, Clock, FileEdit, ArrowLeft, Download, Mail } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { VersionBadge } from '@/components/version/VersionBadge';
+
+// Due date for self-assessments
+const DUE_DATE = new Date('2026-01-31T23:59:59');
 
 interface SubordinateStatus {
   id: string;
@@ -17,6 +20,7 @@ interface SubordinateStatus {
   submitted_at: string | null;
   updated_at: string | null;
   pdf_url?: string | null;
+  email?: string | null;
 }
 
 const STATUS_CONFIG = {
@@ -54,7 +58,7 @@ const TeamStatus = () => {
         // Get all direct reports
         const { data: directReports, error } = await supabase
           .from('employees')
-          .select('id, name_first, name_last, job_title, department')
+          .select('id, name_first, name_last, job_title, department, user_email')
           .eq('reports_to', currentEmployee.id)
           .eq('is_active', true)
           .order('name_last');
@@ -91,6 +95,7 @@ const TeamStatus = () => {
             submitted_at: eval_?.submitted_at || null,
             updated_at: eval_?.updated_at || null,
             pdf_url: eval_?.pdf_url || null,
+            email: emp.user_email || null,
           };
         });
 
@@ -110,6 +115,38 @@ const TeamStatus = () => {
     submitted: subordinates.filter(s => ['submitted', 'reviewed', 'signed'].includes(s.evaluation_status)).length,
     inProgress: subordinates.filter(s => ['draft', 'reopened'].includes(s.evaluation_status)).length,
     notStarted: subordinates.filter(s => s.evaluation_status === 'not_started').length,
+  };
+
+  // Calculate days until due date
+  const daysUntilDue = useMemo(() => {
+    const now = new Date();
+    const diffTime = DUE_DATE.getTime() - now.getTime();
+    return Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+  }, []);
+
+  const showPokeButton = daysUntilDue <= 7 && daysUntilDue > 0;
+
+  // Get incomplete team members (not submitted/reviewed/signed)
+  const incompleteMembers = useMemo(() => {
+    return subordinates.filter(s => !['submitted', 'reviewed', 'signed'].includes(s.evaluation_status));
+  }, [subordinates]);
+
+  const handlePokeTeam = () => {
+    const emails = incompleteMembers
+      .filter(m => m.email)
+      .map(m => m.email)
+      .join(',');
+
+    if (!emails) {
+      return;
+    }
+
+    const subject = encodeURIComponent('Reminder: Self-Evaluation Due Soon');
+    const body = encodeURIComponent(
+      `Hello Team,\n\nThis is a friendly reminder that your self-evaluation is due on ${DUE_DATE.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}.\n\nPlease complete your evaluation as soon as possible.\n\nThank you!`
+    );
+
+    window.location.href = `mailto:${emails}?subject=${subject}&body=${body}`;
   };
 
   if (isLoading) {
@@ -150,15 +187,35 @@ const TeamStatus = () => {
                   </p>
                   <span className="text-muted-foreground">•</span>
                   <VersionBadge />
+                  {daysUntilDue > 0 && (
+                    <>
+                      <span className="text-muted-foreground">•</span>
+                      <span className={`text-sm font-medium ${daysUntilDue <= 7 ? 'text-destructive' : 'text-muted-foreground'}`}>
+                        {daysUntilDue} day{daysUntilDue !== 1 ? 's' : ''} until due
+                      </span>
+                    </>
+                  )}
                 </div>
               </div>
             </div>
-            <Button variant="outline" asChild>
-              <Link to="/" className="gap-2">
-                <ArrowLeft className="w-4 h-4" />
-                My Evaluation
-              </Link>
-            </Button>
+            <div className="flex items-center gap-2">
+              {showPokeButton && incompleteMembers.length > 0 && (
+                <Button 
+                  variant="default" 
+                  onClick={handlePokeTeam}
+                  className="gap-2"
+                >
+                  <Mail className="w-4 h-4" />
+                  Poke Team ({incompleteMembers.length})
+                </Button>
+              )}
+              <Button variant="outline" asChild>
+                <Link to="/" className="gap-2">
+                  <ArrowLeft className="w-4 h-4" />
+                  Dashboard
+                </Link>
+              </Button>
+            </div>
           </div>
 
           {/* Stats Cards */}
