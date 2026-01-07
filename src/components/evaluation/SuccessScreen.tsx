@@ -1,10 +1,8 @@
 import { Button } from '@/components/ui/button';
-import { CheckCircle, Download, Home, FileText, Users, Loader2 } from 'lucide-react';
+import { CheckCircle, Download, Home, FileText, Users } from 'lucide-react';
 import { EvaluationData } from '@/types/evaluation';
 import { toast } from 'sonner';
 import { useNavigate } from 'react-router-dom';
-import { useState, useEffect } from 'react';
-import { supabase } from '@/integrations/supabase/client';
 
 interface SuccessScreenProps {
   data: EvaluationData;
@@ -13,70 +11,12 @@ interface SuccessScreenProps {
 
 export const SuccessScreen = ({ data, hasSubordinates = false }: SuccessScreenProps) => {
   const navigate = useNavigate();
-  const [pdfUrl, setPdfUrl] = useState<string | undefined>(data.pdfUrl);
-  const [isPolling, setIsPolling] = useState(!data.pdfUrl);
-
-  // Poll for PDF URL if not available
-  useEffect(() => {
-    if (pdfUrl || !data.id) {
-      setIsPolling(false);
-      return;
-    }
-
-    let attempts = 0;
-    const maxAttempts = 20; // 20 seconds total with 1s intervals
-    
-    const pollForPdf = async () => {
-      attempts++;
-      console.log(`Polling for PDF (attempt ${attempts}/${maxAttempts})...`);
-      
-      const { data: evalData, error } = await supabase
-        .from('pep_evaluations')
-        .select('pdf_url')
-        .eq('id', data.id)
-        .single();
-      
-      if (error) {
-        console.error('Error polling for PDF:', error);
-      }
-      
-      if (evalData?.pdf_url) {
-        console.log('PDF ready:', evalData.pdf_url);
-        setPdfUrl(evalData.pdf_url);
-        setIsPolling(false);
-        return true;
-      }
-      
-      if (attempts >= maxAttempts) {
-        console.log('Max polling attempts reached');
-        setIsPolling(false);
-        return true;
-      }
-      
-      return false;
-    };
-
-    const interval = setInterval(async () => {
-      const done = await pollForPdf();
-      if (done) clearInterval(interval);
-    }, 1000); // Poll every 1 second for faster feedback
-
-    // Initial check after a short delay
-    const initialTimeout = setTimeout(() => pollForPdf(), 500);
-
-    return () => {
-      clearInterval(interval);
-      clearTimeout(initialTimeout);
-    };
-  }, [data.id, pdfUrl]);
 
   const handleDownloadPdf = () => {
-    if (pdfUrl) {
-      window.open(pdfUrl, '_blank');
-    } else if (isPolling) {
-      toast.info('PDF is still being generated. Please wait a moment.');
+    if (data.pdfUrl) {
+      window.open(data.pdfUrl, '_blank');
     } else {
-      toast.error('PDF generation failed. Please contact HR.');
+      toast.error('PDF not available. Please contact HR.');
     }
   };
 
@@ -156,12 +96,7 @@ export const SuccessScreen = ({ data, hasSubordinates = false }: SuccessScreenPr
       <div className="bg-primary/5 border border-primary/20 rounded-lg p-6 max-w-sm mx-auto mb-8 text-left">
         <h3 className="font-semibold mb-3 text-primary">PDF Document</h3>
         <div className="text-sm text-muted-foreground">
-          {isPolling ? (
-            <div className="flex items-center gap-2">
-              <Loader2 className="w-4 h-4 animate-spin" />
-              Generating PDF document...
-            </div>
-          ) : pdfUrl ? (
+          {data.pdfUrl ? (
             <div className="flex items-center gap-2">
               <CheckCircle className="w-4 h-4 text-success" />
               PDF ready for download
@@ -169,7 +104,7 @@ export const SuccessScreen = ({ data, hasSubordinates = false }: SuccessScreenPr
           ) : (
             <div className="flex items-center gap-2">
               <FileText className="w-4 h-4" />
-              PDF will be available shortly
+              PDF not available
             </div>
           )}
         </div>
@@ -180,14 +115,10 @@ export const SuccessScreen = ({ data, hasSubordinates = false }: SuccessScreenPr
           variant="outline" 
           className="flex items-center gap-2"
           onClick={handleDownloadPdf}
-          disabled={isPolling}
+          disabled={!data.pdfUrl}
         >
-          {isPolling ? (
-            <Loader2 className="w-4 h-4 animate-spin" />
-          ) : (
-            <Download className="w-4 h-4" />
-          )}
-          {isPolling ? 'Generating...' : 'Download PDF'}
+          <Download className="w-4 h-4" />
+          Download PDF
         </Button>
         {hasSubordinates && (
           <>
