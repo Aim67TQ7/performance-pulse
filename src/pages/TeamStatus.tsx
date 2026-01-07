@@ -4,7 +4,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Loader2, Users, CheckCircle2, Clock, FileEdit, ArrowLeft } from 'lucide-react';
+import { Loader2, Users, CheckCircle2, Clock, FileEdit, ArrowLeft, Download } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { VersionBadge } from '@/components/version/VersionBadge';
 
@@ -16,6 +16,7 @@ interface SubordinateStatus {
   evaluation_status: 'not_started' | 'draft' | 'submitted' | 'reopened' | 'reviewed' | 'signed';
   submitted_at: string | null;
   updated_at: string | null;
+  pdf_url?: string | null;
 }
 
 const STATUS_CONFIG = {
@@ -70,7 +71,7 @@ const TeamStatus = () => {
         const subordinateIds = directReports.map(e => e.id);
         const { data: evaluations } = await supabase
           .from('pep_evaluations')
-          .select('employee_id, status, submitted_at, updated_at')
+          .select('employee_id, status, submitted_at, updated_at, pdf_url')
           .in('employee_id', subordinateIds)
           .eq('period_year', currentYear);
 
@@ -89,6 +90,7 @@ const TeamStatus = () => {
             evaluation_status: (eval_?.status as SubordinateStatus['evaluation_status']) || 'not_started',
             submitted_at: eval_?.submitted_at || null,
             updated_at: eval_?.updated_at || null,
+            pdf_url: eval_?.pdf_url || null,
           };
         });
 
@@ -251,6 +253,19 @@ const TeamStatus = () => {
                               {new Date(sub.submitted_at).toLocaleDateString()}
                             </span>
                           )}
+
+                          {sub.pdf_url && (
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              className="gap-2"
+                              onClick={() => window.open(sub.pdf_url!, '_blank')}
+                            >
+                              <Download className="w-4 h-4" />
+                              PDF
+                            </Button>
+                          )}
+
                           <Badge variant={config.variant} className="gap-1.5">
                             <StatusIcon className="w-3.5 h-3.5" />
                             {config.label}

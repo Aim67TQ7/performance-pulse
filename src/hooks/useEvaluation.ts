@@ -342,7 +342,7 @@ export const useEvaluation = () => {
       if (updateError) throw updateError;
 
       // Call PDF generation edge function
-      const { error: pdfError } = await supabase.functions.invoke('generate-pep-pdf', {
+      const { data: pdfResult, error: pdfError } = await supabase.functions.invoke('generate-pep-pdf', {
         body: { evaluationId: data.id },
       });
 
@@ -354,6 +354,7 @@ export const useEvaluation = () => {
         ...prev,
         status: 'submitted',
         submittedAt: new Date(),
+        pdfUrl: (pdfResult as any)?.pdfUrl ?? prev.pdfUrl,
       }));
       setIsReadOnly(true);
       
