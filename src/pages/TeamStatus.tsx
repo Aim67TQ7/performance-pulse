@@ -151,12 +151,25 @@ const TeamStatus = () => {
     return Math.ceil(diffTime / (1000 * 60 * 60 * 24));
   }, [dueDate]);
 
-  const showPokeButton = daysUntilDue !== null && daysUntilDue <= 7 && daysUntilDue > 0;
+  // Check if we're within the assessment period (from open_date to close_date)
+  const isWithinAssessmentPeriod = useMemo(() => {
+    if (!assessmentDates?.open_date || !assessmentDates?.close_date) return false;
+    const now = new Date();
+    const openDate = new Date(assessmentDates.open_date);
+    const closeDate = new Date(assessmentDates.close_date + 'T23:59:59');
+    return now >= openDate && now <= closeDate;
+  }, [assessmentDates]);
+
+  // Determine if we're in the urgent period (7 days or less until due)
+  const isUrgent = daysUntilDue !== null && daysUntilDue <= 7 && daysUntilDue > 0;
 
   // Get incomplete team members (not submitted/reviewed/signed)
   const incompleteMembers = useMemo(() => {
     return subordinates.filter(s => !['submitted', 'reviewed', 'signed'].includes(s.evaluation_status));
   }, [subordinates]);
+
+  // Show POKE button throughout entire assessment period when there are incomplete members
+  const showPokeButton = isWithinAssessmentPeriod && incompleteMembers.length > 0;
 
   const handlePokeTeam = () => {
     const emails = incompleteMembers
@@ -168,10 +181,31 @@ const TeamStatus = () => {
       return;
     }
 
-    const subject = encodeURIComponent('Reminder: Self-Evaluation Due Soon');
-    const body = encodeURIComponent(
-      `Hello Team,\n\nThis is a friendly reminder that your self-evaluation is due on ${dueDate.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}.\n\nPlease complete your evaluation as soon as possible.\n\nThank you!`
-    );
+    // Use different email templates based on urgency
+    let subject: string;
+    let body: string;
+    const formattedDueDate = dueDate.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
+
+    if (isUrgent) {
+      // Urgent email (7 days or less)
+      subject = encodeURIComponent(`URGENT: Self-Evaluation Due in ${daysUntilDue} Day${daysUntilDue !== 1 ? 's' : ''} - Immediate Action Required`);
+      body = encodeURIComponent(
+        `Hello Team,\n\n` +
+        `Your immediate attention is required. The self-evaluation deadline is ${formattedDueDate}, which is only ${daysUntilDue} day${daysUntilDue !== 1 ? 's' : ''} away.\n\n` +
+        `This is a mandatory evaluation and must be completed before the deadline.\n\n` +
+        `Please log in to self.buntinggpt.com using your Microsoft network credentials and complete your self-evaluation today.\n\n` +
+        `Thank you for your prompt attention to this matter.`
+      );
+    } else {
+      // Standard reminder email (more than 7 days)
+      subject = encodeURIComponent(`Reminder: Self-Evaluation Due ${formattedDueDate}`);
+      body = encodeURIComponent(
+        `Hello Team,\n\n` +
+        `This is a friendly reminder that your self-evaluation is due on ${formattedDueDate}.\n\n` +
+        `Please log in to self.buntinggpt.com using your Microsoft network credentials and complete your evaluation at your earliest convenience.\n\n` +
+        `Thank you!`
+      );
+    }
 
     window.location.href = `mailto:${emails}?subject=${subject}&body=${body}`;
   };
@@ -226,14 +260,14 @@ const TeamStatus = () => {
               </div>
             </div>
             <div className="flex items-center gap-2">
-              {showPokeButton && incompleteMembers.length > 0 && (
+              {showPokeButton && (
                 <Button 
-                  variant="default" 
+                  variant={isUrgent ? "destructive" : "default"}
                   onClick={handlePokeTeam}
                   className="gap-2"
                 >
                   <Mail className="w-4 h-4" />
-                  Poke Team ({incompleteMembers.length})
+                  {isUrgent ? 'Urgent Reminder' : 'Send Reminder'} ({incompleteMembers.length})
                 </Button>
               )}
               <Button variant="outline" asChild>

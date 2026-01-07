@@ -1881,6 +1881,35 @@ export type Database = {
         }
         Relationships: []
       }
+      hr_admin_users: {
+        Row: {
+          employee_id: string
+          granted_at: string | null
+          granted_by: string | null
+          id: string
+        }
+        Insert: {
+          employee_id: string
+          granted_at?: string | null
+          granted_by?: string | null
+          id?: string
+        }
+        Update: {
+          employee_id?: string
+          granted_at?: string | null
+          granted_by?: string | null
+          id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "hr_admin_users_employee_id_fkey"
+            columns: ["employee_id"]
+            isOneToOne: true
+            referencedRelation: "employees"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       iframe_sessions: {
         Row: {
           created_at: string
