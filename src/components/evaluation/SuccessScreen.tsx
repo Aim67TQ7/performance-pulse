@@ -18,26 +18,37 @@ export const SuccessScreen = ({ data, hasSubordinates = false }: SuccessScreenPr
 
   // Poll for PDF URL if not available
   useEffect(() => {
-    if (pdfUrl || !data.id) return;
+    if (pdfUrl || !data.id) {
+      setIsPolling(false);
+      return;
+    }
 
     let attempts = 0;
-    const maxAttempts = 10;
+    const maxAttempts = 15; // 30 seconds total
     
     const pollForPdf = async () => {
       attempts++;
-      const { data: evalData } = await supabase
+      console.log(`Polling for PDF (attempt ${attempts}/${maxAttempts})...`);
+      
+      const { data: evalData, error } = await supabase
         .from('pep_evaluations')
         .select('pdf_url')
         .eq('id', data.id)
         .single();
       
+      if (error) {
+        console.error('Error polling for PDF:', error);
+      }
+      
       if (evalData?.pdf_url) {
+        console.log('PDF ready:', evalData.pdf_url);
         setPdfUrl(evalData.pdf_url);
         setIsPolling(false);
         return true;
       }
       
       if (attempts >= maxAttempts) {
+        console.log('Max polling attempts reached');
         setIsPolling(false);
         return true;
       }
@@ -50,10 +61,13 @@ export const SuccessScreen = ({ data, hasSubordinates = false }: SuccessScreenPr
       if (done) clearInterval(interval);
     }, 2000);
 
-    // Initial check
-    pollForPdf();
+    // Initial check after a short delay
+    const initialTimeout = setTimeout(() => pollForPdf(), 1000);
 
-    return () => clearInterval(interval);
+    return () => {
+      clearInterval(interval);
+      clearTimeout(initialTimeout);
+    };
   }, [data.id, pdfUrl]);
 
   const handleDownloadPdf = () => {
