@@ -1,14 +1,17 @@
 import { Button } from '@/components/ui/button';
-import { CheckCircle, Download, Home, Mail, FileText } from 'lucide-react';
+import { CheckCircle, Download, Home, Mail, FileText, Users } from 'lucide-react';
 import { EvaluationData } from '@/types/evaluation';
 import { toast } from 'sonner';
+import { useNavigate } from 'react-router-dom';
 
 interface SuccessScreenProps {
   data: EvaluationData;
-  onReset: () => void;
+  hasSubordinates?: boolean;
 }
 
-export const SuccessScreen = ({ data, onReset }: SuccessScreenProps) => {
+export const SuccessScreen = ({ data, hasSubordinates = false }: SuccessScreenProps) => {
+  const navigate = useNavigate();
+
   const handleDownloadPdf = () => {
     if (data.pdfUrl) {
       window.open(data.pdfUrl, '_blank');
@@ -120,10 +123,22 @@ export const SuccessScreen = ({ data, onReset }: SuccessScreenProps) => {
           <Download className="w-4 h-4" />
           Download PDF
         </Button>
-        <Button onClick={onReset} className="flex items-center gap-2">
-          <Home className="w-4 h-4" />
-          Start New Evaluation
-        </Button>
+        {hasSubordinates && (
+          <>
+            <Button 
+              variant="outline" 
+              onClick={() => navigate('/team-status')} 
+              className="flex items-center gap-2"
+            >
+              <Users className="w-4 h-4" />
+              View Team Status
+            </Button>
+            <Button onClick={() => navigate('/')} className="flex items-center gap-2">
+              <Home className="w-4 h-4" />
+              Back to Dashboard
+            </Button>
+          </>
+        )}
       </div>
     </div>
   );

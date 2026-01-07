@@ -172,7 +172,7 @@ export const EvaluationWizard = () => {
     return (
       <div className="min-h-screen bg-background py-8 px-4">
         <div className="max-w-3xl mx-auto">
-          <SuccessScreen data={data} onReset={handleReset} />
+          <SuccessScreen data={data} hasSubordinates={hasSubordinates} />
         </div>
       </div>
     );
