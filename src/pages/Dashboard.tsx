@@ -4,7 +4,7 @@ import { Helmet } from 'react-helmet-async';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Loader2, FileText, Users, CheckCircle, ArrowRight } from 'lucide-react';
+import { Loader2, FileText, Users, CheckCircle, ArrowRight, Settings } from 'lucide-react';
 import { VersionBadge } from '@/components/version/VersionBadge';
 import { SuccessScreen } from '@/components/evaluation/SuccessScreen';
 import { EvaluationData, EmployeeInfo, QuantitativeData, QualitativeFactors, SummaryData } from '@/types/evaluation';
@@ -15,6 +15,7 @@ export const Dashboard = () => {
   const [hasSubordinates, setHasSubordinates] = useState(false);
   const [evaluationStatus, setEvaluationStatus] = useState<'none' | 'draft' | 'submitted' | 'reopened'>('none');
   const [evaluationData, setEvaluationData] = useState<EvaluationData | null>(null);
+  const [isHrAdmin, setIsHrAdmin] = useState(false);
 
   useEffect(() => {
     const fetchUserData = async () => {
@@ -45,6 +46,15 @@ export const Dashboard = () => {
           .eq('is_active', true);
 
         setHasSubordinates((count || 0) > 0);
+
+        // Check if user is an HR Admin
+        const { data: hrAdminRecord } = await supabase
+          .from('hr_admin_users')
+          .select('id')
+          .eq('employee_id', currentUserEmployee.id)
+          .maybeSingle();
+
+        setIsHrAdmin(!!hrAdminRecord);
 
         // Check for existing evaluation for current year
         const currentYear = new Date().getFullYear();
@@ -263,6 +273,34 @@ export const Dashboard = () => {
                 </Button>
               </CardContent>
             </Card>
+
+            {/* HR Administration Card - Only visible to authorized HR admins */}
+            {isHrAdmin && (
+              <Card className="relative overflow-hidden md:col-span-2">
+                <CardHeader>
+                  <div className="flex items-center gap-3">
+                    <div className="p-2 rounded-lg bg-muted">
+                      <Settings className="w-6 h-6 text-foreground" />
+                    </div>
+                    <div>
+                      <CardTitle>HR Administration</CardTitle>
+                      <CardDescription>
+                        Manage assessment dates and send company-wide notifications
+                      </CardDescription>
+                    </div>
+                  </div>
+                </CardHeader>
+                <CardContent>
+                  <p className="text-sm text-muted-foreground mb-3">
+                    Configure the evaluation period settings and send email notifications to all employees.
+                  </p>
+                  <Button variant="outline" onClick={() => navigate('/hr-admin')} className="gap-2">
+                    Open HR Admin
+                    <ArrowRight className="w-4 h-4" />
+                  </Button>
+                </CardContent>
+              </Card>
+            )}
           </div>
         </div>
       </div>
