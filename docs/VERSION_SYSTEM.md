@@ -53,8 +53,8 @@ USING (true);
 CREATE POLICY "Admins can manage revisions" 
 ON public.app_revisions 
 FOR ALL 
-USING (has_role(auth.uid(), 'admin')) 
-WITH CHECK (has_role(auth.uid(), 'admin'));
+USING (has_user_role(auth.uid(), 'admin')) 
+WITH CHECK (has_user_role(auth.uid(), 'admin'));
 ```
 
 ### Column Descriptions

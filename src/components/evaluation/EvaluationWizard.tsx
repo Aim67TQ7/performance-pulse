@@ -9,6 +9,7 @@ import { SubmitConfirmation } from './SubmitConfirmation';
 import { SuccessScreen } from './SuccessScreen';
 import { ErrorLogPanel } from './ErrorLogPanel';
 import { ReopenDialog } from './ReopenDialog';
+import { VersionBadge } from '@/components/version/VersionBadge';
 import { useEvaluation } from '@/hooks/useEvaluation';
 import { useErrorLogger } from '@/hooks/useErrorLogger';
 import { toast } from 'sonner';
@@ -183,9 +184,13 @@ export const EvaluationWizard = () => {
               <h1 className="text-2xl md:text-3xl font-display font-semibold text-foreground">
                 Performance Self-Evaluation
               </h1>
-              <p className="text-muted-foreground text-sm">
-                Bunting Magnetics – Salaried Employees
-              </p>
+              <div className="flex items-center gap-2">
+                <p className="text-muted-foreground text-sm">
+                  Bunting Magnetics – Salaried Employees
+                </p>
+                <span className="text-muted-foreground">•</span>
+                <VersionBadge />
+              </div>
             </div>
           </div>
           <ErrorLogPanel
