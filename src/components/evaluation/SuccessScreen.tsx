@@ -1,8 +1,10 @@
 import { Button } from '@/components/ui/button';
-import { CheckCircle, Download, Home, Mail, FileText, Users } from 'lucide-react';
+import { CheckCircle, Download, Home, FileText, Users, Loader2 } from 'lucide-react';
 import { EvaluationData } from '@/types/evaluation';
 import { toast } from 'sonner';
 import { useNavigate } from 'react-router-dom';
+import { useState, useEffect } from 'react';
+import { supabase } from '@/integrations/supabase/client';
 
 interface SuccessScreenProps {
   data: EvaluationData;
@@ -11,12 +13,56 @@ interface SuccessScreenProps {
 
 export const SuccessScreen = ({ data, hasSubordinates = false }: SuccessScreenProps) => {
   const navigate = useNavigate();
+  const [pdfUrl, setPdfUrl] = useState<string | undefined>(data.pdfUrl);
+  const [isPolling, setIsPolling] = useState(!data.pdfUrl);
+
+  // Poll for PDF URL if not available
+  useEffect(() => {
+    if (pdfUrl || !data.id) return;
+
+    let attempts = 0;
+    const maxAttempts = 10;
+    
+    const pollForPdf = async () => {
+      attempts++;
+      const { data: evalData } = await supabase
+        .from('pep_evaluations')
+        .select('pdf_url')
+        .eq('id', data.id)
+        .single();
+      
+      if (evalData?.pdf_url) {
+        setPdfUrl(evalData.pdf_url);
+        setIsPolling(false);
+        return true;
+      }
+      
+      if (attempts >= maxAttempts) {
+        setIsPolling(false);
+        return true;
+      }
+      
+      return false;
+    };
+
+    const interval = setInterval(async () => {
+      const done = await pollForPdf();
+      if (done) clearInterval(interval);
+    }, 2000);
+
+    // Initial check
+    pollForPdf();
+
+    return () => clearInterval(interval);
+  }, [data.id, pdfUrl]);
 
   const handleDownloadPdf = () => {
-    if (data.pdfUrl) {
-      window.open(data.pdfUrl, '_blank');
+    if (pdfUrl) {
+      window.open(pdfUrl, '_blank');
+    } else if (isPolling) {
+      toast.info('PDF is still being generated. Please wait a moment.');
     } else {
-      toast.info('PDF is being generated. Please try again in a moment.');
+      toast.error('PDF generation failed. Please contact HR.');
     }
   };
 
@@ -36,7 +82,7 @@ export const SuccessScreen = ({ data, hasSubordinates = false }: SuccessScreenPr
         Evaluation Submitted Successfully!
       </h2>
       <p className="text-muted-foreground mb-8 max-w-md mx-auto">
-        Your self-evaluation has been submitted for review. You will receive a confirmation email shortly.
+        Your self-evaluation has been submitted and is now available for your supervisor to review.
       </p>
 
       {/* Submission details */}
@@ -92,26 +138,27 @@ export const SuccessScreen = ({ data, hasSubordinates = false }: SuccessScreenPr
         </div>
       </div>
 
-      {/* Next steps */}
+      {/* PDF Status */}
       <div className="bg-primary/5 border border-primary/20 rounded-lg p-6 max-w-sm mx-auto mb-8 text-left">
-        <h3 className="font-semibold mb-3 text-primary">What's Next?</h3>
-        <ul className="text-sm text-muted-foreground space-y-2">
-          <li className="flex items-start gap-2">
-            <Mail className="w-4 h-4 text-primary mt-0.5 shrink-0" />
-            Check your email for confirmation
-          </li>
-          <li className="flex items-start gap-2">
-            <CheckCircle className="w-4 h-4 text-primary mt-0.5 shrink-0" />
-            Your supervisor ({data.employeeInfo.supervisorName || 'manager'}) will be notified to review
-          </li>
-          <li className="flex items-start gap-2">
-            <Download className="w-4 h-4 text-primary mt-0.5 shrink-0" />
-            {data.pdfUrl 
-              ? 'Your PDF is ready for download' 
-              : 'A PDF copy is being generated for HR records'
-            }
-          </li>
-        </ul>
+        <h3 className="font-semibold mb-3 text-primary">PDF Document</h3>
+        <div className="text-sm text-muted-foreground">
+          {isPolling ? (
+            <div className="flex items-center gap-2">
+              <Loader2 className="w-4 h-4 animate-spin" />
+              Generating PDF document...
+            </div>
+          ) : pdfUrl ? (
+            <div className="flex items-center gap-2">
+              <CheckCircle className="w-4 h-4 text-success" />
+              PDF ready for download
+            </div>
+          ) : (
+            <div className="flex items-center gap-2">
+              <FileText className="w-4 h-4" />
+              PDF will be available shortly
+            </div>
+          )}
+        </div>
       </div>
 
       <div className="flex flex-col sm:flex-row gap-3 justify-center">
@@ -119,9 +166,14 @@ export const SuccessScreen = ({ data, hasSubordinates = false }: SuccessScreenPr
           variant="outline" 
           className="flex items-center gap-2"
           onClick={handleDownloadPdf}
+          disabled={isPolling}
         >
-          <Download className="w-4 h-4" />
-          Download PDF
+          {isPolling ? (
+            <Loader2 className="w-4 h-4 animate-spin" />
+          ) : (
+            <Download className="w-4 h-4" />
+          )}
+          {isPolling ? 'Generating...' : 'Download PDF'}
         </Button>
         {hasSubordinates && (
           <>
