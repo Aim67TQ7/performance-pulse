@@ -2,6 +2,7 @@ import { useState, useCallback, useEffect } from 'react';
 import { EvaluationData } from '@/types/evaluation';
 import { useErrorLogger } from './useErrorLogger';
 import { supabase } from '@/integrations/supabase/client';
+import { generateEvaluationPdf } from '@/lib/pdfGenerator';
 
 const STORAGE_KEY = 'pep_evaluation_draft';
 
@@ -323,11 +324,11 @@ export const useEvaluation = () => {
     });
   }, [saveToDatabase, isReadOnly]);
 
-  const submitEvaluation = useCallback(async () => {
+  const submitEvaluation = useCallback(async (): Promise<{ success: boolean; pdfUrl?: string }> => {
     try {
       if (!data.id || !currentEmployee) {
         logError('submit', 'Cannot submit: evaluation not saved yet');
-        return false;
+        return { success: false };
       }
 
       // Update status to submitted
@@ -341,12 +342,11 @@ export const useEvaluation = () => {
 
       if (updateError) throw updateError;
 
-      // Call PDF generation edge function
-      const { data: pdfResult, error: pdfError } = await supabase.functions.invoke('generate-pep-pdf', {
-        body: { evaluationId: data.id },
-      });
-
-      if (pdfError) {
+      // Generate PDF client-side
+      let pdfUrl: string | undefined;
+      try {
+        pdfUrl = await generateEvaluationPdf(data);
+      } catch (pdfError) {
         logError('submit', 'PDF generation failed, but evaluation was submitted', { error: pdfError });
       }
 
@@ -354,16 +354,16 @@ export const useEvaluation = () => {
         ...prev,
         status: 'submitted',
         submittedAt: new Date(),
-        pdfUrl: (pdfResult as any)?.pdfUrl ?? prev.pdfUrl,
+        pdfUrl: pdfUrl ?? prev.pdfUrl,
       }));
       setIsReadOnly(true);
       
-      return true;
+      return { success: true, pdfUrl };
     } catch (error) {
       logError('submit', 'Failed to submit evaluation', { error });
-      return false;
+      return { success: false };
     }
-  }, [data.id, currentEmployee, logError]);
+  }, [data, currentEmployee, logError]);
 
   const reopenEvaluation = useCallback(async (reason: string) => {
     try {
