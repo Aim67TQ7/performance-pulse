@@ -24,7 +24,7 @@ export const SuccessScreen = ({ data, hasSubordinates = false }: SuccessScreenPr
     }
 
     let attempts = 0;
-    const maxAttempts = 15; // 30 seconds total
+    const maxAttempts = 20; // 20 seconds total with 1s intervals
     
     const pollForPdf = async () => {
       attempts++;
@@ -59,10 +59,10 @@ export const SuccessScreen = ({ data, hasSubordinates = false }: SuccessScreenPr
     const interval = setInterval(async () => {
       const done = await pollForPdf();
       if (done) clearInterval(interval);
-    }, 2000);
+    }, 1000); // Poll every 1 second for faster feedback
 
     // Initial check after a short delay
-    const initialTimeout = setTimeout(() => pollForPdf(), 1000);
+    const initialTimeout = setTimeout(() => pollForPdf(), 500);
 
     return () => {
       clearInterval(interval);
