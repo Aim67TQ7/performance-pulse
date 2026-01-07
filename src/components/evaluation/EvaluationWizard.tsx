@@ -133,12 +133,14 @@ export const EvaluationWizard = () => {
 
   const handleConfirmSubmit = async () => {
     setIsSubmitting(true);
-    const success = await submitEvaluation();
+    const result = await submitEvaluation();
     setIsSubmitting(false);
 
-    if (success) {
+    if (result.success) {
       setShowConfirmation(false);
       toast.success('Evaluation submitted successfully!');
+    } else {
+      toast.error('Submission failed. Please try again.');
     }
   };
 
