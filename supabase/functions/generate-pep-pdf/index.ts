@@ -1,5 +1,9 @@
-import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+
+// Declare EdgeRuntime for background tasks
+declare const EdgeRuntime: {
+  waitUntil: (promise: Promise<unknown>) => void;
+};
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -60,7 +64,81 @@ const QUALITATIVE_LABELS: Record<string, string> = {
   creativityInitiative: "Creativity/Initiative",
 };
 
-serve(async (req) => {
+// Background task to generate PDF
+async function generatePdfBackground(evaluationId: string) {
+  console.log(`[Background] Starting PDF generation for: ${evaluationId}`);
+  
+  try {
+    const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+    const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+    const supabase = createClient(supabaseUrl, supabaseKey, {
+      auth: { autoRefreshToken: false, persistSession: false },
+    });
+
+    // Fetch evaluation data
+    const { data: evaluation, error: fetchError } = await supabase
+      .from("pep_evaluations")
+      .select("*")
+      .eq("id", evaluationId)
+      .single();
+
+    if (fetchError || !evaluation) {
+      console.error("[Background] Error fetching evaluation:", fetchError);
+      return;
+    }
+
+    console.log("[Background] Evaluation fetched");
+    const evalData = evaluation as EvaluationData;
+
+    // Generate HTML
+    const html = generatePdfHtml(evalData);
+    
+    // Create filename
+    const safeName = (evalData.employee_info_json?.name || "unknown").replace(/[^a-zA-Z0-9]/g, "_");
+    const fileName = `pep_${safeName}_${evalData.period_year}_${evaluationId.slice(0, 8)}.html`;
+
+    // Upload to storage
+    const { error: uploadError } = await supabase.storage
+      .from("pep-evaluations")
+      .upload(fileName, new Blob([html], { type: "text/html" }), {
+        contentType: "text/html",
+        upsert: true,
+      });
+
+    if (uploadError) {
+      console.error("[Background] Upload error:", uploadError);
+      return;
+    }
+
+    // Get public URL
+    const { data: urlData } = supabase.storage
+      .from("pep-evaluations")
+      .getPublicUrl(fileName);
+    
+    const pdfUrl = urlData.publicUrl;
+    console.log("[Background] File uploaded:", pdfUrl);
+
+    // Update evaluation record
+    const { error: updateError } = await supabase
+      .from("pep_evaluations")
+      .update({
+        pdf_url: pdfUrl,
+        pdf_generated_at: new Date().toISOString(),
+      })
+      .eq("id", evaluationId);
+
+    if (updateError) {
+      console.error("[Background] Update error:", updateError);
+      return;
+    }
+
+    console.log(`[Background] PDF generation complete: ${pdfUrl}`);
+  } catch (error) {
+    console.error("[Background] Error:", error);
+  }
+}
+
+Deno.serve(async (req) => {
   // Handle CORS preflight
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
@@ -73,83 +151,13 @@ serve(async (req) => {
       throw new Error("evaluationId is required");
     }
 
-    console.log(`Generating PDF for evaluation: ${evaluationId}`);
+    console.log(`Received PDF request for: ${evaluationId}`);
 
-    // Initialize Supabase client with service role (bypasses RLS)
-    const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
-    const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-    const supabase = createClient(supabaseUrl, supabaseKey, {
-      auth: {
-        autoRefreshToken: false,
-        persistSession: false,
-      },
-    });
-
-    // Fetch evaluation data
-    const { data: evaluation, error: fetchError } = await supabase
-      .from("pep_evaluations")
-      .select("*")
-      .eq("id", evaluationId)
-      .single();
-
-    if (fetchError || !evaluation) {
-      console.error("Error fetching evaluation:", fetchError);
-      throw new Error(`Evaluation not found: ${evaluationId}`);
-    }
-
-    console.log("Evaluation fetched successfully");
-
-    const evalData = evaluation as EvaluationData;
-
-    // Generate HTML for PDF
-    const html = generatePdfHtml(evalData);
-    console.log("HTML generated successfully");
-
-    // Create a safe filename
-    const safeName = (evalData.employee_info_json?.name || "unknown").replace(/[^a-zA-Z0-9]/g, "_");
-    const fileName = `pep_${safeName}_${evalData.period_year}_${evaluationId.slice(0, 8)}.html`;
-
-    // Upload to storage using service role
-    const { data: uploadData, error: uploadError } = await supabase.storage
-      .from("pep-evaluations")
-      .upload(fileName, new Blob([html], { type: "text/html" }), {
-        contentType: "text/html",
-        upsert: true,
-      });
-
-    if (uploadError) {
-      console.error("Error uploading PDF:", uploadError);
-      throw new Error(`Failed to upload PDF: ${uploadError.message}`);
-    }
-
-    console.log("File uploaded successfully:", uploadData?.path);
-
-    // Get public URL
-    const { data: urlData } = supabase.storage
-      .from("pep-evaluations")
-      .getPublicUrl(fileName);
-    
-    const pdfUrl = urlData.publicUrl;
-    console.log("Public URL generated:", pdfUrl);
-
-    // Update evaluation with PDF URL
-    const { error: updateError } = await supabase
-      .from("pep_evaluations")
-      .update({
-        pdf_url: pdfUrl,
-        pdf_generated_at: new Date().toISOString(),
-      })
-      .eq("id", evaluationId);
-
-    if (updateError) {
-      console.error("Error updating evaluation with PDF URL:", updateError);
-      throw new Error(`Failed to update evaluation: ${updateError.message}`);
-    }
-
-    console.log(`PDF generated successfully: ${pdfUrl}`);
+    // Start background task and return immediately
+    EdgeRuntime.waitUntil(generatePdfBackground(evaluationId));
 
     return new Response(
-      JSON.stringify({ success: true, pdfUrl }),
+      JSON.stringify({ success: true, message: "PDF generation started" }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   } catch (error) {
