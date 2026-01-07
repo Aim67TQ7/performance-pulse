@@ -2,3 +2,6 @@ project_id = "qzwxisdfwswsrbzvpzlo"
 
 [functions.generate-pep-pdf]
 verify_jwt = false
+
+[functions.get-app-version]
+verify_jwt = false

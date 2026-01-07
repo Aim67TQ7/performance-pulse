@@ -244,6 +244,59 @@ export type Database = {
         }
         Relationships: []
       }
+      app_revisions: {
+        Row: {
+          app_id: string
+          created_at: string
+          description: string
+          id: string
+          is_current: boolean
+          major: number
+          minor: number
+          patch: number
+          release_date: string
+          released_by: string | null
+          revision_type: string
+          version: string
+        }
+        Insert: {
+          app_id: string
+          created_at?: string
+          description: string
+          id?: string
+          is_current?: boolean
+          major: number
+          minor: number
+          patch: number
+          release_date?: string
+          released_by?: string | null
+          revision_type: string
+          version: string
+        }
+        Update: {
+          app_id?: string
+          created_at?: string
+          description?: string
+          id?: string
+          is_current?: boolean
+          major?: number
+          minor?: number
+          patch?: number
+          release_date?: string
+          released_by?: string | null
+          revision_type?: string
+          version?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "app_revisions_app_id_fkey"
+            columns: ["app_id"]
+            isOneToOne: false
+            referencedRelation: "app_items"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       applications: {
         Row: {
           auth_passcode: string | null

@@ -1,13 +1,13 @@
-import { useAuth } from '@/hooks/useAuth';
+import { useEffect } from 'react';
+import { useAuth } from '@/contexts/AuthContext';
 import { Loader2, LogIn } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { useEffect } from 'react';
 
-interface AuthGateProps {
+interface PrivateRouteProps {
   children: React.ReactNode;
 }
 
-export const AuthGate = ({ children }: AuthGateProps) => {
+export const PrivateRoute = ({ children }: PrivateRouteProps) => {
   const { isLoading, isAuthenticated, redirectToLogin, isEmbedded } = useAuth();
 
   useEffect(() => {
