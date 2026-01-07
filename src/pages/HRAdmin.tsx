@@ -1,0 +1,332 @@
+import { useState, useEffect } from 'react';
+import { Helmet } from 'react-helmet-async';
+import { supabase } from '@/integrations/supabase/client';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Loader2, Lock, Settings, Calendar, ArrowLeft, Save, Mail } from 'lucide-react';
+import { Link } from 'react-router-dom';
+import { toast } from '@/hooks/use-toast';
+import { VersionBadge } from '@/components/version/VersionBadge';
+
+const HR_PASSCODE = '4155';
+
+interface AssessmentDates {
+  open_date: string;
+  close_date: string;
+  period_start: string;
+  period_end: string;
+}
+
+const HRAdmin = () => {
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [passcodeInput, setPasscodeInput] = useState('');
+  const [passcodeError, setPasscodeError] = useState('');
+  const [isLoading, setIsLoading] = useState(true);
+  const [isSaving, setIsSaving] = useState(false);
+  const [dates, setDates] = useState<AssessmentDates>({
+    open_date: '2026-01-01',
+    close_date: '2026-01-31',
+    period_start: '2025-01-01',
+    period_end: '2025-12-31',
+  });
+
+  useEffect(() => {
+    fetchSettings();
+  }, []);
+
+  const fetchSettings = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('pep_settings')
+        .select('setting_value')
+        .eq('setting_key', 'assessment_dates')
+        .single();
+
+      if (error) throw error;
+      if (data?.setting_value) {
+        setDates(data.setting_value as unknown as AssessmentDates);
+      }
+    } catch (error) {
+      console.error('Error fetching settings:', error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handlePasscodeSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (passcodeInput === HR_PASSCODE) {
+      setIsAuthenticated(true);
+      setPasscodeError('');
+    } else {
+      setPasscodeError('Invalid passcode. Please try again.');
+      setPasscodeInput('');
+    }
+  };
+
+  const handleSave = async () => {
+    setIsSaving(true);
+    try {
+      const { error } = await supabase
+        .from('pep_settings')
+        .update({ 
+          setting_value: JSON.parse(JSON.stringify(dates)),
+          updated_at: new Date().toISOString()
+        })
+        .eq('setting_key', 'assessment_dates');
+
+      if (error) throw error;
+      
+      toast({
+        title: 'Settings saved',
+        description: 'Assessment dates have been updated successfully.',
+      });
+    } catch (error) {
+      console.error('Error saving settings:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to save settings. Please try again.',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const handleSendOpenNotification = () => {
+    const subject = encodeURIComponent('Performance Self-Evaluation Now Open');
+    const openDate = new Date(dates.open_date).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
+    const closeDate = new Date(dates.close_date).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
+    const periodStart = new Date(dates.period_start).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
+    const periodEnd = new Date(dates.period_end).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
+
+    const body = encodeURIComponent(
+`Hello Team,
+
+The Performance Self-Evaluation is now open and ready for your input.
+
+IMPORTANT DATES:
+• Assessment Period: ${periodStart} - ${periodEnd}
+• Survey Open: ${openDate}
+• Survey Due: ${closeDate}
+
+HOW TO ACCESS:
+1. Visit https://self.buntinggpt.com
+2. Log in using your Bunting Microsoft network credentials
+3. Complete your self-evaluation before the due date
+
+If you have any questions, please contact HR.
+
+Thank you!`
+    );
+
+    window.location.href = `mailto:?subject=${subject}&body=${body}`;
+  };
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <Loader2 className="w-8 h-8 animate-spin text-primary" />
+      </div>
+    );
+  }
+
+  // Passcode Gate
+  if (!isAuthenticated) {
+    return (
+      <>
+        <Helmet>
+          <title>HR Admin - Self Evaluation</title>
+        </Helmet>
+        <div className="min-h-screen flex items-center justify-center bg-background p-4">
+          <Card className="w-full max-w-sm">
+            <CardHeader className="text-center">
+              <div className="mx-auto mb-4 w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center">
+                <Lock className="w-6 h-6 text-primary" />
+              </div>
+              <CardTitle>HR Admin Access</CardTitle>
+              <CardDescription>Enter the HR passcode to continue</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <form onSubmit={handlePasscodeSubmit} className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="passcode">Passcode</Label>
+                  <Input
+                    id="passcode"
+                    type="password"
+                    inputMode="numeric"
+                    pattern="[0-9]*"
+                    value={passcodeInput}
+                    onChange={(e) => setPasscodeInput(e.target.value)}
+                    placeholder="Enter passcode"
+                    className="text-center text-lg tracking-widest"
+                    autoFocus
+                  />
+                  {passcodeError && (
+                    <p className="text-sm text-destructive">{passcodeError}</p>
+                  )}
+                </div>
+                <Button type="submit" className="w-full">
+                  Access Admin Panel
+                </Button>
+                <Button variant="ghost" asChild className="w-full">
+                  <Link to="/">
+                    <ArrowLeft className="w-4 h-4 mr-2" />
+                    Back to Dashboard
+                  </Link>
+                </Button>
+              </form>
+            </CardContent>
+          </Card>
+        </div>
+      </>
+    );
+  }
+
+  // Admin Panel
+  return (
+    <>
+      <Helmet>
+        <title>HR Admin - Self Evaluation</title>
+      </Helmet>
+      <div className="min-h-screen bg-background">
+        <div className="container mx-auto px-4 py-6 max-w-2xl">
+          {/* Header */}
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center">
+                <Settings className="w-5 h-5 text-primary" />
+              </div>
+              <div>
+                <h1 className="text-xl sm:text-2xl font-bold">HR Admin</h1>
+                <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                  <span>Assessment Configuration</span>
+                  <span>•</span>
+                  <VersionBadge />
+                </div>
+              </div>
+            </div>
+            <Button variant="outline" size="sm" asChild>
+              <Link to="/" className="gap-2">
+                <ArrowLeft className="w-4 h-4" />
+                Dashboard
+              </Link>
+            </Button>
+          </div>
+
+          {/* Assessment Dates Card */}
+          <Card className="mb-6">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2 text-lg">
+                <Calendar className="w-5 h-5" />
+                Assessment Dates
+              </CardTitle>
+              <CardDescription>
+                Configure the assessment period and survey availability dates
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              {/* Assessment Period */}
+              <div className="space-y-4">
+                <h3 className="font-medium text-sm text-muted-foreground uppercase tracking-wide">
+                  Assessment Period (Performance Year)
+                </h3>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="period_start">Period Start</Label>
+                    <Input
+                      id="period_start"
+                      type="date"
+                      value={dates.period_start}
+                      onChange={(e) => setDates({ ...dates, period_start: e.target.value })}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="period_end">Period End</Label>
+                    <Input
+                      id="period_end"
+                      type="date"
+                      value={dates.period_end}
+                      onChange={(e) => setDates({ ...dates, period_end: e.target.value })}
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* Survey Availability */}
+              <div className="space-y-4">
+                <h3 className="font-medium text-sm text-muted-foreground uppercase tracking-wide">
+                  Survey Availability
+                </h3>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="open_date">Open Date</Label>
+                    <Input
+                      id="open_date"
+                      type="date"
+                      value={dates.open_date}
+                      onChange={(e) => setDates({ ...dates, open_date: e.target.value })}
+                    />
+                    <p className="text-xs text-muted-foreground">
+                      When employees can start their evaluations
+                    </p>
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="close_date">Close Date (Due Date)</Label>
+                    <Input
+                      id="close_date"
+                      type="date"
+                      value={dates.close_date}
+                      onChange={(e) => setDates({ ...dates, close_date: e.target.value })}
+                    />
+                    <p className="text-xs text-muted-foreground">
+                      Deadline for completing evaluations
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Save Button */}
+              <div className="pt-4 border-t">
+                <Button onClick={handleSave} disabled={isSaving} className="w-full sm:w-auto">
+                  {isSaving ? (
+                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  ) : (
+                    <Save className="w-4 h-4 mr-2" />
+                  )}
+                  Save Settings
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Notification Card */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2 text-lg">
+                <Mail className="w-5 h-5" />
+                Send Notifications
+              </CardTitle>
+              <CardDescription>
+                Send email notifications to employees about the assessment
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <Button onClick={handleSendOpenNotification} variant="secondary" className="w-full sm:w-auto">
+                <Mail className="w-4 h-4 mr-2" />
+                Send "Survey Open" Email
+              </Button>
+              <p className="text-xs text-muted-foreground mt-2">
+                Opens your email client with a pre-filled message including dates and login instructions
+              </p>
+            </CardContent>
+          </Card>
+        </div>
+      </div>
+    </>
+  );
+};
+
+export default HRAdmin;
