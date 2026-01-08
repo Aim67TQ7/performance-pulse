@@ -124,6 +124,80 @@ export type Database = {
         }
         Relationships: []
       }
+      agent_runs: {
+        Row: {
+          completed_at: string | null
+          error_log: string | null
+          id: string
+          input_context: Json | null
+          org_id: string | null
+          output_artifact: Json | null
+          parent_run_id: string | null
+          project_id: string | null
+          started_at: string | null
+          status: string
+          tool_id: string | null
+          user_id: string | null
+        }
+        Insert: {
+          completed_at?: string | null
+          error_log?: string | null
+          id?: string
+          input_context?: Json | null
+          org_id?: string | null
+          output_artifact?: Json | null
+          parent_run_id?: string | null
+          project_id?: string | null
+          started_at?: string | null
+          status: string
+          tool_id?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          completed_at?: string | null
+          error_log?: string | null
+          id?: string
+          input_context?: Json | null
+          org_id?: string | null
+          output_artifact?: Json | null
+          parent_run_id?: string | null
+          project_id?: string | null
+          started_at?: string | null
+          status?: string
+          tool_id?: string | null
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "agent_runs_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "agent_runs_parent_run_id_fkey"
+            columns: ["parent_run_id"]
+            isOneToOne: false
+            referencedRelation: "agent_runs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "agent_runs_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "agent_runs_tool_id_fkey"
+            columns: ["tool_id"]
+            isOneToOne: false
+            referencedRelation: "tools"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       ai_test_analyses: {
         Row: {
           analysis_text: string
@@ -3156,6 +3230,24 @@ export type Database = {
         }
         Relationships: []
       }
+      organizations: {
+        Row: {
+          created_at: string | null
+          id: string
+          name: string
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          name: string
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          name?: string
+        }
+        Relationships: []
+      }
       pep_evaluations: {
         Row: {
           created_at: string
@@ -3300,6 +3392,47 @@ export type Database = {
           },
         ]
       }
+      pinned_context: {
+        Row: {
+          content_snapshot: string | null
+          file_name: string
+          file_type: string | null
+          id: string
+          pinned_at: string | null
+          project_id: string | null
+          storage_path: string
+          user_id: string | null
+        }
+        Insert: {
+          content_snapshot?: string | null
+          file_name: string
+          file_type?: string | null
+          id?: string
+          pinned_at?: string | null
+          project_id?: string | null
+          storage_path: string
+          user_id?: string | null
+        }
+        Update: {
+          content_snapshot?: string | null
+          file_name?: string
+          file_type?: string | null
+          id?: string
+          pinned_at?: string | null
+          project_id?: string | null
+          storage_path?: string
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "pinned_context_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       product_knowledge_embeddings: {
         Row: {
           chunk_title: string
@@ -3374,6 +3507,44 @@ export type Database = {
           updated_at?: string
         }
         Relationships: []
+      }
+      projects: {
+        Row: {
+          created_at: string | null
+          description: string | null
+          id: string
+          name: string
+          org_id: string | null
+          status: string | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          name: string
+          org_id?: string | null
+          status?: string | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          name?: string
+          org_id?: string | null
+          status?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "projects_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       prospector: {
         Row: {
@@ -4669,6 +4840,54 @@ export type Database = {
         }
         Relationships: []
       }
+      smart_actions: {
+        Row: {
+          action_type: string
+          button_label: string
+          id: string
+          is_global: boolean | null
+          org_id: string | null
+          system_prompt: string | null
+          tool_id: string | null
+          trigger_pattern: string
+        }
+        Insert: {
+          action_type: string
+          button_label: string
+          id?: string
+          is_global?: boolean | null
+          org_id?: string | null
+          system_prompt?: string | null
+          tool_id?: string | null
+          trigger_pattern: string
+        }
+        Update: {
+          action_type?: string
+          button_label?: string
+          id?: string
+          is_global?: boolean | null
+          org_id?: string | null
+          system_prompt?: string | null
+          tool_id?: string | null
+          trigger_pattern?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "smart_actions_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "smart_actions_tool_id_fkey"
+            columns: ["tool_id"]
+            isOneToOne: false
+            referencedRelation: "tools"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       supplier_data: {
         Row: {
           created_at: string | null
@@ -5327,6 +5546,50 @@ export type Database = {
             columns: ["entity_id"]
             isOneToOne: false
             referencedRelation: "entities"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      tools: {
+        Row: {
+          category: string
+          config: Json | null
+          created_at: string | null
+          description: string | null
+          id: string
+          is_active: boolean | null
+          name: string
+          org_id: string | null
+          version: number | null
+        }
+        Insert: {
+          category: string
+          config?: Json | null
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          is_active?: boolean | null
+          name: string
+          org_id?: string | null
+          version?: number | null
+        }
+        Update: {
+          category?: string
+          config?: Json | null
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          is_active?: boolean | null
+          name?: string
+          org_id?: string | null
+          version?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tools_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
             referencedColumns: ["id"]
           },
         ]
