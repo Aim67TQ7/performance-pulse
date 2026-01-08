@@ -2,7 +2,8 @@ import { useState } from 'react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
-import { ChevronRight, ChevronDown, Download, CheckCircle2, Clock, FileEdit } from 'lucide-react';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { ChevronRight, ChevronDown, Download, CheckCircle2, Clock, FileEdit, ExternalLink } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 export interface HierarchyMember {
@@ -34,9 +35,11 @@ interface HierarchyNodeProps {
 
 const HierarchyNode = ({ member, level, defaultExpanded = false }: HierarchyNodeProps) => {
   const [isOpen, setIsOpen] = useState(defaultExpanded);
+  const [pdfDialogOpen, setPdfDialogOpen] = useState(false);
   const hasChildren = member.children.length > 0;
   const config = STATUS_CONFIG[member.evaluation_status];
   const StatusIcon = config.icon;
+  const canViewPdf = member.pdf_url && ['submitted', 'reviewed', 'signed'].includes(member.evaluation_status);
 
   return (
     <div className="w-full">
@@ -92,12 +95,11 @@ const HierarchyNode = ({ member, level, defaultExpanded = false }: HierarchyNode
               variant={config.variant} 
               className={cn(
                 "gap-1 text-xs",
-                member.pdf_url && ['submitted', 'reviewed', 'signed'].includes(member.evaluation_status) && 
-                  "cursor-pointer hover:opacity-80 transition-opacity"
+                canViewPdf && "cursor-pointer hover:opacity-80 transition-opacity"
               )}
               onClick={() => {
-                if (member.pdf_url && ['submitted', 'reviewed', 'signed'].includes(member.evaluation_status)) {
-                  window.open(member.pdf_url, '_blank');
+                if (canViewPdf) {
+                  setPdfDialogOpen(true);
                 }
               }}
             >
@@ -121,6 +123,35 @@ const HierarchyNode = ({ member, level, defaultExpanded = false }: HierarchyNode
           </CollapsibleContent>
         )}
       </Collapsible>
+
+      {/* PDF Viewer Dialog */}
+      <Dialog open={pdfDialogOpen} onOpenChange={setPdfDialogOpen}>
+        <DialogContent className="max-w-4xl h-[85vh] flex flex-col">
+          <DialogHeader className="flex-shrink-0">
+            <DialogTitle className="flex items-center justify-between pr-8">
+              <span>{member.name} - Evaluation</span>
+              <Button
+                variant="outline"
+                size="sm"
+                className="gap-1"
+                onClick={() => window.open(member.pdf_url!, '_blank')}
+              >
+                <ExternalLink className="w-4 h-4" />
+                Open in New Tab
+              </Button>
+            </DialogTitle>
+          </DialogHeader>
+          <div className="flex-1 min-h-0">
+            {member.pdf_url && (
+              <iframe
+                src={member.pdf_url}
+                className="w-full h-full border rounded-md"
+                title={`${member.name} Evaluation PDF`}
+              />
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
