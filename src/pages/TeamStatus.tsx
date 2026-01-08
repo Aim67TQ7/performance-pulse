@@ -60,7 +60,8 @@ const TeamStatus = () => {
         const { data: allEmployees, error } = await supabase
           .from('employees')
           .select('id, name_first, name_last, job_title, department, user_email, reports_to')
-          .eq('is_active', true);
+          .eq('is_active', true)
+          .eq('benefit_class', 'Salary');
 
         if (error) throw error;
 
