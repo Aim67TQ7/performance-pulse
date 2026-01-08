@@ -102,16 +102,14 @@ export const EmployeeInfoStep = ({ data, onUpdate, isReadOnly = false }: Employe
           <Input
             id="periodYear"
             type="number"
-            value={data.periodYear}
-            onChange={(e) => onUpdate({ periodYear: parseInt(e.target.value) || new Date().getFullYear() })}
+            value={2025}
             placeholder="Year"
-            min={2020}
-            max={2030}
             className="h-12"
-            disabled={isReadOnly}
+            readOnly
+            disabled
           />
           <p className="text-xs text-muted-foreground">
-            January 1 – December 31, {data.periodYear}
+            January 1 – December 31, 2025
           </p>
         </div>
       </div>
