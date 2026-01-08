@@ -34,18 +34,18 @@ const HRAdmin = () => {
   });
   const [companyHierarchy, setCompanyHierarchy] = useState<HierarchyMember[]>([]);
   const [isLoadingHierarchy, setIsLoadingHierarchy] = useState(false);
-  const [currentYear] = useState(new Date().getFullYear());
+  const [periodYear, setPeriodYear] = useState<number | null>(null);
 
   useEffect(() => {
     fetchSettings();
   }, []);
 
-  // Load company hierarchy after authentication
+  // Load company hierarchy after authentication and settings are loaded
   useEffect(() => {
-    if (isAuthenticated) {
+    if (isAuthenticated && periodYear !== null) {
       loadCompanyHierarchy();
     }
-  }, [isAuthenticated, currentYear]);
+  }, [isAuthenticated, periodYear]);
 
   const fetchSettings = async () => {
     try {
@@ -57,7 +57,12 @@ const HRAdmin = () => {
 
       if (error) throw error;
       if (data?.setting_value) {
-        setDates(data.setting_value as unknown as AssessmentDates);
+        const settings = data.setting_value as unknown as AssessmentDates;
+        setDates(settings);
+        // Extract period year from period_end
+        if (settings.period_end) {
+          setPeriodYear(new Date(settings.period_end).getFullYear());
+        }
       }
     } catch (error) {
       console.error('Error fetching settings:', error);
@@ -101,7 +106,7 @@ const HRAdmin = () => {
         .from('pep_evaluations')
         .select('employee_id, status, submitted_at, pdf_url')
         .in('employee_id', allIds)
-        .eq('period_year', currentYear);
+        .eq('period_year', periodYear!);
 
       const evalMap = new Map(
         evaluations?.map(e => [e.employee_id, e]) || []
