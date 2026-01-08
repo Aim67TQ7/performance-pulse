@@ -51,7 +51,10 @@ export const SuccessScreen = ({ data, hasSubordinates = false }: SuccessScreenPr
     try {
       const url = await generateEvaluationPdf(data);
       setGeneratedUrl(url);
-      toast.success('PDF generated successfully.');
+
+      const isRemote = /^https?:\/\//.test(url);
+      toast.success(isRemote ? 'PDF generated and saved successfully.' : 'PDF generated (save to storage failed).');
+
       // Immediately download after generation to guarantee the user gets it.
       downloadUrl(url, filename);
     } catch (e) {

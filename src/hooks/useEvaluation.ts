@@ -389,20 +389,23 @@ export const useEvaluation = () => {
       }
 
       // Generate PDF (while evaluation is still in a draft/reopened state so RLS allows updating pdf_url)
+      // Important: only persist *remote* URLs (never store blob: URLs in the DB)
       let pdfUrl: string | undefined;
+      let remotePdfUrl: string | undefined;
       try {
         pdfUrl = await generateEvaluationPdf({ ...data, id: evaluationId });
+        remotePdfUrl = pdfUrl && /^https?:\/\//.test(pdfUrl) ? pdfUrl : undefined;
       } catch (pdfError) {
         logError('submit', 'PDF generation failed, but evaluation will still be submitted', { error: pdfError });
       }
 
-      // Update status to submitted (include pdf_url since we generated it while still in draft state)
+      // Update status to submitted (include pdf_url only if it successfully uploaded to Storage)
       const { error: updateError } = await supabase
         .from('pep_evaluations')
         .update({
           status: 'submitted',
           submitted_at: new Date().toISOString(),
-          pdf_url: pdfUrl,
+          pdf_url: remotePdfUrl,
           employee_info_json: JSON.parse(JSON.stringify(data.employeeInfo)),
           quantitative_json: JSON.parse(JSON.stringify(data.quantitative)),
           qualitative_json: JSON.parse(JSON.stringify(data.qualitative)),
@@ -417,11 +420,11 @@ export const useEvaluation = () => {
         id: evaluationId,
         status: 'submitted',
         submittedAt: new Date(),
-        pdfUrl: pdfUrl ?? prev.pdfUrl,
+        pdfUrl: remotePdfUrl ?? prev.pdfUrl,
       }));
       setIsReadOnly(true);
       
-      return { success: true, pdfUrl };
+      return { success: true, pdfUrl: remotePdfUrl };
     } catch (error) {
       logError('submit', 'Failed to submit evaluation', { error });
       return { success: false };
