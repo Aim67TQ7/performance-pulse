@@ -396,12 +396,13 @@ export const useEvaluation = () => {
         logError('submit', 'PDF generation failed, but evaluation will still be submitted', { error: pdfError });
       }
 
-      // Update status to submitted
+      // Update status to submitted (include pdf_url since we generated it while still in draft state)
       const { error: updateError } = await supabase
         .from('pep_evaluations')
         .update({
           status: 'submitted',
           submitted_at: new Date().toISOString(),
+          pdf_url: pdfUrl,
           employee_info_json: JSON.parse(JSON.stringify(data.employeeInfo)),
           quantitative_json: JSON.parse(JSON.stringify(data.quantitative)),
           qualitative_json: JSON.parse(JSON.stringify(data.qualitative)),
