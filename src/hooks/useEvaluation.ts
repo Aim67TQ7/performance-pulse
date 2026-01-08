@@ -90,7 +90,7 @@ export const useEvaluation = () => {
           .from('employees')
           .select('id, name_first, name_last, job_title, department, reports_to, user_id, benefit_class')
           .eq('user_id', user.id)
-          .eq('benefit_class', 'Salary')
+          .eq('benefit_class', 'salary')
           .single();
 
         if (employeeError || !employeeData) {
