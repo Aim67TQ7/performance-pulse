@@ -185,7 +185,7 @@ const TeamStatus = () => {
         `Hello Team,\n\n` +
         `Your immediate attention is required. The self-evaluation deadline is ${formattedDueDate}, which is only ${daysUntilDue} day${daysUntilDue !== 1 ? 's' : ''} away.\n\n` +
         `This is a mandatory evaluation and must be completed before the deadline.\n\n` +
-        `Please log in to self.buntinggpt.com using your Microsoft network credentials and complete your self-evaluation today.\n\n` +
+        `Please visit https://buntingGPT.com, log in with your Microsoft network credentials, and open the Self-Evaluation app from the sidebar menu.\n\n` +
         `Thank you for your prompt attention to this matter.`
       );
     } else {
@@ -194,7 +194,7 @@ const TeamStatus = () => {
       body = encodeURIComponent(
         `Hello Team,\n\n` +
         `This is a friendly reminder that your self-evaluation is due on ${formattedDueDate}.\n\n` +
-        `Please log in to self.buntinggpt.com using your Microsoft network credentials and complete your evaluation at your earliest convenience.\n\n` +
+        `Please visit https://buntingGPT.com, log in with your Microsoft network credentials, and open the Self-Evaluation app from the sidebar menu.\n\n` +
         `Thank you!`
       );
     }
