@@ -3,8 +3,9 @@ import { CheckCircle, Download, Home, FileText, Users, RefreshCw } from 'lucide-
 import { EvaluationData } from '@/types/evaluation';
 import { toast } from 'sonner';
 import { useNavigate } from 'react-router-dom';
-import { useMemo, useState } from 'react';
+import { useMemo, useState, useEffect } from 'react';
 import { generateEvaluationPdf } from '@/lib/pdfGenerator';
+import { supabase } from '@/integrations/supabase/client';
 
 interface SuccessScreenProps {
   data: EvaluationData;
@@ -12,23 +13,59 @@ interface SuccessScreenProps {
 }
 
 function downloadUrl(url: string, filename: string) {
-  if (url.startsWith('blob:')) {
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = filename;
-    document.body.appendChild(a);
-    a.click();
-    a.remove();
+  // For remote URLs, fetch as blob to trigger proper download
+  if (/^https?:\/\//.test(url)) {
+    fetch(url)
+      .then(res => res.blob())
+      .then(blob => {
+        const blobUrl = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = blobUrl;
+        a.download = filename;
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        URL.revokeObjectURL(blobUrl);
+      })
+      .catch(() => {
+        // Fallback: open in new tab if fetch fails
+        window.open(url, '_blank', 'noopener,noreferrer');
+      });
     return;
   }
-  // For https URLs, opening in a new tab is usually fine (and supports in-browser PDF viewer).
-  window.open(url, '_blank', 'noopener,noreferrer');
+  // For blob: URLs, download directly
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
 }
 
 export const SuccessScreen = ({ data, hasSubordinates = false }: SuccessScreenProps) => {
   const navigate = useNavigate();
   const [generatedUrl, setGeneratedUrl] = useState<string | null>(null);
   const [isGenerating, setIsGenerating] = useState(false);
+  const [dbPdfUrl, setDbPdfUrl] = useState<string | null>(null);
+
+  // Fetch pdf_url from database on mount to survive refresh
+  useEffect(() => {
+    const fetchPdfUrl = async () => {
+      if (!data.id) return;
+      
+      const { data: evalData } = await supabase
+        .from('pep_evaluations')
+        .select('pdf_url')
+        .eq('id', data.id)
+        .single();
+      
+      if (evalData?.pdf_url && /^https?:\/\//.test(evalData.pdf_url)) {
+        setDbPdfUrl(evalData.pdf_url);
+      }
+    };
+    
+    fetchPdfUrl();
+  }, [data.id]);
 
   const filename = useMemo(() => {
     const name = (data.employeeInfo?.name || 'Employee').replace(/[^a-zA-Z0-9]/g, '_');
@@ -36,11 +73,12 @@ export const SuccessScreen = ({ data, hasSubordinates = false }: SuccessScreenPr
     return `PEP_${name}_${year}.pdf`;
   }, [data.employeeInfo?.name, data.employeeInfo?.periodYear]);
 
-  const effectivePdfUrl = generatedUrl ?? data.pdfUrl ?? null;
+  // Priority: freshly generated > DB stored > prop passed
+  const effectivePdfUrl = generatedUrl ?? dbPdfUrl ?? data.pdfUrl ?? null;
 
   const handleDownloadPdf = () => {
     if (!effectivePdfUrl) {
-      toast.error('PDF not available yet. Click “Generate PDF” to create it now.');
+      toast.error('PDF not available yet. Click "Generate PDF" to create it now.');
       return;
     }
     downloadUrl(effectivePdfUrl, filename);
@@ -53,9 +91,12 @@ export const SuccessScreen = ({ data, hasSubordinates = false }: SuccessScreenPr
       setGeneratedUrl(url);
 
       const isRemote = /^https?:\/\//.test(url);
+      if (isRemote) {
+        setDbPdfUrl(url); // Update local state so it persists in UI
+      }
       toast.success(isRemote ? 'PDF generated and saved successfully.' : 'PDF generated (save to storage failed).');
 
-      // Immediately download after generation to guarantee the user gets it.
+      // Immediately download after generation
       downloadUrl(url, filename);
     } catch (e) {
       console.error('PDF generation failed:', e);

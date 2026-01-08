@@ -22,9 +22,9 @@ const STATUS_CONFIG = {
   not_started: { label: 'Not Started', variant: 'outline' as const, icon: Clock },
   draft: { label: 'In Progress', variant: 'secondary' as const, icon: FileEdit },
   reopened: { label: 'Reopened', variant: 'default' as const, icon: FileEdit },
-  submitted: { label: 'Submitted', variant: 'default' as const, icon: CheckCircle2 },
-  reviewed: { label: 'Reviewed', variant: 'default' as const, icon: CheckCircle2 },
-  signed: { label: 'Signed', variant: 'default' as const, icon: CheckCircle2 },
+  submitted: { label: 'View Submission', variant: 'default' as const, icon: CheckCircle2 },
+  reviewed: { label: 'View Submission', variant: 'default' as const, icon: CheckCircle2 },
+  signed: { label: 'View Submission', variant: 'default' as const, icon: CheckCircle2 },
 };
 
 interface HierarchyNodeProps {
@@ -91,21 +91,24 @@ const HierarchyNode = ({ member, level, defaultExpanded = false }: HierarchyNode
                 PDF
               </Button>
             )}
-            <Badge 
-              variant={config.variant} 
-              className={cn(
-                "gap-1 text-xs",
-                canViewPdf && "cursor-pointer hover:opacity-80 transition-opacity"
-              )}
-              onClick={() => {
-                if (canViewPdf) {
-                  setPdfDialogOpen(true);
-                }
-              }}
-            >
-              <StatusIcon className="w-3 h-3" />
-              {config.label}
-            </Badge>
+            {canViewPdf ? (
+              <Badge 
+                variant={config.variant} 
+                className="gap-1 text-xs cursor-pointer hover:opacity-80 transition-opacity"
+                onClick={() => setPdfDialogOpen(true)}
+              >
+                <StatusIcon className="w-3 h-3" />
+                View Submission
+              </Badge>
+            ) : (
+              <Badge 
+                variant={config.variant} 
+                className="gap-1 text-xs"
+              >
+                <StatusIcon className="w-3 h-3" />
+                {config.label}
+              </Badge>
+            )}
           </div>
         </div>
         {hasChildren && (
