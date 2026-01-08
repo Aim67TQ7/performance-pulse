@@ -88,8 +88,9 @@ export const useEvaluation = () => {
         // Get current employee record
         const { data: employeeData, error: employeeError } = await supabase
           .from('employees')
-          .select('id, name_first, name_last, job_title, department, reports_to, user_id')
+          .select('id, name_first, name_last, job_title, department, reports_to, user_id, benefit_class')
           .eq('user_id', user.id)
+          .eq('benefit_class', 'Salary')
           .single();
 
         if (employeeError || !employeeData) {

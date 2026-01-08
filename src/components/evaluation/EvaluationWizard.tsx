@@ -75,6 +75,7 @@ export const EvaluationWizard = () => {
           .from('employees')
           .select('id', { count: 'exact', head: true })
           .eq('reports_to', currentUserEmployee.id)
+          .eq('benefit_class', 'Salary')
           .eq('is_active', true);
 
         setHasSubordinates((count || 0) > 0);
