@@ -194,9 +194,10 @@ IMPORTANT DATES:
 • Self-Assessment Due: ${closeDate}
 
 HOW TO ACCESS:
-1. Visit https://self.buntinggpt.com
+1. Visit https://buntingGPT.com
 2. Log in using your Bunting Microsoft network credentials
-3. Complete your self-evaluation before the due date
+3. Open the Self-Evaluation app from the sidebar menu
+4. Complete your self-evaluation before the due date
 
 If you have any questions, please contact HR.
 
