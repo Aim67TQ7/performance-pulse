@@ -407,6 +407,14 @@ export const useEvaluation = () => {
       let pdfUrl: string | undefined;
       try {
         pdfUrl = await generateEvaluationPdf({ ...data, id: evaluationId });
+        
+        // Save PDF URL to database
+        if (pdfUrl) {
+          await supabase
+            .from('pep_evaluations')
+            .update({ pdf_url: pdfUrl })
+            .eq('id', evaluationId);
+        }
       } catch (pdfError) {
         logError('submit', 'PDF generation failed, but evaluation was submitted', { error: pdfError });
       }
