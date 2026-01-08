@@ -22,9 +22,9 @@ const STATUS_CONFIG = {
   not_started: { label: 'Not Started', variant: 'outline' as const, icon: Clock },
   draft: { label: 'In Progress', variant: 'secondary' as const, icon: FileEdit },
   reopened: { label: 'Reopened', variant: 'default' as const, icon: FileEdit },
-  submitted: { label: 'View Submission', variant: 'default' as const, icon: CheckCircle2 },
-  reviewed: { label: 'View Submission', variant: 'default' as const, icon: CheckCircle2 },
-  signed: { label: 'View Submission', variant: 'default' as const, icon: CheckCircle2 },
+  submitted: { label: 'Submitted', variant: 'default' as const, icon: CheckCircle2 },
+  reviewed: { label: 'Reviewed', variant: 'default' as const, icon: CheckCircle2 },
+  signed: { label: 'Signed', variant: 'default' as const, icon: CheckCircle2 },
 };
 
 interface HierarchyNodeProps {
@@ -80,20 +80,10 @@ const HierarchyNode = ({ member, level, defaultExpanded = false }: HierarchyNode
                 {new Date(member.submitted_at).toLocaleDateString()}
               </span>
             )}
-            {member.pdf_url && (
-              <Button
-                variant="outline"
-                size="sm"
-                className="gap-1 h-7 text-xs"
-                onClick={() => window.open(member.pdf_url!, '_blank')}
-              >
-                <Download className="w-3 h-3" />
-                PDF
-              </Button>
-            )}
+            {/* Show "View Submission" only when PDF exists and status is submitted/reviewed/signed */}
             {canViewPdf ? (
               <Badge 
-                variant={config.variant} 
+                variant="default"
                 className="gap-1 text-xs cursor-pointer hover:opacity-80 transition-opacity"
                 onClick={() => setPdfDialogOpen(true)}
               >

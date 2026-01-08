@@ -49,15 +49,31 @@ export const SuccessScreen = ({ data, hasSubordinates = false }: SuccessScreenPr
   const [dbPdfUrl, setDbPdfUrl] = useState<string | null>(null);
 
   // Fetch pdf_url from database on mount to survive refresh
+  // Fallback: query by employee_id + period_year if data.id is missing
   useEffect(() => {
     const fetchPdfUrl = async () => {
-      if (!data.id) return;
+      let evalData: { pdf_url: string | null } | null = null;
       
-      const { data: evalData } = await supabase
-        .from('pep_evaluations')
-        .select('pdf_url')
-        .eq('id', data.id)
-        .single();
+      // Try by ID first
+      if (data.id) {
+        const { data: result } = await supabase
+          .from('pep_evaluations')
+          .select('pdf_url')
+          .eq('id', data.id)
+          .single();
+        evalData = result;
+      }
+      
+      // Fallback: query by employee_id and period_year
+      if (!evalData?.pdf_url && data.employeeId && data.employeeInfo?.periodYear) {
+        const { data: result } = await supabase
+          .from('pep_evaluations')
+          .select('pdf_url')
+          .eq('employee_id', data.employeeId)
+          .eq('period_year', data.employeeInfo.periodYear)
+          .single();
+        evalData = result;
+      }
       
       if (evalData?.pdf_url && /^https?:\/\//.test(evalData.pdf_url)) {
         setDbPdfUrl(evalData.pdf_url);
@@ -65,7 +81,7 @@ export const SuccessScreen = ({ data, hasSubordinates = false }: SuccessScreenPr
     };
     
     fetchPdfUrl();
-  }, [data.id]);
+  }, [data.id, data.employeeId, data.employeeInfo?.periodYear]);
 
   const filename = useMemo(() => {
     const name = (data.employeeInfo?.name || 'Employee').replace(/[^a-zA-Z0-9]/g, '_');
