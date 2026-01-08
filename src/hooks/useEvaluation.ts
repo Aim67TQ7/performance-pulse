@@ -339,9 +339,38 @@ export const useEvaluation = () => {
 
   const submitEvaluation = useCallback(async (): Promise<{ success: boolean; pdfUrl?: string }> => {
     try {
-      if (!data.id || !currentEmployee) {
-        logError('submit', 'Cannot submit: evaluation not saved yet');
+      if (!currentEmployee) {
+        logError('submit', 'Cannot submit: employee data not loaded');
         return { success: false };
+      }
+
+      let evaluationId = data.id;
+
+      // If no evaluation ID exists, create the record first
+      if (!evaluationId) {
+        const evalPayload = {
+          employee_id: currentEmployee.id,
+          period_year: data.employeeInfo.periodYear,
+          status: 'draft',
+          employee_info_json: JSON.parse(JSON.stringify(data.employeeInfo)),
+          quantitative_json: JSON.parse(JSON.stringify(data.quantitative)),
+          qualitative_json: JSON.parse(JSON.stringify(data.qualitative)),
+          summary_json: JSON.parse(JSON.stringify(data.summary)),
+        };
+
+        const { data: insertedData, error: insertError } = await supabase
+          .from('pep_evaluations')
+          .insert(evalPayload)
+          .select('id')
+          .single();
+
+        if (insertError) {
+          logError('submit', 'Failed to create evaluation record', { error: insertError });
+          return { success: false };
+        }
+
+        evaluationId = insertedData.id;
+        setData(prev => ({ ...prev, id: evaluationId }));
       }
 
       // Update status to submitted
@@ -350,21 +379,26 @@ export const useEvaluation = () => {
         .update({
           status: 'submitted',
           submitted_at: new Date().toISOString(),
+          employee_info_json: JSON.parse(JSON.stringify(data.employeeInfo)),
+          quantitative_json: JSON.parse(JSON.stringify(data.quantitative)),
+          qualitative_json: JSON.parse(JSON.stringify(data.qualitative)),
+          summary_json: JSON.parse(JSON.stringify(data.summary)),
         })
-        .eq('id', data.id);
+        .eq('id', evaluationId);
 
       if (updateError) throw updateError;
 
       // Generate PDF client-side
       let pdfUrl: string | undefined;
       try {
-        pdfUrl = await generateEvaluationPdf(data);
+        pdfUrl = await generateEvaluationPdf({ ...data, id: evaluationId });
       } catch (pdfError) {
         logError('submit', 'PDF generation failed, but evaluation was submitted', { error: pdfError });
       }
 
       setData(prev => ({
         ...prev,
+        id: evaluationId,
         status: 'submitted',
         submittedAt: new Date(),
         pdfUrl: pdfUrl ?? prev.pdfUrl,
