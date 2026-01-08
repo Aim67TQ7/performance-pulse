@@ -18,12 +18,13 @@ interface AssessmentDates {
 const TeamStatus = () => {
   const [hierarchy, setHierarchy] = useState<HierarchyMember[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [currentYear] = useState(new Date().getFullYear());
   const [assessmentDates, setAssessmentDates] = useState<AssessmentDates | null>(null);
+  const [periodYear, setPeriodYear] = useState<number | null>(null);
 
   useEffect(() => {
     const loadData = async () => {
       // Fetch assessment dates from settings
+      let year: number | null = null;
       try {
         const { data: settingsData } = await supabase
           .from('pep_settings')
@@ -32,10 +33,22 @@ const TeamStatus = () => {
           .single();
         
         if (settingsData?.setting_value) {
-          setAssessmentDates(settingsData.setting_value as unknown as AssessmentDates);
+          const settings = settingsData.setting_value as unknown as AssessmentDates;
+          setAssessmentDates(settings);
+          // Extract period year from period_end (e.g., 2025-12-31 -> 2025)
+          if (settings.period_end) {
+            year = new Date(settings.period_end).getFullYear();
+            setPeriodYear(year);
+          }
         }
       } catch (error) {
         console.error('Error fetching settings:', error);
+      }
+      
+      // Fallback if settings couldn't be loaded
+      if (!year) {
+        year = new Date().getFullYear();
+        setPeriodYear(year);
       }
 
       // Load hierarchical subordinates
@@ -94,7 +107,8 @@ const TeamStatus = () => {
           .from('pep_evaluations')
           .select('employee_id, status, submitted_at, pdf_url')
           .in('employee_id', Array.from(subordinateIds))
-          .eq('period_year', currentYear);
+          .eq('period_year', year!);
+
 
         const evalMap = new Map(
           evaluations?.map(e => [e.employee_id, e]) || []
@@ -129,7 +143,7 @@ const TeamStatus = () => {
     };
 
     loadData();
-  }, [currentYear]);
+  }, [periodYear]);
 
   const stats = useMemo(() => countHierarchyStats(hierarchy), [hierarchy]);
 
@@ -234,7 +248,7 @@ const TeamStatus = () => {
                 </h1>
                 <div className="flex items-center gap-2">
                   <p className="text-muted-foreground text-sm">
-                    {currentYear} Self-Review Progress
+                    {periodYear || new Date().getFullYear()} Self-Review Progress
                   </p>
                   <span className="text-muted-foreground">•</span>
                   <VersionBadge />
