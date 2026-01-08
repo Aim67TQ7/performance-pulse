@@ -974,50 +974,46 @@ export async function generateEvaluationPdf(data: EvaluationData): Promise<strin
   const localUrl = URL.createObjectURL(blob);
 
   // Best-effort upload to Supabase Storage
+  // Use deterministic path: pdfs/{evaluationId}/evaluation.pdf
   if (data.id) {
-    const storagePath = `pdfs/${data.id}/${filename}`;
+    const storagePath = `pdfs/${data.id}/evaluation.pdf`;
     try {
       const { error: uploadError } = await supabase.storage
         .from('pep-evaluations')
         .upload(storagePath, blob, { upsert: true, contentType: 'application/pdf' });
 
       if (uploadError) {
-        // This is the key debug signal we need
         console.error('[PEP] PDF upload failed', {
           bucket: 'pep-evaluations',
           storagePath,
           error: uploadError,
         });
-      } else {
-        const { data: urlData } = supabase.storage
-          .from('pep-evaluations')
-          .getPublicUrl(storagePath);
-
-        if (!urlData?.publicUrl) {
-          console.error('[PEP] getPublicUrl returned no publicUrl', {
-            bucket: 'pep-evaluations',
-            storagePath,
-            urlData,
-          });
-        } else {
-          try {
-            await supabase
-              .from('pep_evaluations')
-              .update({ pdf_url: urlData.publicUrl, pdf_generated_at: new Date().toISOString() })
-              .eq('id', data.id);
-          } catch (dbErr) {
-            console.error('[PEP] Failed to persist pdf_url to pep_evaluations', {
-              evaluationId: data.id,
-              pdf_url: urlData.publicUrl,
-              error: dbErr,
-            });
-          }
-
-          return urlData.publicUrl;
-        }
+        // Return local URL on upload failure
+        return localUrl;
       }
+      
+      // Construct the public URL deterministically (don't rely on getPublicUrl quirks)
+      const publicUrl = `https://qzwxisdfwswsrbzvpzlo.supabase.co/storage/v1/object/public/pep-evaluations/${storagePath}`;
+      console.log('[PEP] PDF uploaded successfully', { storagePath, publicUrl });
+      
+      // Persist pdf_url to DB (best-effort, may fail due to RLS if already submitted)
+      try {
+        const { error: updateError } = await supabase
+          .from('pep_evaluations')
+          .update({ pdf_url: publicUrl, pdf_generated_at: new Date().toISOString() })
+          .eq('id', data.id);
+        
+        if (updateError) {
+          console.warn('[PEP] Could not persist pdf_url (RLS may block post-submission)', updateError);
+        }
+      } catch (dbErr) {
+        console.warn('[PEP] Failed to persist pdf_url', dbErr);
+      }
+
+      return publicUrl;
     } catch (err) {
       console.warn('[PEP] PDF upload exception, using local URL:', err);
+      return localUrl;
     }
   }
 

@@ -388,15 +388,28 @@ export const useEvaluation = () => {
         setData(prev => ({ ...prev, id: evaluationId }));
       }
 
-      // Generate PDF (while evaluation is still in a draft/reopened state so RLS allows updating pdf_url)
-      // Important: only persist *remote* URLs (never store blob: URLs in the DB)
-      let pdfUrl: string | undefined;
+      // Check if a PDF already exists for this evaluation - skip regeneration if so
       let remotePdfUrl: string | undefined;
-      try {
-        pdfUrl = await generateEvaluationPdf({ ...data, id: evaluationId });
-        remotePdfUrl = pdfUrl && /^https?:\/\//.test(pdfUrl) ? pdfUrl : undefined;
-      } catch (pdfError) {
-        logError('submit', 'PDF generation failed, but evaluation will still be submitted', { error: pdfError });
+      
+      const { data: existingEval } = await supabase
+        .from('pep_evaluations')
+        .select('pdf_url')
+        .eq('id', evaluationId)
+        .single();
+      
+      if (existingEval?.pdf_url && /^https?:\/\//.test(existingEval.pdf_url)) {
+        // PDF already exists - reuse it
+        remotePdfUrl = existingEval.pdf_url;
+        console.log('[PEP] Reusing existing PDF', { pdf_url: remotePdfUrl });
+      } else {
+        // Generate PDF (while evaluation is still in a draft/reopened state so RLS allows updating pdf_url)
+        // Important: only persist *remote* URLs (never store blob: URLs in the DB)
+        try {
+          const pdfUrl = await generateEvaluationPdf({ ...data, id: evaluationId });
+          remotePdfUrl = pdfUrl && /^https?:\/\//.test(pdfUrl) ? pdfUrl : undefined;
+        } catch (pdfError) {
+          logError('submit', 'PDF generation failed, but evaluation will still be submitted', { error: pdfError });
+        }
       }
 
       // Update status to submitted (include pdf_url only if it successfully uploaded to Storage)
