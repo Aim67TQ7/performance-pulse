@@ -15,16 +15,17 @@ interface AssessmentDates {
   period_end: string;
 }
 
+// Hardcoded assessment year - do not change without HR approval
+const ASSESSMENT_YEAR = 2025;
+
 const TeamStatus = () => {
   const [hierarchy, setHierarchy] = useState<HierarchyMember[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [assessmentDates, setAssessmentDates] = useState<AssessmentDates | null>(null);
-  const [periodYear, setPeriodYear] = useState<number | null>(null);
 
   useEffect(() => {
     const loadData = async () => {
-      // Fetch assessment dates from settings
-      let year: number | null = null;
+      // Fetch assessment dates from settings (for display purposes only)
       try {
         const { data: settingsData } = await supabase
           .from('pep_settings')
@@ -35,20 +36,9 @@ const TeamStatus = () => {
         if (settingsData?.setting_value) {
           const settings = settingsData.setting_value as unknown as AssessmentDates;
           setAssessmentDates(settings);
-          // Extract period year from period_end (e.g., 2025-12-31 -> 2025)
-          if (settings.period_end) {
-            year = new Date(settings.period_end).getFullYear();
-            setPeriodYear(year);
-          }
         }
       } catch (error) {
         console.error('Error fetching settings:', error);
-      }
-      
-      // Fallback if settings couldn't be loaded
-      if (!year) {
-        year = new Date().getFullYear();
-        setPeriodYear(year);
       }
 
       // Load hierarchical subordinates
@@ -68,8 +58,7 @@ const TeamStatus = () => {
           return;
         }
 
-        // Fetch all subordinates recursively using RPC or manual fetching
-        // We'll fetch all employees and build the tree client-side for simplicity
+        // Fetch all subordinates recursively
         const { data: allEmployees, error } = await supabase
           .from('employees')
           .select('id, name_first, name_last, job_title, department, user_email, reports_to')
@@ -102,13 +91,12 @@ const TeamStatus = () => {
           return;
         }
 
-        // Get evaluations for all subordinates
+        // Get evaluations for all subordinates using hardcoded year
         const { data: evaluations } = await supabase
           .from('pep_evaluations')
           .select('employee_id, status, submitted_at, pdf_url')
           .in('employee_id', Array.from(subordinateIds))
-          .eq('period_year', year!);
-
+          .eq('period_year', ASSESSMENT_YEAR);
 
         const evalMap = new Map(
           evaluations?.map(e => [e.employee_id, e]) || []
@@ -143,7 +131,7 @@ const TeamStatus = () => {
     };
 
     loadData();
-  }, [periodYear]);
+  }, []);
 
   const stats = useMemo(() => countHierarchyStats(hierarchy), [hierarchy]);
 
@@ -248,7 +236,7 @@ const TeamStatus = () => {
                 </h1>
                 <div className="flex items-center gap-2">
                   <p className="text-muted-foreground text-sm">
-                    {periodYear || new Date().getFullYear()} Self-Review Progress
+                    {ASSESSMENT_YEAR} Self-Review Progress
                   </p>
                   <span className="text-muted-foreground">•</span>
                   <VersionBadge />

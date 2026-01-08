@@ -22,12 +22,15 @@ interface ManagerInfo {
   name_last: string;
 }
 
+// Hardcoded assessment year - do not change without HR approval
+const ASSESSMENT_YEAR = 2025;
+
 const getInitialData = (): EvaluationData => ({
   employeeInfo: {
     name: '',
     title: '',
     department: '',
-    periodYear: new Date().getFullYear(),
+    periodYear: ASSESSMENT_YEAR,
     supervisorId: '',
     supervisorName: '',
   },
@@ -85,21 +88,8 @@ export const useEvaluation = () => {
           return;
         }
 
-        // Fetch HR settings for assessment dates
-        let periodYear = new Date().getFullYear();
-        const { data: settingsData } = await supabase
-          .from('pep_settings')
-          .select('setting_value')
-          .eq('setting_key', 'assessment_dates')
-          .single();
-
-        if (settingsData?.setting_value) {
-          const settings = settingsData.setting_value as { period_end?: string };
-          if (settings.period_end) {
-            // Extract year from period_end (e.g., "2025-12-31" -> 2025)
-            periodYear = new Date(settings.period_end).getFullYear();
-          }
-        }
+        // Use hardcoded assessment year
+        const periodYear = ASSESSMENT_YEAR;
 
         // Get current employee record
         const { data: employeeData, error: employeeError } = await supabase

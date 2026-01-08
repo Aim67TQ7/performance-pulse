@@ -34,18 +34,20 @@ const HRAdmin = () => {
   });
   const [companyHierarchy, setCompanyHierarchy] = useState<HierarchyMember[]>([]);
   const [isLoadingHierarchy, setIsLoadingHierarchy] = useState(false);
-  const [periodYear, setPeriodYear] = useState<number | null>(null);
+  
+  // Hardcoded assessment year - do not change without HR approval
+  const ASSESSMENT_YEAR = 2025;
 
   useEffect(() => {
     fetchSettings();
   }, []);
 
-  // Load company hierarchy after authentication and settings are loaded
+  // Load company hierarchy after authentication
   useEffect(() => {
-    if (isAuthenticated && periodYear !== null) {
+    if (isAuthenticated) {
       loadCompanyHierarchy();
     }
-  }, [isAuthenticated, periodYear]);
+  }, [isAuthenticated]);
 
   const fetchSettings = async () => {
     try {
@@ -59,10 +61,6 @@ const HRAdmin = () => {
       if (data?.setting_value) {
         const settings = data.setting_value as unknown as AssessmentDates;
         setDates(settings);
-        // Extract period year from period_end
-        if (settings.period_end) {
-          setPeriodYear(new Date(settings.period_end).getFullYear());
-        }
       }
     } catch (error) {
       console.error('Error fetching settings:', error);
@@ -101,12 +99,12 @@ const HRAdmin = () => {
       // Get all employee IDs for fetching evaluations
       const allIds = allEmployees.map(e => e.id);
 
-      // Get evaluations for all employees
+      // Get evaluations for all employees using hardcoded year
       const { data: evaluations } = await supabase
         .from('pep_evaluations')
         .select('employee_id, status, submitted_at, pdf_url')
         .in('employee_id', allIds)
-        .eq('period_year', periodYear!);
+        .eq('period_year', ASSESSMENT_YEAR);
 
       const evalMap = new Map(
         evaluations?.map(e => [e.employee_id, e]) || []

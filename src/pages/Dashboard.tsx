@@ -57,13 +57,13 @@ export const Dashboard = () => {
 
         setIsHrAdmin(!!hrAdminRecord);
 
-        // Check for existing evaluation for current year
-        const currentYear = new Date().getFullYear();
+        // Hardcoded assessment year - do not change without HR approval
+        const ASSESSMENT_YEAR = 2025;
         const { data: evaluation } = await supabase
           .from('pep_evaluations')
           .select('*')
           .eq('employee_id', currentUserEmployee.id)
-          .eq('period_year', currentYear)
+          .eq('period_year', ASSESSMENT_YEAR)
           .single();
 
         if (evaluation) {
@@ -74,7 +74,7 @@ export const Dashboard = () => {
             name: '',
             title: '',
             department: '',
-            periodYear: currentYear,
+            periodYear: ASSESSMENT_YEAR,
           };
           const quantitative = evaluation.quantitative_json as unknown as QuantitativeData || {
             performanceObjectives: '',
