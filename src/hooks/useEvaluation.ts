@@ -388,6 +388,14 @@ export const useEvaluation = () => {
         setData(prev => ({ ...prev, id: evaluationId }));
       }
 
+      // Generate PDF (while evaluation is still in a draft/reopened state so RLS allows updating pdf_url)
+      let pdfUrl: string | undefined;
+      try {
+        pdfUrl = await generateEvaluationPdf({ ...data, id: evaluationId });
+      } catch (pdfError) {
+        logError('submit', 'PDF generation failed, but evaluation will still be submitted', { error: pdfError });
+      }
+
       // Update status to submitted
       const { error: updateError } = await supabase
         .from('pep_evaluations')
@@ -402,22 +410,6 @@ export const useEvaluation = () => {
         .eq('id', evaluationId);
 
       if (updateError) throw updateError;
-
-      // Generate PDF client-side
-      let pdfUrl: string | undefined;
-      try {
-        pdfUrl = await generateEvaluationPdf({ ...data, id: evaluationId });
-        
-        // Save PDF URL to database
-        if (pdfUrl) {
-          await supabase
-            .from('pep_evaluations')
-            .update({ pdf_url: pdfUrl })
-            .eq('id', evaluationId);
-        }
-      } catch (pdfError) {
-        logError('submit', 'PDF generation failed, but evaluation was submitted', { error: pdfError });
-      }
 
       setData(prev => ({
         ...prev,
