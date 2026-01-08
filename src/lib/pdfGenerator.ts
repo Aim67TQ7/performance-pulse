@@ -981,20 +981,40 @@ export async function generateEvaluationPdf(data: EvaluationData): Promise<strin
         .from('pep-evaluations')
         .upload(storagePath, blob, { upsert: true, contentType: 'application/pdf' });
 
-      if (!uploadError) {
+      if (uploadError) {
+        // This is the key debug signal we need
+        console.error('[PEP] PDF upload failed', {
+          bucket: 'pep-evaluations',
+          storagePath,
+          error: uploadError,
+        });
+      } else {
         const { data: urlData } = supabase.storage
           .from('pep-evaluations')
           .getPublicUrl(storagePath);
 
-        if (urlData?.publicUrl) {
-          await supabase
-            .from('pep_evaluations')
-            .update({ pdf_url: urlData.publicUrl, pdf_generated_at: new Date().toISOString() })
-            .eq('id', data.id);
+        if (!urlData?.publicUrl) {
+          console.error('[PEP] getPublicUrl returned no publicUrl', {
+            bucket: 'pep-evaluations',
+            storagePath,
+            urlData,
+          });
+        } else {
+          try {
+            await supabase
+              .from('pep_evaluations')
+              .update({ pdf_url: urlData.publicUrl, pdf_generated_at: new Date().toISOString() })
+              .eq('id', data.id);
+          } catch (dbErr) {
+            console.error('[PEP] Failed to persist pdf_url to pep_evaluations', {
+              evaluationId: data.id,
+              pdf_url: urlData.publicUrl,
+              error: dbErr,
+            });
+          }
+
           return urlData.publicUrl;
         }
-      } else {
-        console.warn('[PEP] PDF upload failed:', uploadError);
       }
     } catch (err) {
       console.warn('[PEP] PDF upload exception, using local URL:', err);
