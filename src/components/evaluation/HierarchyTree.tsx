@@ -88,7 +88,19 @@ const HierarchyNode = ({ member, level, defaultExpanded = false }: HierarchyNode
                 PDF
               </Button>
             )}
-            <Badge variant={config.variant} className="gap-1 text-xs">
+            <Badge 
+              variant={config.variant} 
+              className={cn(
+                "gap-1 text-xs",
+                member.pdf_url && ['submitted', 'reviewed', 'signed'].includes(member.evaluation_status) && 
+                  "cursor-pointer hover:opacity-80 transition-opacity"
+              )}
+              onClick={() => {
+                if (member.pdf_url && ['submitted', 'reviewed', 'signed'].includes(member.evaluation_status)) {
+                  window.open(member.pdf_url, '_blank');
+                }
+              }}
+            >
               <StatusIcon className="w-3 h-3" />
               {config.label}
             </Badge>
