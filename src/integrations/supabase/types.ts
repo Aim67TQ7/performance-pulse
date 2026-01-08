@@ -2588,6 +2588,42 @@ export type Database = {
         }
         Relationships: []
       }
+      mto_daily: {
+        Row: {
+          book_to_bill: number | null
+          confirmed_backlog: number | null
+          created_at: string
+          days_in_house: number | null
+          id: string
+          incoming: number | null
+          otd: number | null
+          shipped: number | null
+          total_orders: number | null
+        }
+        Insert: {
+          book_to_bill?: number | null
+          confirmed_backlog?: number | null
+          created_at?: string
+          days_in_house?: number | null
+          id?: string
+          incoming?: number | null
+          otd?: number | null
+          shipped?: number | null
+          total_orders?: number | null
+        }
+        Update: {
+          book_to_bill?: number | null
+          confirmed_backlog?: number | null
+          created_at?: string
+          days_in_house?: number | null
+          id?: string
+          incoming?: number | null
+          otd?: number | null
+          shipped?: number | null
+          total_orders?: number | null
+        }
+        Relationships: []
+      }
       mto_delivery: {
         Row: {
           april_otd: number | null
