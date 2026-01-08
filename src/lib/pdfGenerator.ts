@@ -1,7 +1,6 @@
-import jsPDF from 'jspdf';
-import html2canvas from 'html2canvas';
-import { EvaluationData, QUALITATIVE_FACTORS, RATING_OPTIONS } from '@/types/evaluation';
+import { PDFDocument, StandardFonts, rgb } from 'pdf-lib';
 import { supabase } from '@/integrations/supabase/client';
+import { EvaluationData } from '@/types/evaluation';
 
 const RATING_LABELS: Record<string, string> = {
   exceptional: 'Exceptional',
@@ -30,224 +29,285 @@ const QUALITATIVE_LABELS: Record<string, string> = {
   creativityInitiative: 'Creativity/Initiative',
 };
 
-function createPdfHtml(data: EvaluationData): string {
-  const qualitativeRows = Object.entries(data.qualitative)
-    .map(([key, value]) => `
-      <tr>
-        <td style="padding: 8px; border: 1px solid #ddd;">${QUALITATIVE_LABELS[key] || key}</td>
-        <td style="padding: 8px; border: 1px solid #ddd; text-align: center;">${value || '-'}</td>
-      </tr>
-    `).join('');
+type PdfContext = {
+  doc: PDFDocument;
+  page: ReturnType<PDFDocument['addPage']>;
+  font: any;
+  fontBold: any;
+  cursorY: number;
+};
 
-  return `
-    <div id="pdf-content" style="font-family: Arial, sans-serif; padding: 40px; max-width: 800px; background: white; color: #333;">
-      <!-- Header -->
-      <div style="text-align: center; margin-bottom: 30px; border-bottom: 3px solid #1e3a5f; padding-bottom: 20px;">
-        <h1 style="color: #1e3a5f; margin: 0 0 10px 0; font-size: 24px;">BUNTING MAGNETICS</h1>
-        <h2 style="color: #555; margin: 0; font-size: 18px;">Performance Evaluation Program</h2>
-        <p style="color: #777; margin: 10px 0 0 0; font-size: 14px;">Evaluation Period: ${data.employeeInfo.periodYear}</p>
-      </div>
+const A4 = { width: 595.28, height: 841.89 };
+const MARGIN_X = 50;
+const MARGIN_Y = 50;
+const LINE_GAP = 4;
 
-      <!-- Employee Information -->
-      <div style="margin-bottom: 30px; background: #f8f9fa; padding: 20px; border-radius: 8px;">
-        <h3 style="color: #1e3a5f; margin: 0 0 15px 0; font-size: 16px;">Employee Information</h3>
-        <table style="width: 100%; border-collapse: collapse;">
-          <tr>
-            <td style="padding: 8px 0; width: 30%;"><strong>Name:</strong></td>
-            <td style="padding: 8px 0;">${data.employeeInfo.name}</td>
-          </tr>
-          <tr>
-            <td style="padding: 8px 0;"><strong>Title:</strong></td>
-            <td style="padding: 8px 0;">${data.employeeInfo.title}</td>
-          </tr>
-          <tr>
-            <td style="padding: 8px 0;"><strong>Department:</strong></td>
-            <td style="padding: 8px 0;">${data.employeeInfo.department}</td>
-          </tr>
-          <tr>
-            <td style="padding: 8px 0;"><strong>Supervisor:</strong></td>
-            <td style="padding: 8px 0;">${data.employeeInfo.supervisorName || 'N/A'}</td>
-          </tr>
-        </table>
-      </div>
+function clampText(v: unknown): string {
+  if (v === null || v === undefined) return '';
+  return String(v);
+}
 
-      <!-- Quantitative Section -->
-      <div style="margin-bottom: 30px;">
-        <h3 style="color: #1e3a5f; margin: 0 0 15px 0; font-size: 16px; border-bottom: 2px solid #1e3a5f; padding-bottom: 8px;">Section I: Quantitative Assessment</h3>
-        
-        <div style="margin-bottom: 20px;">
-          <h4 style="color: #333; margin: 0 0 10px 0; font-size: 14px;">Performance Objectives</h4>
-          <div style="background: #f8f9fa; padding: 15px; border-radius: 4px; white-space: pre-wrap; font-size: 13px; line-height: 1.6;">
-            ${data.quantitative.performanceObjectives || 'Not provided'}
-          </div>
-        </div>
-        
-        <div style="margin-bottom: 20px;">
-          <h4 style="color: #333; margin: 0 0 10px 0; font-size: 14px;">Work Accomplishments</h4>
-          <div style="background: #f8f9fa; padding: 15px; border-radius: 4px; white-space: pre-wrap; font-size: 13px; line-height: 1.6;">
-            ${data.quantitative.workAccomplishments || 'Not provided'}
-          </div>
-        </div>
-        
-        <div style="margin-bottom: 20px;">
-          <h4 style="color: #333; margin: 0 0 10px 0; font-size: 14px;">Personal Development</h4>
-          <div style="background: #f8f9fa; padding: 15px; border-radius: 4px; white-space: pre-wrap; font-size: 13px; line-height: 1.6;">
-            ${data.quantitative.personalDevelopment || 'Not provided'}
-          </div>
-        </div>
+function makeFilename(data: EvaluationData): string {
+  const name = clampText(data.employeeInfo?.name || 'Employee').replace(/[^a-zA-Z0-9]/g, '_');
+  const year = clampText(data.employeeInfo?.periodYear || new Date().getFullYear());
+  return `PEP_${name}_${year}.pdf`;
+}
 
-        <div style="background: #e8f4f8; padding: 15px; border-radius: 4px; text-align: center;">
-          <strong>Quantitative Rating:</strong> ${RATING_LABELS[data.quantitative.quantitativeRating || ''] || 'Not rated'}
-        </div>
-      </div>
+function newPage(ctx: Omit<PdfContext, 'page' | 'cursorY'>): PdfContext {
+  const page = ctx.doc.addPage([A4.width, A4.height]);
+  return {
+    ...ctx,
+    page,
+    cursorY: A4.height - MARGIN_Y,
+  };
+}
 
-      <!-- Qualitative Section -->
-      <div style="margin-bottom: 30px;">
-        <h3 style="color: #1e3a5f; margin: 0 0 15px 0; font-size: 16px; border-bottom: 2px solid #1e3a5f; padding-bottom: 8px;">Section II: Qualitative Assessment</h3>
-        <p style="color: #666; font-size: 12px; margin-bottom: 15px;">Scale: 5 = Exceptional, 4 = Excellent, 3 = Fully Satisfactory, 2 = Marginal, 1 = Unacceptable</p>
-        <table style="width: 100%; border-collapse: collapse; font-size: 13px;">
-          <thead>
-            <tr style="background: #1e3a5f; color: white;">
-              <th style="padding: 10px; text-align: left; border: 1px solid #ddd;">Factor</th>
-              <th style="padding: 10px; text-align: center; border: 1px solid #ddd; width: 80px;">Rating</th>
-            </tr>
-          </thead>
-          <tbody>
-            ${qualitativeRows}
-          </tbody>
-        </table>
-      </div>
+function ensureSpace(ctx: PdfContext, neededHeight: number): PdfContext {
+  if (ctx.cursorY - neededHeight >= MARGIN_Y) return ctx;
+  return newPage({ doc: ctx.doc, font: ctx.font, fontBold: ctx.fontBold } as any);
+}
 
-      <!-- Summary Section -->
-      <div style="margin-bottom: 30px;">
-        <h3 style="color: #1e3a5f; margin: 0 0 15px 0; font-size: 16px; border-bottom: 2px solid #1e3a5f; padding-bottom: 8px;">Section III: Summary</h3>
-        
-        <div style="margin-bottom: 20px;">
-          <h4 style="color: #333; margin: 0 0 10px 0; font-size: 14px;">Employee Self-Summary</h4>
-          <div style="background: #f8f9fa; padding: 15px; border-radius: 4px; white-space: pre-wrap; font-size: 13px; line-height: 1.6;">
-            ${data.summary.employeeSummary || 'Not provided'}
-          </div>
-        </div>
-        
-        <div style="margin-bottom: 20px;">
-          <h4 style="color: #333; margin: 0 0 10px 0; font-size: 14px;">Targets for Next Year</h4>
-          <div style="background: #f8f9fa; padding: 15px; border-radius: 4px; white-space: pre-wrap; font-size: 13px; line-height: 1.6;">
-            ${data.summary.targetsForNextYear || 'Not provided'}
-          </div>
-        </div>
+function wrapLines(text: string, font: any, fontSize: number, maxWidth: number): string[] {
+  const normalized = (text || '').replace(/\r\n/g, '\n');
+  const paragraphs = normalized.split('\n');
 
-        <div style="display: flex; gap: 20px;">
-          <div style="flex: 1; background: #e8f4f8; padding: 15px; border-radius: 4px; text-align: center;">
-            <strong>Qualitative Rating:</strong><br/>
-            ${RATING_LABELS[data.summary.qualitativeRating || ''] || 'Not rated'}
-          </div>
-          <div style="flex: 1; background: #1e3a5f; color: white; padding: 15px; border-radius: 4px; text-align: center;">
-            <strong>Overall Rating:</strong><br/>
-            ${RATING_LABELS[data.summary.overallRating || ''] || 'Not rated'}
-          </div>
-        </div>
-      </div>
+  const lines: string[] = [];
 
-      <!-- Footer -->
-      <div style="margin-top: 40px; padding-top: 20px; border-top: 1px solid #ddd; color: #777; font-size: 11px; text-align: center;">
-        <p>Generated on ${new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit' })}</p>
-        <p>Bunting Magnetics Co. | Confidential Employee Document</p>
-      </div>
-    </div>
-  `;
+  for (const para of paragraphs) {
+    const words = para.split(/\s+/).filter(Boolean);
+    if (words.length === 0) {
+      lines.push('');
+      continue;
+    }
+
+    let current = '';
+    for (const word of words) {
+      const candidate = current ? `${current} ${word}` : word;
+      const w = font.widthOfTextAtSize(candidate, fontSize);
+      if (w <= maxWidth) {
+        current = candidate;
+      } else {
+        if (current) lines.push(current);
+        // If single word is too long, hard-break it.
+        if (font.widthOfTextAtSize(word, fontSize) > maxWidth) {
+          let chunk = '';
+          for (const ch of word) {
+            const cand = chunk + ch;
+            if (font.widthOfTextAtSize(cand, fontSize) <= maxWidth) {
+              chunk = cand;
+            } else {
+              if (chunk) lines.push(chunk);
+              chunk = ch;
+            }
+          }
+          if (chunk) lines.push(chunk);
+          current = '';
+        } else {
+          current = word;
+        }
+      }
+    }
+    if (current) lines.push(current);
+  }
+
+  return lines;
+}
+
+function drawText(ctx: PdfContext, text: string, opts: { fontSize: number; bold?: boolean; color?: { r: number; g: number; b: number } } ) {
+  const { fontSize, bold, color } = opts;
+  const font = bold ? ctx.fontBold : ctx.font;
+  const maxWidth = A4.width - MARGIN_X * 2;
+  const lines = wrapLines(text, font, fontSize, maxWidth);
+
+  const lineHeight = fontSize + LINE_GAP;
+  const needed = lines.length * lineHeight;
+  ctx = ensureSpace(ctx, needed);
+
+  for (const line of lines) {
+    ctx.page.drawText(line, {
+      x: MARGIN_X,
+      y: ctx.cursorY - fontSize,
+      size: fontSize,
+      font,
+      color: color ? rgb(color.r, color.g, color.b) : rgb(0.15, 0.15, 0.15),
+    });
+    ctx.cursorY -= lineHeight;
+  }
+
+  return ctx;
+}
+
+function drawDivider(ctx: PdfContext) {
+  ctx = ensureSpace(ctx, 18);
+  const y = ctx.cursorY - 8;
+  ctx.page.drawLine({
+    start: { x: MARGIN_X, y },
+    end: { x: A4.width - MARGIN_X, y },
+    thickness: 1,
+    color: rgb(0.8, 0.82, 0.85),
+  });
+  ctx.cursorY -= 18;
+  return ctx;
+}
+
+function drawKeyValue(ctx: PdfContext, key: string, value: string) {
+  const fontSize = 11;
+  const keyText = `${key}: `;
+  const keyWidth = ctx.fontBold.widthOfTextAtSize(keyText, fontSize);
+  const maxWidth = A4.width - MARGIN_X * 2;
+  const valueMaxWidth = Math.max(50, maxWidth - keyWidth);
+
+  const valueLines = wrapLines(value, ctx.font, fontSize, valueMaxWidth);
+  const lineHeight = fontSize + LINE_GAP;
+  const needed = valueLines.length * lineHeight;
+  ctx = ensureSpace(ctx, needed);
+
+  // first line with key
+  ctx.page.drawText(keyText, {
+    x: MARGIN_X,
+    y: ctx.cursorY - fontSize,
+    size: fontSize,
+    font: ctx.fontBold,
+    color: rgb(0.15, 0.15, 0.15),
+  });
+
+  ctx.page.drawText(valueLines[0] || '', {
+    x: MARGIN_X + keyWidth,
+    y: ctx.cursorY - fontSize,
+    size: fontSize,
+    font: ctx.font,
+    color: rgb(0.15, 0.15, 0.15),
+  });
+
+  ctx.cursorY -= lineHeight;
+
+  for (let i = 1; i < valueLines.length; i++) {
+    ctx.page.drawText(valueLines[i], {
+      x: MARGIN_X + keyWidth,
+      y: ctx.cursorY - fontSize,
+      size: fontSize,
+      font: ctx.font,
+      color: rgb(0.15, 0.15, 0.15),
+    });
+    ctx.cursorY -= lineHeight;
+  }
+
+  return ctx;
+}
+
+async function buildPdfBytes(data: EvaluationData): Promise<Uint8Array> {
+  const doc = await PDFDocument.create();
+  const font = await doc.embedFont(StandardFonts.Helvetica);
+  const fontBold = await doc.embedFont(StandardFonts.HelveticaBold);
+
+  let ctx: PdfContext = newPage({ doc, font, fontBold } as any);
+
+  // Title
+  ctx = drawText(ctx, 'BUNTING MAGNETICS', { fontSize: 18, bold: true, color: { r: 0.12, g: 0.23, b: 0.37 } });
+  ctx = drawText(ctx, 'Performance Self-Assessment', { fontSize: 14, bold: true });
+  ctx = drawText(ctx, `Assessment Period: ${clampText(data.employeeInfo?.periodYear)}`, { fontSize: 11, color: { r: 0.35, g: 0.35, b: 0.35 } });
+  ctx = drawDivider(ctx);
+
+  // Employee info
+  ctx = drawText(ctx, 'Employee Information', { fontSize: 13, bold: true, color: { r: 0.12, g: 0.23, b: 0.37 } });
+  ctx = drawKeyValue(ctx, 'Name', clampText(data.employeeInfo?.name) || '');
+  ctx = drawKeyValue(ctx, 'Title', clampText(data.employeeInfo?.title) || '');
+  ctx = drawKeyValue(ctx, 'Department', clampText(data.employeeInfo?.department) || '');
+  ctx = drawKeyValue(ctx, 'Supervisor', clampText(data.employeeInfo?.supervisorName) || 'N/A');
+  ctx = drawDivider(ctx);
+
+  // Quantitative
+  ctx = drawText(ctx, 'Section I: Quantitative Assessment', { fontSize: 13, bold: true, color: { r: 0.12, g: 0.23, b: 0.37 } });
+  ctx = drawText(ctx, 'Performance Objectives', { fontSize: 12, bold: true });
+  ctx = drawText(ctx, clampText(data.quantitative?.performanceObjectives) || 'Not provided', { fontSize: 11 });
+  ctx = drawText(ctx, 'Work Accomplishments', { fontSize: 12, bold: true });
+  ctx = drawText(ctx, clampText(data.quantitative?.workAccomplishments) || 'Not provided', { fontSize: 11 });
+  ctx = drawText(ctx, 'Personal Development', { fontSize: 12, bold: true });
+  ctx = drawText(ctx, clampText(data.quantitative?.personalDevelopment) || 'Not provided', { fontSize: 11 });
+  ctx = drawKeyValue(ctx, 'Quantitative Rating', RATING_LABELS[clampText(data.quantitative?.quantitativeRating)] || 'Not rated');
+  ctx = drawDivider(ctx);
+
+  // Qualitative
+  ctx = drawText(ctx, 'Section II: Qualitative Assessment', { fontSize: 13, bold: true, color: { r: 0.12, g: 0.23, b: 0.37 } });
+  ctx = drawText(ctx, 'Scale: 5 Exceptional, 4 Excellent, 3 Fully Satisfactory, 2 Marginal, 1 Unacceptable', {
+    fontSize: 10,
+    color: { r: 0.35, g: 0.35, b: 0.35 },
+  });
+
+  // Simple two-column list
+  const entries = Object.entries(data.qualitative || {});
+  for (const [key, val] of entries) {
+    const label = QUALITATIVE_LABELS[key] || key;
+    const rating = val === null || val === undefined ? '-' : String(val);
+    ctx = drawKeyValue(ctx, label, rating);
+  }
+  ctx = drawDivider(ctx);
+
+  // Summary
+  ctx = drawText(ctx, 'Section III: Summary', { fontSize: 13, bold: true, color: { r: 0.12, g: 0.23, b: 0.37 } });
+  ctx = drawText(ctx, 'Employee Self-Summary', { fontSize: 12, bold: true });
+  ctx = drawText(ctx, clampText(data.summary?.employeeSummary) || 'Not provided', { fontSize: 11 });
+  ctx = drawText(ctx, 'Targets for Next Year', { fontSize: 12, bold: true });
+  ctx = drawText(ctx, clampText(data.summary?.targetsForNextYear) || 'Not provided', { fontSize: 11 });
+  ctx = drawKeyValue(ctx, 'Qualitative Rating', RATING_LABELS[clampText(data.summary?.qualitativeRating)] || 'Not rated');
+  ctx = drawKeyValue(ctx, 'Overall Rating', RATING_LABELS[clampText(data.summary?.overallRating)] || 'Not rated');
+
+  // Footer
+  ctx = drawDivider(ctx);
+  ctx = drawText(ctx, `Generated on ${new Date().toLocaleString('en-US')}`, { fontSize: 9, color: { r: 0.45, g: 0.45, b: 0.45 } });
+  ctx = drawText(ctx, 'Bunting Magnetics Co. | Confidential Employee Document', { fontSize: 9, color: { r: 0.45, g: 0.45, b: 0.45 } });
+
+  return await doc.save();
 }
 
 export async function generateEvaluationPdf(data: EvaluationData): Promise<string> {
-  // Create a hidden container for rendering
-  const container = document.createElement('div');
-  container.style.position = 'absolute';
-  container.style.left = '-9999px';
-  container.style.top = '0';
-  container.style.width = '800px';
-  container.innerHTML = createPdfHtml(data);
-  document.body.appendChild(container);
+  // Always generate locally first so the user can download even if storage fails.
+  const pdfBytes = await buildPdfBytes(data);
+
+  // pdf-lib returns Uint8Array<ArrayBufferLike> which TS won't accept directly as a BlobPart in some configs.
+  // Re-wrap into a "safe" Uint8Array backed by a plain ArrayBuffer.
+  const safeBytes = new Uint8Array(pdfBytes);
+  const pdfBlob = new Blob([safeBytes], { type: 'application/pdf' });
+  const localUrl = URL.createObjectURL(pdfBlob);
+
+  // If we don't have an evaluation id yet, we can't upload/update reliably.
+  if (!data.id) return localUrl;
+
+  const filename = makeFilename(data);
+  const storagePath = `pdfs/${data.id}/${filename}`;
 
   try {
-    const content = container.querySelector('#pdf-content') as HTMLElement;
-    
-    // Render to canvas
-    const canvas = await html2canvas(content, {
-      scale: 2,
-      useCORS: true,
-      logging: false,
-      backgroundColor: '#ffffff',
-    });
+    const { error: uploadError } = await supabase.storage
+      .from('pep-evaluations')
+      .upload(storagePath, pdfBlob, {
+        contentType: 'application/pdf',
+        upsert: true,
+      });
 
-    // Calculate dimensions for A4
-    const imgWidth = 210; // A4 width in mm
-    const pageHeight = 297; // A4 height in mm
-    const imgHeight = (canvas.height * imgWidth) / canvas.width;
-    
-    // Create PDF
-    const pdf = new jsPDF('p', 'mm', 'a4');
-    let heightLeft = imgHeight;
-    let position = 0;
+    if (uploadError) throw uploadError;
 
-    // Add first page
-    pdf.addImage(canvas.toDataURL('image/png'), 'PNG', 0, position, imgWidth, imgHeight);
-    heightLeft -= pageHeight;
+    const { data: urlData } = supabase.storage
+      .from('pep-evaluations')
+      .getPublicUrl(storagePath);
 
-    // Add additional pages if needed
-    while (heightLeft >= 0) {
-      position = heightLeft - imgHeight;
-      pdf.addPage();
-      pdf.addImage(canvas.toDataURL('image/png'), 'PNG', 0, position, imgWidth, imgHeight);
-      heightLeft -= pageHeight;
+    const pdfUrl = urlData.publicUrl;
+
+    const { error: updateError } = await supabase
+      .from('pep_evaluations')
+      .update({
+        pdf_url: pdfUrl,
+        pdf_generated_at: new Date().toISOString(),
+      })
+      .eq('id', data.id);
+
+    if (updateError) {
+      console.error('Failed to update evaluation with PDF URL:', updateError);
+      // Still return the public URL; worst case supervisor may not see it if DB update fails.
     }
 
-    // Convert to blob
-    const pdfBlob = pdf.output('blob');
-    const localUrl = URL.createObjectURL(pdfBlob);
-
-    // Generate filename
-    const sanitizedName = data.employeeInfo.name.replace(/[^a-zA-Z0-9]/g, '_');
-    const filename = `PEP_${sanitizedName}_${data.employeeInfo.periodYear}.pdf`;
-    const storagePath = `pdfs/${data.id}/${filename}`;
-
-    // Upload to Supabase storage (best-effort)
-    try {
-      const { error: uploadError } = await supabase.storage
-        .from('pep-evaluations')
-        .upload(storagePath, pdfBlob, {
-          contentType: 'application/pdf',
-          upsert: true,
-        });
-
-      if (uploadError) throw uploadError;
-
-      // Get public URL
-      const { data: urlData } = supabase.storage
-        .from('pep-evaluations')
-        .getPublicUrl(storagePath);
-
-      const pdfUrl = urlData.publicUrl;
-
-      // Update evaluation record with PDF URL
-      const { error: updateError } = await supabase
-        .from('pep_evaluations')
-        .update({
-          pdf_url: pdfUrl,
-          pdf_generated_at: new Date().toISOString(),
-        })
-        .eq('id', data.id);
-
-      if (updateError) {
-        console.error('Failed to update evaluation with PDF URL:', updateError);
-      }
-
-      return pdfUrl;
-    } catch (err) {
-      // Still allow the user to download locally even if storage upload fails.
-      console.error('PDF upload failed; returning local download URL instead.', err);
-      return localUrl;
-    }
-  } finally {
-    // Clean up
-    document.body.removeChild(container);
+    return pdfUrl;
+  } catch (err) {
+    console.error('PDF upload failed; returning local download URL instead.', err);
+    return localUrl;
   }
 }
