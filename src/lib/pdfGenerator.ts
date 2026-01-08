@@ -908,11 +908,70 @@ async function buildPdfBytes(data: EvaluationData): Promise<Uint8Array> {
 // ─────────────────────────────────────────────────────────────────────────────
 
 export async function generateEvaluationPdf(data: EvaluationData): Promise<string> {
-  const pdfBytes = await buildPdfBytes(data);
-  const safeBytes = new Uint8Array(pdfBytes);
-  const blob = new Blob([safeBytes], { type: 'application/pdf' });
+  // Build PDF bytes (never throw — always return *something*)
+  let blob: Blob;
+  let filename: string;
+
+  try {
+    const pdfBytes = await buildPdfBytes(data);
+    // Ensure we have an ArrayBuffer-backed Uint8Array (avoids SharedArrayBuffer typing issues)
+    const safeBytes = Uint8Array.from(new Uint8Array(pdfBytes));
+    blob = new Blob([safeBytes], { type: 'application/pdf' });
+    filename = makeFilename(data);
+  } catch (err) {
+    console.error('[PEP] PDF build failed; generating fallback PDF', err);
+
+    // Fallback: generate a minimal PDF so users still get a downloadable artifact
+    const doc = await PDFDocument.create();
+    const page = doc.addPage([PAGE_WIDTH, PAGE_HEIGHT]);
+    const font = await doc.embedFont(StandardFonts.Helvetica);
+
+    const msg =
+      'PDF generation failed. Please contact HR/IT and reference the timestamp below.';
+    page.drawText('Performance Evaluation PDF', {
+      x: MARGIN,
+      y: PAGE_HEIGHT - MARGIN - 20,
+      size: 16,
+      font,
+      color: COLORS.primaryRed,
+    });
+    page.drawText(msg, {
+      x: MARGIN,
+      y: PAGE_HEIGHT - MARGIN - 55,
+      size: 11,
+      font,
+      color: COLORS.darkGray,
+      maxWidth: CONTENT_WIDTH,
+    });
+    page.drawText(`Employee: ${clampText(data.employeeInfo?.name) || 'Unknown'}`, {
+      x: MARGIN,
+      y: PAGE_HEIGHT - MARGIN - 90,
+      size: 11,
+      font,
+      color: COLORS.darkGray,
+    });
+    page.drawText(`Year: ${data.employeeInfo?.periodYear ?? ''}`, {
+      x: MARGIN,
+      y: PAGE_HEIGHT - MARGIN - 110,
+      size: 11,
+      font,
+      color: COLORS.darkGray,
+    });
+    page.drawText(`Generated: ${new Date().toISOString()}`, {
+      x: MARGIN,
+      y: PAGE_HEIGHT - MARGIN - 130,
+      size: 10,
+      font,
+      color: COLORS.mediumGray,
+    });
+
+    const fallbackBytes = await doc.save();
+    const safeFallbackBytes = Uint8Array.from(new Uint8Array(fallbackBytes));
+    blob = new Blob([safeFallbackBytes], { type: 'application/pdf' });
+    filename = makeFilename(data).replace(/\.pdf$/i, '_FALLBACK.pdf');
+  }
+
   const localUrl = URL.createObjectURL(blob);
-  const filename = makeFilename(data);
 
   // Best-effort upload to Supabase Storage
   if (data.id) {
@@ -934,9 +993,11 @@ export async function generateEvaluationPdf(data: EvaluationData): Promise<strin
             .eq('id', data.id);
           return urlData.publicUrl;
         }
+      } else {
+        console.warn('[PEP] PDF upload failed:', uploadError);
       }
     } catch (err) {
-      console.warn('PDF upload failed, using local URL:', err);
+      console.warn('[PEP] PDF upload exception, using local URL:', err);
     }
   }
 
