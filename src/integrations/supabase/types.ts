@@ -2246,6 +2246,57 @@ export type Database = {
         }
         Relationships: []
       }
+      magsep_knowledge: {
+        Row: {
+          answer: string
+          category: string
+          chunk_type: string
+          content_for_embedding: string | null
+          content_hash: string | null
+          created_at: string | null
+          embedding: string | null
+          equipment_types: Json | null
+          id: string
+          industries: Json | null
+          keywords: Json | null
+          metadata: Json | null
+          question: string
+          subcategory: string | null
+        }
+        Insert: {
+          answer: string
+          category: string
+          chunk_type: string
+          content_for_embedding?: string | null
+          content_hash?: string | null
+          created_at?: string | null
+          embedding?: string | null
+          equipment_types?: Json | null
+          id: string
+          industries?: Json | null
+          keywords?: Json | null
+          metadata?: Json | null
+          question: string
+          subcategory?: string | null
+        }
+        Update: {
+          answer?: string
+          category?: string
+          chunk_type?: string
+          content_for_embedding?: string | null
+          content_hash?: string | null
+          created_at?: string | null
+          embedding?: string | null
+          equipment_types?: Json | null
+          id?: string
+          industries?: Json | null
+          keywords?: Json | null
+          metadata?: Json | null
+          question?: string
+          subcategory?: string | null
+        }
+        Relationships: []
+      }
       "MAI Customers": {
         Row: {
           Customer: string | null
@@ -6260,6 +6311,30 @@ export type Database = {
       rvw_owns_review: {
         Args: { _review_id: string; _user_id: string }
         Returns: boolean
+      }
+      search_magsep_by_keywords: {
+        Args: { search_keywords: string[] }
+        Returns: {
+          answer: string
+          category: string
+          id: string
+          match_count: number
+          question: string
+        }[]
+      }
+      search_magsep_knowledge: {
+        Args: {
+          match_count?: number
+          match_threshold?: number
+          query_embedding: string
+        }
+        Returns: {
+          answer: string
+          category: string
+          id: string
+          question: string
+          similarity: number
+        }[]
       }
       search_product_knowledge: {
         Args: {
