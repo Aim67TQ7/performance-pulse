@@ -85,6 +85,22 @@ export const useEvaluation = () => {
           return;
         }
 
+        // Fetch HR settings for assessment dates
+        let periodYear = new Date().getFullYear();
+        const { data: settingsData } = await supabase
+          .from('pep_settings')
+          .select('setting_value')
+          .eq('setting_key', 'assessment_dates')
+          .single();
+
+        if (settingsData?.setting_value) {
+          const settings = settingsData.setting_value as { period_end?: string };
+          if (settings.period_end) {
+            // Extract year from period_end (e.g., "2025-12-31" -> 2025)
+            periodYear = new Date(settings.period_end).getFullYear();
+          }
+        }
+
         // Get current employee record
         const { data: employeeData, error: employeeError } = await supabase
           .from('employees')
@@ -116,12 +132,11 @@ export const useEvaluation = () => {
         }
 
         // Check for existing evaluation
-        const currentYear = new Date().getFullYear();
         const { data: evalData } = await supabase
           .from('pep_evaluations')
           .select('*')
           .eq('employee_id', employeeData.id)
-          .eq('period_year', currentYear)
+          .eq('period_year', periodYear)
           .single();
 
         if (evalData) {
@@ -133,7 +148,7 @@ export const useEvaluation = () => {
               name: `${employeeData.name_first} ${employeeData.name_last}`,
               title: employeeData.job_title || '',
               department: employeeData.department || '',
-              periodYear: currentYear,
+              periodYear: periodYear,
               supervisorId: employeeData.reports_to,
               supervisorName: managerName,
             },
@@ -160,7 +175,7 @@ export const useEvaluation = () => {
             name: `${employeeData.name_first} ${employeeData.name_last}`,
             title: employeeData.job_title || '',
             department: employeeData.department || '',
-            periodYear: currentYear,
+            periodYear: periodYear,
             supervisorId: employeeData.reports_to,
             supervisorName: managerName,
           };
