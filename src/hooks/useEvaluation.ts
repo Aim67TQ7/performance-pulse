@@ -179,13 +179,24 @@ export const useEvaluation = () => {
 
   // Save to Supabase
   const saveToDatabase = useCallback(async (newData: EvaluationData) => {
-    if (isReadOnly) return;
+    if (isReadOnly || isLoading) return;
+    
+    // Wait for employee data to load before attempting to save
+    if (!currentEmployee) {
+      // Silently save to localStorage while employee data loads
+      const saveData = {
+        ...newData,
+        lastSavedAt: new Date().toISOString(),
+      };
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(saveData));
+      return;
+    }
     
     setIsSaving(true);
     try {
       const { data: { user } } = await supabase.auth.getUser();
       
-      if (!user || !currentEmployee) {
+      if (!user) {
         // Fallback to localStorage if not authenticated
         const saveData = {
           ...newData,
@@ -229,11 +240,12 @@ export const useEvaluation = () => {
       
       setLastSaved(new Date());
     } catch (error) {
-      logError('save', 'Failed to save evaluation data', { error });
+      // Log error silently without showing toast for auto-save failures
+      console.error('[PEP] Auto-save failed:', error);
     } finally {
       setIsSaving(false);
     }
-  }, [currentEmployee, isReadOnly, logError]);
+  }, [currentEmployee, isReadOnly, isLoading]);
 
   // Sync employee info changes to the employees table
   const syncEmployeeToDatabase = useCallback(async (updates: Partial<EvaluationData['employeeInfo']>) => {
