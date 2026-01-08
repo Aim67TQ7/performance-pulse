@@ -1,22 +1,64 @@
 import { Button } from '@/components/ui/button';
-import { CheckCircle, Download, Home, FileText, Users } from 'lucide-react';
+import { CheckCircle, Download, Home, FileText, Users, RefreshCw } from 'lucide-react';
 import { EvaluationData } from '@/types/evaluation';
 import { toast } from 'sonner';
 import { useNavigate } from 'react-router-dom';
+import { useMemo, useState } from 'react';
+import { generateEvaluationPdf } from '@/lib/pdfGenerator';
 
 interface SuccessScreenProps {
   data: EvaluationData;
   hasSubordinates?: boolean;
 }
 
+function downloadUrl(url: string, filename: string) {
+  if (url.startsWith('blob:')) {
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    return;
+  }
+  // For https URLs, opening in a new tab is usually fine (and supports in-browser PDF viewer).
+  window.open(url, '_blank', 'noopener,noreferrer');
+}
+
 export const SuccessScreen = ({ data, hasSubordinates = false }: SuccessScreenProps) => {
   const navigate = useNavigate();
+  const [generatedUrl, setGeneratedUrl] = useState<string | null>(null);
+  const [isGenerating, setIsGenerating] = useState(false);
+
+  const filename = useMemo(() => {
+    const name = (data.employeeInfo?.name || 'Employee').replace(/[^a-zA-Z0-9]/g, '_');
+    const year = data.employeeInfo?.periodYear ?? new Date().getFullYear();
+    return `PEP_${name}_${year}.pdf`;
+  }, [data.employeeInfo?.name, data.employeeInfo?.periodYear]);
+
+  const effectivePdfUrl = generatedUrl ?? data.pdfUrl ?? null;
 
   const handleDownloadPdf = () => {
-    if (data.pdfUrl) {
-      window.open(data.pdfUrl, '_blank');
-    } else {
-      toast.error('PDF not available. Please contact HR.');
+    if (!effectivePdfUrl) {
+      toast.error('PDF not available yet. Click “Generate PDF” to create it now.');
+      return;
+    }
+    downloadUrl(effectivePdfUrl, filename);
+  };
+
+  const handleGeneratePdf = async () => {
+    setIsGenerating(true);
+    try {
+      const url = await generateEvaluationPdf(data);
+      setGeneratedUrl(url);
+      toast.success('PDF generated successfully.');
+      // Immediately download after generation to guarantee the user gets it.
+      downloadUrl(url, filename);
+    } catch (e) {
+      console.error('PDF generation failed:', e);
+      toast.error('PDF generation failed. Please try again or contact HR.');
+    } finally {
+      setIsGenerating(false);
     }
   };
 
@@ -36,7 +78,7 @@ export const SuccessScreen = ({ data, hasSubordinates = false }: SuccessScreenPr
         Evaluation Submitted Successfully!
       </h2>
       <p className="text-muted-foreground mb-8 max-w-md mx-auto">
-        Your self-evaluation has been submitted and is now available for your supervisor to review.
+        Your self-assessment has been submitted and is now available for your supervisor to review.
       </p>
 
       {/* Submission details */}
@@ -96,7 +138,7 @@ export const SuccessScreen = ({ data, hasSubordinates = false }: SuccessScreenPr
       <div className="bg-primary/5 border border-primary/20 rounded-lg p-6 max-w-sm mx-auto mb-8 text-left">
         <h3 className="font-semibold mb-3 text-primary">PDF Document</h3>
         <div className="text-sm text-muted-foreground">
-          {data.pdfUrl ? (
+          {effectivePdfUrl ? (
             <div className="flex items-center gap-2">
               <CheckCircle className="w-4 h-4 text-success" />
               PDF ready for download
@@ -104,7 +146,7 @@ export const SuccessScreen = ({ data, hasSubordinates = false }: SuccessScreenPr
           ) : (
             <div className="flex items-center gap-2">
               <FileText className="w-4 h-4" />
-              PDF not available
+              PDF not available yet — generate it now
             </div>
           )}
         </div>
@@ -115,11 +157,24 @@ export const SuccessScreen = ({ data, hasSubordinates = false }: SuccessScreenPr
           variant="outline" 
           className="flex items-center gap-2"
           onClick={handleDownloadPdf}
-          disabled={!data.pdfUrl}
+          disabled={!effectivePdfUrl}
         >
           <Download className="w-4 h-4" />
           Download PDF
         </Button>
+
+        {!effectivePdfUrl && (
+          <Button
+            variant="default"
+            className="flex items-center gap-2"
+            onClick={handleGeneratePdf}
+            disabled={isGenerating}
+          >
+            <RefreshCw className={"w-4 h-4" + (isGenerating ? ' animate-spin' : '')} />
+            {isGenerating ? 'Generating…' : 'Generate PDF'}
+          </Button>
+        )}
+
         {hasSubordinates && (
           <>
             <Button 
