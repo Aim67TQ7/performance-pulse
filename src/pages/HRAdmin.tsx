@@ -186,8 +186,8 @@ The Performance Self-Evaluation is now open and ready for your input.
 
 IMPORTANT DATES:
 • Assessment Period: ${periodStart} - ${periodEnd}
-• Survey Open: ${openDate}
-• Survey Due: ${closeDate}
+• Self-Assessment Open: ${openDate}
+• Self-Assessment Due: ${closeDate}
 
 HOW TO ACCESS:
 1. Visit https://self.buntinggpt.com
@@ -303,7 +303,7 @@ Thank you!`
                 Assessment Dates
               </CardTitle>
               <CardDescription>
-                Configure the assessment period and survey availability dates
+                Configure the assessment period and self-assessment availability dates
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">
@@ -337,7 +337,7 @@ Thank you!`
               {/* Survey Availability */}
               <div className="space-y-4">
                 <h3 className="font-medium text-sm text-muted-foreground uppercase tracking-wide">
-                  Survey Availability
+                  Self-Assessment Availability
                 </h3>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div className="space-y-2">
@@ -395,7 +395,7 @@ Thank you!`
             <CardContent>
               <Button onClick={handleSendOpenNotification} variant="secondary" className="w-full sm:w-auto">
                 <Mail className="w-4 h-4 mr-2" />
-                Send "Survey Open" Email
+                Send "Self-Assessment Open" Email
               </Button>
               <p className="text-xs text-muted-foreground mt-2">
                 Opens your email client with a pre-filled message including dates and login instructions
