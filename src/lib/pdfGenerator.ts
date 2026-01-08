@@ -996,7 +996,7 @@ export async function generateEvaluationPdf(data: EvaluationData): Promise<strin
       const publicUrl = `https://qzwxisdfwswsrbzvpzlo.supabase.co/storage/v1/object/public/pep-evaluations/${storagePath}`;
       console.log('[PEP] PDF uploaded successfully', { storagePath, publicUrl });
       
-      // Persist pdf_url to DB (best-effort, may fail due to RLS if already submitted)
+      // Persist pdf_url to DB - first try direct update, then use edge function if RLS blocks
       try {
         const { error: updateError } = await supabase
           .from('pep_evaluations')
@@ -1004,7 +1004,18 @@ export async function generateEvaluationPdf(data: EvaluationData): Promise<strin
           .eq('id', data.id);
         
         if (updateError) {
-          console.warn('[PEP] Could not persist pdf_url (RLS may block post-submission)', updateError);
+          console.warn('[PEP] Direct update failed (RLS), calling edge function...', updateError);
+          // Fallback to edge function which uses service role
+          const { error: fnError } = await supabase.functions.invoke('persist-pdf-url', {
+            body: { evaluation_id: data.id, pdf_url: publicUrl }
+          });
+          if (fnError) {
+            console.error('[PEP] Edge function also failed to persist pdf_url', fnError);
+          } else {
+            console.log('[PEP] pdf_url persisted via edge function');
+          }
+        } else {
+          console.log('[PEP] pdf_url persisted directly');
         }
       } catch (dbErr) {
         console.warn('[PEP] Failed to persist pdf_url', dbErr);
