@@ -81,6 +81,8 @@ export const Dashboard = () => {
             workAccomplishments: '',
             personalDevelopment: '',
             quantitativeRating: null,
+            competencies: [],
+            overallQuantitativeRating: null,
           };
           const qualitative = (evaluation.qualitative_json as unknown as QualitativeFactors) || {
             forecastingPlanningSkills: null,

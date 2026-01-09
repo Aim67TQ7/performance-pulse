@@ -11,11 +11,35 @@ export interface EmployeeInfo {
   supervisorName?: string;
 }
 
+// Competency type for database
+export interface Competency {
+  id: string;
+  name: string;
+  definition: string;
+  observable_behaviors: string;
+  display_order: number;
+  is_active: boolean;
+  created_at?: string;
+  updated_at?: string;
+}
+
+// Competency rating from employee
+export interface CompetencyRating {
+  competencyId: string;
+  competencyName: string;
+  score: number | null; // 1-5
+  comments: string;
+}
+
 export interface QuantitativeData {
-  performanceObjectives: string;
-  workAccomplishments: string;
-  personalDevelopment: string;
-  quantitativeRating: OverallRating | null;
+  // Legacy fields (for backwards compatibility)
+  performanceObjectives?: string;
+  workAccomplishments?: string;
+  personalDevelopment?: string;
+  quantitativeRating?: OverallRating | null;
+  // New competency-based fields
+  competencies: CompetencyRating[];
+  overallQuantitativeRating: OverallRating | null;
 }
 
 export interface QualitativeFactors {

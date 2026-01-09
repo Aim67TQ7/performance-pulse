@@ -5,11 +5,12 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Loader2, Lock, Settings, Calendar, ArrowLeft, Save, Mail, Users, CheckCircle2, Clock, FileEdit } from 'lucide-react';
+import { Loader2, Lock, Settings, Calendar, ArrowLeft, Save, Mail, Users, CheckCircle2, Clock, FileEdit, Award } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { toast } from '@/hooks/use-toast';
 import { VersionBadge } from '@/components/version/VersionBadge';
 import { HierarchyTree, HierarchyMember, buildHierarchyTree, countHierarchyStats } from '@/components/evaluation/HierarchyTree';
+import { CompetencyManager } from '@/components/admin/CompetencyManager';
 
 const HR_PASSCODE = '4155';
 
@@ -385,6 +386,11 @@ Thank you!`
               </div>
             </CardContent>
           </Card>
+
+          {/* Performance Competencies Manager */}
+          <div className="mb-6">
+            <CompetencyManager />
+          </div>
 
           {/* Notification Card */}
           <Card className="mb-6">

@@ -39,6 +39,8 @@ const getInitialData = (): EvaluationData => ({
     workAccomplishments: '',
     personalDevelopment: '',
     quantitativeRating: null,
+    competencies: [],
+    overallQuantitativeRating: null,
   },
   qualitative: {
     forecastingPlanningSkills: null,
@@ -489,11 +491,10 @@ export const useEvaluation = () => {
     const sections = {
       employeeInfo: Object.values(data.employeeInfo).filter(v => v && v !== '').length / 5, // Updated for supervisor
       quantitative: (
-        (data.quantitative.performanceObjectives ? 1 : 0) +
-        (data.quantitative.workAccomplishments ? 1 : 0) +
-        (data.quantitative.personalDevelopment ? 1 : 0) +
-        (data.quantitative.quantitativeRating ? 1 : 0)
-      ) / 4,
+        // Count completed competencies + overall rating
+        ((data.quantitative.competencies?.filter(c => c.score !== null).length || 0) / Math.max(data.quantitative.competencies?.length || 1, 1)) * 0.8 +
+        (data.quantitative.overallQuantitativeRating ? 0.2 : 0)
+      ),
       qualitative: Object.values(data.qualitative).filter(v => v !== null).length / 15,
       summary: (
         (data.summary.employeeSummary ? 1 : 0) +

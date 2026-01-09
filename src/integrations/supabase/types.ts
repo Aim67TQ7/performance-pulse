@@ -3338,6 +3338,39 @@ export type Database = {
         }
         Relationships: []
       }
+      pep_competencies: {
+        Row: {
+          created_at: string | null
+          definition: string
+          display_order: number
+          id: string
+          is_active: boolean
+          name: string
+          observable_behaviors: string
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          definition: string
+          display_order?: number
+          id?: string
+          is_active?: boolean
+          name: string
+          observable_behaviors: string
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          definition?: string
+          display_order?: number
+          id?: string
+          is_active?: boolean
+          name?: string
+          observable_behaviors?: string
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
       pep_evaluations: {
         Row: {
           created_at: string
