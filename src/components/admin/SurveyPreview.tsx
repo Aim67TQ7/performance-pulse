@@ -77,10 +77,10 @@ export function SurveyPreview({ open, onOpenChange }: SurveyPreviewProps) {
             <p className="text-sm text-muted-foreground mt-1">(Blank Preview for Review)</p>
           </div>
 
-          {/* Section A: Employee Information */}
+          {/* Section I: Employee Information */}
           <Card>
             <CardHeader>
-              <CardTitle className="text-lg">Section A: Employee Information</CardTitle>
+              <CardTitle className="text-lg">Section I: Employee Information</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="grid grid-cols-2 gap-4">
@@ -112,7 +112,48 @@ export function SurveyPreview({ open, onOpenChange }: SurveyPreviewProps) {
             </CardContent>
           </Card>
 
-          {/* Section II: Performance Competencies */}
+          {/* Section II: Quantitative Self-Assessment */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-lg">Section II: Quantitative Self-Assessment</CardTitle>
+              <p className="text-sm text-muted-foreground">
+                Enter your performance objectives with measurable targets and actual results
+              </p>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              <div className="overflow-x-auto">
+                <table className="w-full border-collapse border border-muted-foreground">
+                  <thead>
+                    <tr className="bg-muted">
+                      <th className="border border-muted-foreground p-2 text-left text-sm font-medium">Performance Objective</th>
+                      <th className="border border-muted-foreground p-2 text-left text-sm font-medium w-28">Measurable Target</th>
+                      <th className="border border-muted-foreground p-2 text-left text-sm font-medium w-24">Actual</th>
+                      <th className="border border-muted-foreground p-2 text-left text-sm font-medium w-20">Score</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {[1, 2, 3, 4, 5].map((row) => (
+                      <tr key={row}>
+                        <td className="border border-muted-foreground p-2 h-12"></td>
+                        <td className="border border-muted-foreground p-2 h-12"></td>
+                        <td className="border border-muted-foreground p-2 h-12"></td>
+                        <td className="border border-muted-foreground p-2 h-12 text-center text-muted-foreground">%</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+              
+              <div className="space-y-2">
+                <label className="text-sm font-medium">
+                  Work Accomplishments (Describe your key achievements during this period):
+                </label>
+                <div className="border border-dashed border-muted-foreground h-24 rounded" />
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Section III: Performance Competencies */}
           <Card>
             <CardHeader>
               <CardTitle className="text-lg">Section III: Performance Competencies Evaluation</CardTitle>
