@@ -1,16 +1,19 @@
 import { useState, useEffect, useMemo } from 'react';
 import { Helmet } from 'react-helmet-async';
 import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '@/contexts/AuthContext';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Loader2, Lock, Settings, Calendar, ArrowLeft, Save, Mail, Users, CheckCircle2, Clock, FileEdit, Award } from 'lucide-react';
+import { Switch } from '@/components/ui/switch';
+import { Loader2, Lock, Settings, Calendar, ArrowLeft, Save, Mail, Users, CheckCircle2, Clock, FileEdit, Award, Eye, ShieldCheck } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { toast } from '@/hooks/use-toast';
 import { VersionBadge } from '@/components/version/VersionBadge';
 import { HierarchyTree, HierarchyMember, buildHierarchyTree, countHierarchyStats } from '@/components/evaluation/HierarchyTree';
 import { CompetencyManager } from '@/components/admin/CompetencyManager';
+import { SurveyPreview } from '@/components/admin/SurveyPreview';
 
 const HR_PASSCODE = '4155';
 
@@ -22,11 +25,15 @@ interface AssessmentDates {
 }
 
 const HRAdmin = () => {
+  const { user } = useAuth();
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [passcodeInput, setPasscodeInput] = useState('');
   const [passcodeError, setPasscodeError] = useState('');
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
+  const [requireAuth, setRequireAuth] = useState(false);
+  const [isCheckingAuth, setIsCheckingAuth] = useState(true);
+  const [surveyPreviewOpen, setSurveyPreviewOpen] = useState(false);
   const [dates, setDates] = useState<AssessmentDates>({
     open_date: '2026-01-01',
     close_date: '2026-01-31',
@@ -41,7 +48,17 @@ const HRAdmin = () => {
 
   useEffect(() => {
     fetchSettings();
+    checkAuthMode();
   }, []);
+
+  // Check if user has auth-based access when requireAuth is enabled
+  useEffect(() => {
+    if (!isLoading && requireAuth && user) {
+      checkAuthAccess();
+    } else if (!isLoading) {
+      setIsCheckingAuth(false);
+    }
+  }, [isLoading, requireAuth, user]);
 
   // Load company hierarchy after authentication
   useEffect(() => {
@@ -49,6 +66,58 @@ const HRAdmin = () => {
       loadCompanyHierarchy();
     }
   }, [isAuthenticated]);
+
+  const checkAuthMode = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('pep_settings')
+        .select('setting_value')
+        .eq('setting_key', 'hr_admin_auth_mode')
+        .single();
+
+      if (!error && data?.setting_value) {
+        const authMode = data.setting_value as { require_auth: boolean };
+        setRequireAuth(authMode.require_auth || false);
+      }
+    } catch (error) {
+      console.error('Error checking auth mode:', error);
+    }
+  };
+
+  const checkAuthAccess = async () => {
+    if (!user) {
+      setIsCheckingAuth(false);
+      return;
+    }
+
+    try {
+      // Check if user is in hr_admin_users table via their employee record
+      const { data: employee, error: empError } = await supabase
+        .from('employees')
+        .select('id')
+        .eq('user_id', user.id)
+        .single();
+
+      if (empError || !employee) {
+        setIsCheckingAuth(false);
+        return;
+      }
+
+      const { data: adminUser, error: adminError } = await supabase
+        .from('hr_admin_users')
+        .select('id')
+        .eq('employee_id', employee.id)
+        .single();
+
+      if (!adminError && adminUser) {
+        setIsAuthenticated(true);
+      }
+    } catch (error) {
+      console.error('Error checking auth access:', error);
+    } finally {
+      setIsCheckingAuth(false);
+    }
+  };
 
   const fetchSettings = async () => {
     try {
@@ -67,6 +136,36 @@ const HRAdmin = () => {
       console.error('Error fetching settings:', error);
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const toggleAuthMode = async () => {
+    const newValue = !requireAuth;
+    try {
+      const { error } = await supabase
+        .from('pep_settings')
+        .update({ 
+          setting_value: JSON.parse(JSON.stringify({ require_auth: newValue })),
+          updated_at: new Date().toISOString()
+        })
+        .eq('setting_key', 'hr_admin_auth_mode');
+
+      if (error) throw error;
+      
+      setRequireAuth(newValue);
+      toast({
+        title: 'Auth mode updated',
+        description: newValue 
+          ? 'HR Admin now requires user authentication (hr_admin_users table).' 
+          : 'HR Admin now uses passcode authentication.',
+      });
+    } catch (error) {
+      console.error('Error updating auth mode:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to update auth mode.',
+        variant: 'destructive',
+      });
     }
   };
 
@@ -210,7 +309,7 @@ Thank you!`
 
   const hierarchyStats = useMemo(() => countHierarchyStats(companyHierarchy), [companyHierarchy]);
 
-  if (isLoading) {
+  if (isLoading || isCheckingAuth) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
         <Loader2 className="w-8 h-8 animate-spin text-primary" />
@@ -218,8 +317,41 @@ Thank you!`
     );
   }
 
-  // Passcode Gate
+  // Auth Gate - show passcode if not using auth mode, or if auth check didn't pass
   if (!isAuthenticated) {
+    // If requireAuth is true and user is logged in but not authorized
+    if (requireAuth && user) {
+      return (
+        <>
+          <Helmet>
+            <title>HR Admin - Self Evaluation</title>
+          </Helmet>
+          <div className="min-h-screen flex items-center justify-center bg-background p-4">
+            <Card className="w-full max-w-sm">
+              <CardHeader className="text-center">
+                <div className="mx-auto mb-4 w-12 h-12 rounded-full bg-destructive/10 flex items-center justify-center">
+                  <ShieldCheck className="w-6 h-6 text-destructive" />
+                </div>
+                <CardTitle>Access Denied</CardTitle>
+                <CardDescription>
+                  You are not authorized to access HR Admin. Please contact HR if you believe this is an error.
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <Button variant="ghost" asChild className="w-full">
+                  <Link to="/">
+                    <ArrowLeft className="w-4 h-4 mr-2" />
+                    Back to Dashboard
+                  </Link>
+                </Button>
+              </CardContent>
+            </Card>
+          </div>
+        </>
+      );
+    }
+
+    // Show passcode gate (default behavior or when not logged in with requireAuth)
     return (
       <>
         <Helmet>
@@ -478,8 +610,50 @@ Thank you!`
               )}
             </CardContent>
           </Card>
+
+          {/* Security & Tools Card */}
+          <Card className="mb-6">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2 text-lg">
+                <ShieldCheck className="w-5 h-5" />
+                Security & Tools
+              </CardTitle>
+              <CardDescription>
+                Admin page security settings and preview tools
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              {/* Auth Toggle */}
+              <div className="flex items-center justify-between">
+                <div className="space-y-1">
+                  <Label htmlFor="auth-mode" className="font-medium">Require User Authentication</Label>
+                  <p className="text-xs text-muted-foreground">
+                    When enabled, only users in hr_admin_users table can access this page (no passcode needed)
+                  </p>
+                </div>
+                <Switch
+                  id="auth-mode"
+                  checked={requireAuth}
+                  onCheckedChange={toggleAuthMode}
+                />
+              </div>
+              
+              <div className="border-t pt-4">
+                <Button onClick={() => setSurveyPreviewOpen(true)} variant="outline" className="w-full sm:w-auto">
+                  <Eye className="w-4 h-4 mr-2" />
+                  Preview Blank Survey Form
+                </Button>
+                <p className="text-xs text-muted-foreground mt-2">
+                  View and print a blank survey form for review or to share with developers
+                </p>
+              </div>
+            </CardContent>
+          </Card>
         </div>
       </div>
+
+      {/* Survey Preview Dialog */}
+      <SurveyPreview open={surveyPreviewOpen} onOpenChange={setSurveyPreviewOpen} />
     </>
   );
 };
