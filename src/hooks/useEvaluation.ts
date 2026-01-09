@@ -35,7 +35,7 @@ const getInitialData = (): EvaluationData => ({
     supervisorName: '',
   },
   quantitative: {
-    performanceObjectives: '',
+    performanceObjectives: [],
     workAccomplishments: '',
     personalDevelopment: '',
     quantitativeRating: null,
