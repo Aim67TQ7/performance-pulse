@@ -77,7 +77,7 @@ export const Dashboard = () => {
             periodYear: ASSESSMENT_YEAR,
           };
           const quantitative = evaluation.quantitative_json as unknown as QuantitativeData || {
-            performanceObjectives: '',
+            performanceObjectives: [],
             workAccomplishments: '',
             personalDevelopment: '',
             quantitativeRating: null,

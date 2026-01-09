@@ -31,13 +31,22 @@ export interface CompetencyRating {
   comments: string;
 }
 
+// Performance objective with measurable target
+export interface PerformanceObjective {
+  id: string;
+  objective: string;
+  measurableTarget: string;
+  actual: string;
+}
+
 export interface QuantitativeData {
+  // New structured performance objectives
+  performanceObjectives: PerformanceObjective[];
+  workAccomplishments: string;
   // Legacy fields (for backwards compatibility)
-  performanceObjectives?: string;
-  workAccomplishments?: string;
   personalDevelopment?: string;
   quantitativeRating?: OverallRating | null;
-  // New competency-based fields
+  // Competency-based fields
   competencies: CompetencyRating[];
   overallQuantitativeRating: OverallRating | null;
 }

@@ -854,9 +854,18 @@ async function buildPdfBytes(data: EvaluationData): Promise<Uint8Array> {
   ctx.y -= SECTION_GAP;
   ctx = drawSectionHeader(ctx, 'Section II: Quantitative Assessment');
   
-  ctx = drawTextBox(ctx, 'Performance Objectives', data.quantitative?.performanceObjectives || '');
+  // Format performance objectives for display
+  const objectivesText = Array.isArray(data.quantitative?.performanceObjectives) 
+    ? data.quantitative.performanceObjectives.map((obj, i) => {
+        const score = obj.measurableTarget && obj.actual 
+          ? `${Math.round((parseFloat(obj.actual.replace(/[^0-9.-]/g, '')) / parseFloat(obj.measurableTarget.replace(/[^0-9.-]/g, ''))) * 100)}%`
+          : '-';
+        return `${i + 1}. ${obj.objective || 'N/A'}\n   Target: ${obj.measurableTarget || 'N/A'} | Actual: ${obj.actual || 'N/A'} | Score: ${score}`;
+      }).join('\n\n')
+    : '';
+  
+  ctx = drawTextBox(ctx, 'Performance Objectives', objectivesText);
   ctx = drawTextBox(ctx, 'Work Accomplishments', data.quantitative?.workAccomplishments || '');
-  ctx = drawTextBox(ctx, 'Personal Development', data.quantitative?.personalDevelopment || '');
   
   ctx.y -= 15;
   ctx = ensureSpace(ctx, 70);
