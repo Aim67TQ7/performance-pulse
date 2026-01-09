@@ -1,8 +1,7 @@
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
-import { EvaluationData, RATING_OPTIONS, OverallRating } from '@/types/evaluation';
-import { RatingSelector } from './RatingSelector';
-import { Target, Trophy, BookOpen } from 'lucide-react';
+import { EvaluationData } from '@/types/evaluation';
+import { Target, Trophy } from 'lucide-react';
 
 interface QuantitativeStepProps {
   data: EvaluationData['quantitative'];
@@ -14,7 +13,7 @@ export const QuantitativeStep = ({ data, onUpdate }: QuantitativeStepProps) => {
     <div className="form-section animate-slide-up">
       <div className="mb-6">
         <h2 className="text-2xl font-display font-semibold text-foreground mb-2">
-          A. Quantitative Self-Evaluation
+          Section II: Quantitative Self-Assessment
         </h2>
         <p className="text-muted-foreground">
           Describe your key achievements and objectives for this evaluation period.
@@ -62,39 +61,6 @@ export const QuantitativeStep = ({ data, onUpdate }: QuantitativeStepProps) => {
           <p className="text-xs text-muted-foreground text-right">
             Aim for 3-5 bullet points
           </p>
-        </div>
-
-        {/* Personal Development */}
-        <div className="space-y-3">
-          <Label htmlFor="development" className="flex items-center gap-2 text-base font-medium">
-            <BookOpen className="w-5 h-5 text-accent" />
-            Personal Development
-          </Label>
-          <p className="text-sm text-muted-foreground">
-            Describe your personal development activities, training, and growth initiatives.
-          </p>
-          <Textarea
-            id="development"
-            value={data.personalDevelopment}
-            onChange={(e) => onUpdate({ personalDevelopment: e.target.value })}
-            placeholder="• Completed [training/certification]&#10;• Developed skills in [area]&#10;• Mentored [colleague/team member]"
-            className="min-h-[180px] resize-y"
-          />
-          <p className="text-xs text-muted-foreground text-right">
-            Aim for 3-5 bullet points
-          </p>
-        </div>
-
-        {/* Quantitative Rating */}
-        <div className="pt-6 border-t border-border">
-          <Label className="text-base font-medium mb-4 block">
-            Objective/Quantitative Self-Evaluation Rating
-          </Label>
-          <RatingSelector
-            value={data.quantitativeRating}
-            onChange={(rating) => onUpdate({ quantitativeRating: rating as OverallRating })}
-            options={RATING_OPTIONS}
-          />
         </div>
       </div>
     </div>

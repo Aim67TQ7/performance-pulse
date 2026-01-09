@@ -489,8 +489,13 @@ export const useEvaluation = () => {
 
   const calculateProgress = useCallback(() => {
     const sections = {
-      employeeInfo: Object.values(data.employeeInfo).filter(v => v && v !== '').length / 5, // Updated for supervisor
+      employeeInfo: Object.values(data.employeeInfo).filter(v => v && v !== '').length / 5,
       quantitative: (
+        // Performance objectives + work accomplishments
+        (data.quantitative.performanceObjectives ? 0.5 : 0) +
+        (data.quantitative.workAccomplishments ? 0.5 : 0)
+      ),
+      competencies: (
         // Count completed competencies + overall rating
         ((data.quantitative.competencies?.filter(c => c.score !== null).length || 0) / Math.max(data.quantitative.competencies?.length || 1, 1)) * 0.8 +
         (data.quantitative.overallQuantitativeRating ? 0.2 : 0)
@@ -498,13 +503,12 @@ export const useEvaluation = () => {
       qualitative: Object.values(data.qualitative).filter(v => v !== null).length / 15,
       summary: (
         (data.summary.employeeSummary ? 1 : 0) +
-        (data.summary.targetsForNextYear ? 1 : 0) +
         (data.summary.qualitativeRating ? 1 : 0) +
         (data.summary.overallRating ? 1 : 0)
-      ) / 4,
+      ) / 3,
     };
 
-    const total = (sections.employeeInfo + sections.quantitative + sections.qualitative + sections.summary) / 4;
+    const total = (sections.employeeInfo + sections.quantitative + sections.competencies + sections.qualitative + sections.summary) / 5;
     
     return { sections, total: Math.round(total * 100) };
   }, [data]);
