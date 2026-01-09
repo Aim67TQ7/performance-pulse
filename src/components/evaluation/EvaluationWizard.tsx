@@ -1,6 +1,7 @@
 import { useState, useMemo, useEffect } from 'react';
 import { ProgressHeader } from './ProgressHeader';
 import { EmployeeInfoStep } from './EmployeeInfoStep';
+import { QuantitativeStep } from './QuantitativeStep';
 import { CompetenciesStep } from './CompetenciesStep';
 import { QualitativeStep } from './QualitativeStep';
 import { SummaryStep } from './SummaryStep';
@@ -20,9 +21,10 @@ import { Link } from 'react-router-dom';
 
 const STEPS = [
   { id: 1, title: 'Employee Info', shortTitle: 'Info' },
-  { id: 2, title: 'Competencies', shortTitle: 'Comp.' },
-  { id: 3, title: 'Qualitative', shortTitle: 'Qual.' },
-  { id: 4, title: 'Summary', shortTitle: 'Summary' },
+  { id: 2, title: 'Quantitative', shortTitle: 'Quant.' },
+  { id: 3, title: 'Competencies', shortTitle: 'Comp.' },
+  { id: 4, title: 'Qualitative', shortTitle: 'Qual.' },
+  { id: 5, title: 'Summary', shortTitle: 'Summary' },
 ];
 
 export const EvaluationWizard = () => {
@@ -103,9 +105,10 @@ export const EvaluationWizard = () => {
   const completedSteps = useMemo(() => {
     const completed: number[] = [];
     if (sections.employeeInfo >= 0.75) completed.push(1);
-    if (sections.quantitative >= 0.75) completed.push(2);
-    if (sections.qualitative >= 0.6) completed.push(3);
-    if (sections.summary >= 0.75) completed.push(4);
+    if (sections.quantitative >= 0.5) completed.push(2);
+    if (sections.competencies >= 0.75) completed.push(3);
+    if (sections.qualitative >= 0.6) completed.push(4);
+    if (sections.summary >= 0.75) completed.push(5);
     return completed;
   }, [sections]);
 
@@ -280,18 +283,24 @@ export const EvaluationWizard = () => {
           />
         )}
         {currentStep === 2 && (
-          <CompetenciesStep 
+          <QuantitativeStep 
             data={data.quantitative} 
             onUpdate={updateQuantitative} 
           />
         )}
         {currentStep === 3 && (
+          <CompetenciesStep 
+            data={data.quantitative} 
+            onUpdate={updateQuantitative} 
+          />
+        )}
+        {currentStep === 4 && (
           <QualitativeStep 
             data={data.qualitative} 
             onUpdate={updateQualitative} 
           />
         )}
-        {currentStep === 4 && (
+        {currentStep === 5 && (
           <SummaryStep 
             data={data.summary} 
             onUpdate={updateSummary} 
