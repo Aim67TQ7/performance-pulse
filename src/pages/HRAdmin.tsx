@@ -196,7 +196,7 @@ IMPORTANT DATES:
 HOW TO ACCESS:
 1. Visit https://buntingGPT.com
 2. Log in using your Bunting Microsoft network credentials
-3. Open the Self-Evaluation app from the sidebar menu
+3. On sidebar, Featured section, click the Performance Self-Review link
 4. Complete your self-evaluation before the due date
 
 If you have any questions, please contact HR.

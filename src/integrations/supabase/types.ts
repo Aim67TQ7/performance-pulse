@@ -261,6 +261,7 @@ export type Database = {
           name: string
           requires_auth: boolean | null
           show_to_demo: boolean
+          sidebar_featured: boolean | null
           token: string | null
           updated_at: string | null
           url: string
@@ -285,6 +286,7 @@ export type Database = {
           name: string
           requires_auth?: boolean | null
           show_to_demo?: boolean
+          sidebar_featured?: boolean | null
           token?: string | null
           updated_at?: string | null
           url: string
@@ -309,6 +311,7 @@ export type Database = {
           name?: string
           requires_auth?: boolean | null
           show_to_demo?: boolean
+          sidebar_featured?: boolean | null
           token?: string | null
           updated_at?: string | null
           url?: string
