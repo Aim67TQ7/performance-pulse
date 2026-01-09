@@ -1,7 +1,7 @@
 import { useState, useMemo, useEffect } from 'react';
 import { ProgressHeader } from './ProgressHeader';
 import { EmployeeInfoStep } from './EmployeeInfoStep';
-import { QuantitativeStep } from './QuantitativeStep';
+import { CompetenciesStep } from './CompetenciesStep';
 import { QualitativeStep } from './QualitativeStep';
 import { SummaryStep } from './SummaryStep';
 import { NavigationButtons } from './NavigationButtons';
@@ -20,7 +20,7 @@ import { Link } from 'react-router-dom';
 
 const STEPS = [
   { id: 1, title: 'Employee Info', shortTitle: 'Info' },
-  { id: 2, title: 'Quantitative', shortTitle: 'Quant.' },
+  { id: 2, title: 'Competencies', shortTitle: 'Comp.' },
   { id: 3, title: 'Qualitative', shortTitle: 'Qual.' },
   { id: 4, title: 'Summary', shortTitle: 'Summary' },
 ];
@@ -280,7 +280,7 @@ export const EvaluationWizard = () => {
           />
         )}
         {currentStep === 2 && (
-          <QuantitativeStep 
+          <CompetenciesStep 
             data={data.quantitative} 
             onUpdate={updateQuantitative} 
           />
