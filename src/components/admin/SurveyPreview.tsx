@@ -4,7 +4,6 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { Printer } from "lucide-react";
-import { QUALITATIVE_FACTORS } from "@/types/evaluation";
 import {
   Dialog,
   DialogContent,
@@ -25,13 +24,6 @@ interface SurveyPreviewProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
 }
-
-// Convert QUALITATIVE_FACTORS object to array for easier rendering
-const QUALITATIVE_CATEGORIES = [
-  { key: 'planningOrganization', label: 'Planning & Organization', factors: QUALITATIVE_FACTORS.planningOrganization },
-  { key: 'interpersonal', label: 'Interpersonal', factors: QUALITATIVE_FACTORS.interpersonal },
-  { key: 'individual', label: 'Individual', factors: QUALITATIVE_FACTORS.individual },
-] as const;
 
 export function SurveyPreview({ open, onOpenChange }: SurveyPreviewProps) {
   const [competencies, setCompetencies] = useState<Competency[]>([]);
@@ -120,10 +112,10 @@ export function SurveyPreview({ open, onOpenChange }: SurveyPreviewProps) {
             </CardContent>
           </Card>
 
-          {/* Section B: Performance Competencies */}
+          {/* Section II: Performance Competencies */}
           <Card>
             <CardHeader>
-              <CardTitle className="text-lg">Section B: Performance Competencies Evaluation</CardTitle>
+              <CardTitle className="text-lg">Section III: Performance Competencies Evaluation</CardTitle>
               <p className="text-sm text-muted-foreground">
                 Rate yourself on each competency using a 1-5 scale (1 = Needs Improvement, 5 = Exceptional)
               </p>
@@ -173,53 +165,10 @@ export function SurveyPreview({ open, onOpenChange }: SurveyPreviewProps) {
             </CardContent>
           </Card>
 
-          {/* Section C: Qualitative Self-Evaluation */}
+          {/* Section IV: Summary */}
           <Card>
             <CardHeader>
-              <CardTitle className="text-lg">Section C: Qualitative Self-Evaluation</CardTitle>
-              <p className="text-sm text-muted-foreground">
-                Rate yourself on each factor using a 1-5 scale (1 = Strongly Disagree, 5 = Strongly Agree)
-              </p>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-6">
-                {QUALITATIVE_CATEGORIES.map((category, catIndex) => (
-                  <div key={category.key} className="space-y-3">
-                    <h4 className="font-semibold text-foreground border-b pb-1">
-                      {String.fromCharCode(65 + catIndex)}. {category.label}
-                    </h4>
-                    <div className="space-y-4 pl-4">
-                      {category.factors.map((factor, factorIndex) => (
-                        <div key={factor.key} className="flex items-start gap-3">
-                          <span className="text-sm text-muted-foreground min-w-[24px]">
-                            {catIndex + 1}.{factorIndex + 1}
-                          </span>
-                          <div className="flex-1">
-                            <p className="text-sm">{factor.label}</p>
-                            <div className="mt-2 flex items-center gap-2">
-                              {[1, 2, 3, 4, 5].map((num) => (
-                                <div
-                                  key={num}
-                                  className="w-6 h-6 border rounded text-xs flex items-center justify-center"
-                                >
-                                  {num}
-                                </div>
-                              ))}
-                            </div>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Section D: Summary */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-lg">Section D: Summary</CardTitle>
+              <CardTitle className="text-lg">Section IV: Employee Summary</CardTitle>
             </CardHeader>
             <CardContent className="space-y-6">
               <div className="space-y-2">
@@ -229,41 +178,19 @@ export function SurveyPreview({ open, onOpenChange }: SurveyPreviewProps) {
                 <div className="border border-dashed border-muted-foreground h-32 rounded" />
               </div>
               
-              <div className="space-y-2">
-                <label className="text-sm font-medium">
-                  Goals and Targets for Next Year:
-                </label>
-                <div className="border border-dashed border-muted-foreground h-32 rounded" />
-              </div>
-              
               <Separator />
               
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <label className="text-sm font-medium">Overall Competencies Rating:</label>
-                  <div className="flex gap-2">
-                    {[1, 2, 3, 4, 5].map((num) => (
-                      <div
-                        key={num}
-                        className="w-8 h-8 border rounded flex items-center justify-center text-sm"
-                      >
-                        {num}
-                      </div>
-                    ))}
-                  </div>
-                </div>
-                <div className="space-y-2">
-                  <label className="text-sm font-medium">Overall Qualitative Rating:</label>
-                  <div className="flex gap-2">
-                    {[1, 2, 3, 4, 5].map((num) => (
-                      <div
-                        key={num}
-                        className="w-8 h-8 border rounded flex items-center justify-center text-sm"
-                      >
-                        {num}
-                      </div>
-                    ))}
-                  </div>
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Overall Self-Evaluation Rating:</label>
+                <div className="flex gap-2">
+                  {[1, 2, 3, 4, 5].map((num) => (
+                    <div
+                      key={num}
+                      className="w-8 h-8 border rounded flex items-center justify-center text-sm"
+                    >
+                      {num}
+                    </div>
+                  ))}
                 </div>
               </div>
               

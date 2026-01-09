@@ -872,26 +872,15 @@ async function buildPdfBytes(data: EvaluationData): Promise<Uint8Array> {
   ctx = drawRatingBadge(ctx, 'QUANTITATIVE RATING', data.quantitative?.quantitativeRating ?? null, MARGIN, CONTENT_WIDTH);
   ctx.y -= 55;
   
-  // ─── PAGE 3-4: QUALITATIVE ASSESSMENT ───
-  ctx = newPage(ctx);
-  ctx = drawPageHeader(ctx);
-  ctx = drawSectionHeader(ctx, 'Section III: Qualitative Assessment');
-  ctx = drawRatingLegend(ctx);
-  
-  for (const [sectionTitle, factors] of Object.entries(QUALITATIVE_SECTIONS)) {
-    ctx = drawQualitativeTable(ctx, sectionTitle, factors, data.qualitative as unknown as Record<string, number | null>);
-  }
-  
-  // ─── PAGE 4-5: SUMMARY ───
+  // ─── PAGE 3-4: SUMMARY ───
   ctx = ensureSpace(ctx, 200);
   if (ctx.y < PAGE_HEIGHT / 2) {
     ctx = newPage(ctx);
     ctx = drawPageHeader(ctx);
   }
   
-  ctx = drawSectionHeader(ctx, 'Section IV: Summary');
+  ctx = drawSectionHeader(ctx, 'Section IV: Employee Summary');
   ctx = drawTextBox(ctx, 'Employee Self-Summary', data.summary?.employeeSummary || '');
-  ctx = drawTextBox(ctx, 'Targets for Next Year', data.summary?.targetsForNextYear || '');
   
   ctx.y -= 15;
   ctx = ensureSpace(ctx, 80);
