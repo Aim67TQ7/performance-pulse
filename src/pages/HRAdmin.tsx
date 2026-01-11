@@ -7,13 +7,15 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
-import { Loader2, Lock, Settings, Calendar, ArrowLeft, Save, Mail, Users, CheckCircle2, Clock, FileEdit, Award, Eye, ShieldCheck } from 'lucide-react';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Loader2, Lock, Settings, Calendar, ArrowLeft, Save, Mail, Users, CheckCircle2, Clock, FileEdit, Award, Eye, ShieldCheck, UserCog } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { toast } from '@/hooks/use-toast';
 import { VersionBadge } from '@/components/version/VersionBadge';
 import { HierarchyTree, HierarchyMember, buildHierarchyTree, countHierarchyStats } from '@/components/evaluation/HierarchyTree';
 import { CompetencyManager } from '@/components/admin/CompetencyManager';
 import { SurveyPreview } from '@/components/admin/SurveyPreview';
+import { EmployeeManager } from '@/components/admin/EmployeeManager';
 
 const HR_PASSCODE = '4155';
 
@@ -433,8 +435,23 @@ Thank you!`
             </Button>
           </div>
 
-          {/* Assessment Dates Card */}
-          <Card className="mb-6">
+          {/* Tabs */}
+          <Tabs defaultValue="assessment" className="space-y-6">
+            <TabsList className="grid w-full grid-cols-2">
+              <TabsTrigger value="assessment" className="gap-2">
+                <Settings className="w-4 h-4" />
+                Assessment Settings
+              </TabsTrigger>
+              <TabsTrigger value="employees" className="gap-2">
+                <UserCog className="w-4 h-4" />
+                Employee Management
+              </TabsTrigger>
+            </TabsList>
+
+            {/* Assessment Settings Tab */}
+            <TabsContent value="assessment" className="space-y-6">
+              {/* Assessment Dates Card */}
+              <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2 text-lg">
                 <Calendar className="w-5 h-5" />
@@ -520,12 +537,10 @@ Thank you!`
           </Card>
 
           {/* Performance Competencies Manager */}
-          <div className="mb-6">
-            <CompetencyManager />
-          </div>
+          <CompetencyManager />
 
           {/* Notification Card */}
-          <Card className="mb-6">
+          <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2 text-lg">
                 <Mail className="w-5 h-5" />
@@ -612,7 +627,7 @@ Thank you!`
           </Card>
 
           {/* Security & Tools Card */}
-          <Card className="mb-6">
+          <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2 text-lg">
                 <ShieldCheck className="w-5 h-5" />
@@ -649,6 +664,13 @@ Thank you!`
               </div>
             </CardContent>
           </Card>
+            </TabsContent>
+
+            {/* Employee Management Tab */}
+            <TabsContent value="employees">
+              <EmployeeManager />
+            </TabsContent>
+          </Tabs>
         </div>
       </div>
 
