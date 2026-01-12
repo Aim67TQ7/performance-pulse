@@ -77,7 +77,7 @@ export function PrivateRoute({ children }: PrivateRouteProps) {
   }
 
   // ==========================================================================
-  // STANDALONE MODE: Normal auth flow
+  // STANDALONE MODE: App is embedded-only, show access restricted message
   // ==========================================================================
   
   // Show loading while checking authentication
@@ -94,9 +94,27 @@ export function PrivateRoute({ children }: PrivateRouteProps) {
     );
   }
 
-  // Redirect to auth page if not logged in
+  // User not authenticated in standalone mode - show access restricted message
   if (!user) {
-    return <Navigate to="/auth" state={{ from: location }} replace />;
+    return (
+      <div className="flex flex-col items-center justify-center h-screen gap-4 p-4 text-center">
+        <img 
+          src="/bunting-logo.png" 
+          alt="Bunting Magnetics" 
+          className="h-16 w-auto mb-4"
+        />
+        <div className="text-xl font-semibold text-foreground">Access Restricted</div>
+        <p className="text-muted-foreground text-sm max-w-md">
+          This application can only be accessed through the main BuntingGPT portal.
+        </p>
+        <a 
+          href="https://buntinggpt.com" 
+          className="mt-4 px-6 py-2 bg-primary text-primary-foreground rounded-md hover:bg-primary/90 transition-colors"
+        >
+          Go to buntinggpt.com
+        </a>
+      </div>
+    );
   }
 
   // Render the protected content
