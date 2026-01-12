@@ -69,6 +69,24 @@ export function useParentAuth(): ParentAuthState & { requestAuth: () => void } {
 
     console.log('[useParentAuth] Running in embedded mode, waiting for parent auth...');
 
+    // First, check if we already have a valid session from cross-domain cookies
+    const checkExistingSession = async () => {
+      try {
+        const { data: { session }, error } = await supabase.auth.getSession();
+        if (session && !error) {
+          console.log('[useParentAuth] Found existing session from cookies!', session.user.email);
+          setAuthReceived(true);
+          setIsLoading(false);
+          setUser({ id: session.user.id, email: session.user.email || '' });
+          authAttempted.current = true;
+          return true;
+        }
+      } catch (err) {
+        console.log('[useParentAuth] No existing session found');
+      }
+      return false;
+    };
+
     const handleMessage = async (event: MessageEvent) => {
       // Validate origin
       if (!isAllowedOrigin(event.origin)) {
@@ -159,31 +177,45 @@ export function useParentAuth(): ParentAuthState & { requestAuth: () => void } {
       }
     };
 
-    window.addEventListener('message', handleMessage);
-
-    // Request auth from parent immediately
-    requestAuth();
-
-    // Retry every 2 seconds for up to 10 seconds
-    const retryInterval = setInterval(() => {
-      if (!authAttempted.current) {
-        requestAuth();
+    // Start by checking for existing session
+    checkExistingSession().then((hasSession) => {
+      if (hasSession) {
+        console.log('[useParentAuth] Using existing cookie session, skipping parent auth request');
+        return;
       }
-    }, 2000);
 
-    const timeout = setTimeout(() => {
-      clearInterval(retryInterval);
-      if (!authReceived) {
-        console.warn('[useParentAuth] Auth timeout - no response from parent');
-        setError('Authentication timeout - parent did not respond');
-        setIsLoading(false);
-      }
-    }, 10000);
+      // No existing session, set up message listener and request from parent
+      window.addEventListener('message', handleMessage);
+
+      // Request auth from parent immediately
+      requestAuth();
+
+      // Retry every 2 seconds for up to 10 seconds
+      const retryInterval = setInterval(() => {
+        if (!authAttempted.current) {
+          requestAuth();
+        }
+      }, 2000);
+
+      const timeout = setTimeout(() => {
+        clearInterval(retryInterval);
+        if (!authReceived) {
+          console.warn('[useParentAuth] Auth timeout - no response from parent');
+          setError('Authentication timeout - parent did not respond');
+          setIsLoading(false);
+        }
+      }, 10000);
+
+      // Cleanup will be handled by the outer effect
+      return () => {
+        window.removeEventListener('message', handleMessage);
+        clearInterval(retryInterval);
+        clearTimeout(timeout);
+      };
+    });
 
     return () => {
       window.removeEventListener('message', handleMessage);
-      clearInterval(retryInterval);
-      clearTimeout(timeout);
     };
   }, [isEmbedded, requestAuth, authReceived]);
 
