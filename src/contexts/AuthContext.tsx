@@ -7,29 +7,34 @@
 
 import { createContext, useContext, ReactNode } from 'react';
 import { useParentAuth, ParentAuthState } from '@/hooks/useParentAuth';
-import type { User, Session } from '@supabase/supabase-js';
+import { supabase } from '@/integrations/supabase/client';
 
 interface AuthContextType extends ParentAuthState {
-  // Additional context-specific properties can be added here
   signOut: () => Promise<void>;
 }
 
-const AuthContext = createContext<AuthContextType | undefined>(undefined);
+// Default context value for when accessed outside provider (should not happen in normal use)
+const defaultContextValue: AuthContextType = {
+  user: null,
+  session: null,
+  isLoading: true,
+  isEmbedded: false,
+  authReceived: false,
+  error: null,
+  requestAuth: () => {},
+  signOut: async () => {},
+};
+
+const AuthContext = createContext<AuthContextType>(defaultContextValue);
 
 export const useAuth = () => {
-  const context = useContext(AuthContext);
-  if (!context) {
-    throw new Error('useAuth must be used within an AuthProvider');
-  }
-  return context;
+  return useContext(AuthContext);
 };
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const auth = useParentAuth();
 
-  // Import supabase for signOut
   const signOut = async () => {
-    const { supabase } = await import('@/integrations/supabase/client');
     await supabase.auth.signOut();
   };
 
