@@ -1,11 +1,12 @@
 import { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
-import { Loader2, UserPlus, AlertCircle, CheckCircle2 } from 'lucide-react';
+import { Loader2, UserPlus, AlertCircle, CheckCircle2, Zap } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
 
 interface OrphanUser {
@@ -34,6 +35,7 @@ interface AuthUserSyncProps {
 export const AuthUserSync = ({ open, onOpenChange, onSyncComplete }: AuthUserSyncProps) => {
   const [isLoading, setIsLoading] = useState(false);
   const [isSyncing, setIsSyncing] = useState(false);
+  const [isAutoSyncing, setIsAutoSyncing] = useState(false);
   const [users, setUsers] = useState<UserToSync[]>([]);
   const [stats, setStats] = useState({ total: 0, linked: 0 });
 
@@ -110,6 +112,47 @@ export const AuthUserSync = ({ open, onOpenChange, onSyncComplete }: AuthUserSyn
 
   const selectedUsers = users.filter(u => u.selected);
   const validSelected = selectedUsers.filter(u => u.name_first.trim() && u.name_last.trim());
+
+  const handleAutoSync = async () => {
+    setIsAutoSyncing(true);
+    try {
+      const response = await fetch(
+        'https://qzwxisdfwswsrbzvpzlo.supabase.co/functions/v1/sync-auth-users',
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ autoSync: true }),
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error('Auto-sync request failed');
+      }
+
+      const result = await response.json();
+
+      if (result.errors?.length > 0) {
+        console.warn('Auto-sync errors:', result.errors);
+      }
+
+      toast({
+        title: 'Auto-Sync Complete',
+        description: `Created ${result.created} employee records with placeholder names.${result.errors?.length > 0 ? ` ${result.errors.length} errors.` : ''} Update names in Employee Management.`,
+      });
+
+      onSyncComplete();
+      onOpenChange(false);
+    } catch (error: any) {
+      console.error('Auto-sync error:', error);
+      toast({
+        title: 'Auto-Sync Failed',
+        description: error.message || 'Failed to auto-sync users',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsAutoSyncing(false);
+    }
+  };
 
   const handleSync = async () => {
     if (validSelected.length === 0) {
@@ -275,17 +318,51 @@ export const AuthUserSync = ({ open, onOpenChange, onSyncComplete }: AuthUserSyn
           </div>
         )}
 
-        <DialogFooter>
+        <DialogFooter className="flex-col sm:flex-row gap-2">
           <Button variant="outline" onClick={() => onOpenChange(false)}>
             Cancel
           </Button>
+          
+          {users.length > 0 && (
+            <AlertDialog>
+              <AlertDialogTrigger asChild>
+                <Button 
+                  variant="secondary" 
+                  disabled={isAutoSyncing || isSyncing}
+                  className="gap-2"
+                >
+                  {isAutoSyncing && <Loader2 className="w-4 h-4 animate-spin" />}
+                  <Zap className="w-4 h-4" />
+                  Auto-Import All ({users.length})
+                </Button>
+              </AlertDialogTrigger>
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle>Auto-Import All Users?</AlertDialogTitle>
+                  <AlertDialogDescription>
+                    This will create {users.length} employee records with placeholder names 
+                    (e.g., "Badge 00100" based on email badge numbers).
+                    <br /><br />
+                    You can update the actual names later in Employee Management.
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel>Cancel</AlertDialogCancel>
+                  <AlertDialogAction onClick={handleAutoSync}>
+                    Import All
+                  </AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
+          )}
+          
           <Button 
             onClick={handleSync} 
-            disabled={validSelected.length === 0 || isSyncing}
+            disabled={validSelected.length === 0 || isSyncing || isAutoSyncing}
             className="gap-2"
           >
             {isSyncing && <Loader2 className="w-4 h-4 animate-spin" />}
-            Import {validSelected.length} Employee{validSelected.length !== 1 ? 's' : ''}
+            Import {validSelected.length} Selected
           </Button>
         </DialogFooter>
       </DialogContent>
