@@ -28,49 +28,88 @@ export function useParentAuth(): ParentAuthState {
   useEffect(() => {
     // Only run in embedded mode
     if (!isEmbedded) {
+      console.log('[useParentAuth] Not embedded, skipping parent auth');
       setIsLoading(false);
       return;
     }
 
-    console.log('[useParentAuth] Running in embedded mode, requesting auth from parent...');
+    console.log('[useParentAuth] Init:', { 
+      isEmbedded, 
+      timestamp: new Date().toISOString(),
+      parentOrigin: window.parent !== window ? 'has parent' : 'no parent'
+    });
 
     // Listen for parent to send token
     const handleMessage = async (event: MessageEvent) => {
+      // Log ALL incoming messages for debugging
+      console.log('[useParentAuth] Received message:', {
+        origin: event.origin,
+        type: event.data?.type,
+        hasToken: !!event.data?.token,
+        tokenLength: event.data?.token?.length || 0,
+        tokenPreview: event.data?.token ? event.data.token.substring(0, 30) + '...' : null,
+        timestamp: new Date().toISOString()
+      });
+
       // Only accept from parent domain
       if (event.origin !== 'https://buntinggpt.com') {
+        console.log('[useParentAuth] Rejected message: origin mismatch', { 
+          received: event.origin, 
+          expected: 'https://buntinggpt.com' 
+        });
         return;
       }
 
       if (event.data.type === 'AUTH_TOKEN') {
-        console.log('[useParentAuth] Received AUTH_TOKEN from parent');
+        console.log('[useParentAuth] Processing AUTH_TOKEN from parent');
         authAttempted.current = true;
 
         const token = event.data.token;
 
         if (token) {
           try {
+            console.log('[useParentAuth] Attempting to set session with token...');
+            
             // Set the session manually in Supabase client
             const { data, error: sessionError } = await supabase.auth.setSession({
               access_token: token,
               refresh_token: '' // Parent handles refresh
             });
 
+            console.log('[useParentAuth] setSession result:', {
+              success: !sessionError,
+              hasData: !!data,
+              hasUser: !!data?.user,
+              userId: data?.user?.id,
+              email: data?.user?.email,
+              error: sessionError?.message,
+              errorCode: sessionError?.code,
+              timestamp: new Date().toISOString()
+            });
+
             if (sessionError) {
               console.error('[useParentAuth] Failed to set session:', sessionError);
-              setError('Failed to establish session');
+              setError(`Failed to establish session: ${sessionError.message}`);
               setIsLoading(false);
               return;
             }
 
             if (data.user) {
-              console.log('[useParentAuth] Session established for:', data.user.email);
+              console.log('[useParentAuth] Session established successfully:', {
+                userId: data.user.id,
+                email: data.user.email,
+                timestamp: new Date().toISOString()
+              });
               setUser({ id: data.user.id, email: data.user.email || '' });
               setAuthReceived(true);
               setError(null);
+            } else {
+              console.warn('[useParentAuth] setSession succeeded but no user returned');
+              setError('Session set but no user data');
             }
           } catch (err) {
             console.error('[useParentAuth] Error setting session:', err);
-            setError('Authentication error');
+            setError(`Authentication error: ${err instanceof Error ? err.message : 'Unknown'}`);
           }
         } else {
           // Parent sent null token = logout signal
@@ -99,7 +138,10 @@ export function useParentAuth(): ParentAuthState {
 
     // Request auth from parent on load
     const requestAuth = () => {
-      console.log('[useParentAuth] Sending REQUEST_AUTH to parent');
+      console.log('[useParentAuth] Sending REQUEST_AUTH to parent:', {
+        targetOrigin: 'https://buntinggpt.com',
+        timestamp: new Date().toISOString()
+      });
       window.parent.postMessage({
         type: 'REQUEST_AUTH'
       }, 'https://buntinggpt.com');
@@ -113,6 +155,11 @@ export function useParentAuth(): ParentAuthState {
     const retryInterval = setInterval(() => {
       if (!authAttempted.current && retryCount < 3) {
         retryCount++;
+        console.log('[useParentAuth] Retry attempt:', { 
+          count: retryCount, 
+          authAttempted: authAttempted.current,
+          timestamp: new Date().toISOString() 
+        });
         requestAuth();
       } else {
         clearInterval(retryInterval);
@@ -123,7 +170,11 @@ export function useParentAuth(): ParentAuthState {
     const timeout = setTimeout(() => {
       clearInterval(retryInterval);
       if (!authAttempted.current) {
-        console.warn('[useParentAuth] Auth timeout - no response from parent');
+        console.warn('[useParentAuth] Auth timeout - no response from parent:', {
+          authAttempted: authAttempted.current,
+          retryCount,
+          timestamp: new Date().toISOString()
+        });
         setError('Authentication timeout - parent did not respond');
         setIsLoading(false);
       }

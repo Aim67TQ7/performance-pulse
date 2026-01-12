@@ -20,12 +20,35 @@ export function PrivateRoute({ children }: PrivateRouteProps) {
   const { isEmbedded, authReceived, isLoading: parentAuthLoading, error: parentAuthError } = useParentAuth();
   const location = useLocation();
 
+  // Debug logging for auth state
+  console.log('[PrivateRoute] Current state:', {
+    isEmbedded,
+    authReceived,
+    parentAuthLoading,
+    parentAuthError,
+    hasUser: !!user,
+    userId: user?.id,
+    userEmail: user?.email,
+    authLoading,
+    sessionChecked,
+    route: location.pathname,
+    timestamp: new Date().toISOString()
+  });
+
   // ==========================================================================
   // EMBEDDED MODE: Wait for parent auth instead of redirecting to /auth
   // ==========================================================================
   if (isEmbedded) {
+    console.log('[PrivateRoute] Embedded mode decision:', {
+      parentAuthLoading,
+      authReceived,
+      parentAuthError,
+      hasUser: !!user
+    });
+
     // Still waiting for parent to send auth
     if (parentAuthLoading && !authReceived && !parentAuthError) {
+      console.log('[PrivateRoute] Showing loading - waiting for parent auth');
       return (
         <div className="flex flex-col items-center justify-center h-screen gap-4">
           <img 
@@ -41,6 +64,7 @@ export function PrivateRoute({ children }: PrivateRouteProps) {
 
     // Parent auth failed/timed out
     if (parentAuthError && !user) {
+      console.log('[PrivateRoute] Showing error - parent auth failed:', parentAuthError);
       return (
         <div className="flex flex-col items-center justify-center h-screen gap-4 p-4 text-center">
           <img 
@@ -60,10 +84,12 @@ export function PrivateRoute({ children }: PrivateRouteProps) {
 
     // Auth received or user exists - render children
     if (authReceived || user) {
+      console.log('[PrivateRoute] Rendering children - auth successful');
       return <>{children}</>;
     }
 
     // Fallback loading state
+    console.log('[PrivateRoute] Showing fallback loading state');
     return (
       <div className="flex items-center justify-center h-screen">
         <img 
