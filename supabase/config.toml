@@ -8,3 +8,6 @@ verify_jwt = false
 
 [functions.import-employees]
 verify_jwt = false
+
+[functions.sync-auth-users]
+verify_jwt = false
