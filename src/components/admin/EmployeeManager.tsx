@@ -10,8 +10,9 @@ import { Switch } from '@/components/ui/switch';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Loader2, Plus, Pencil, Search, UserPlus, Users, ChevronLeft, ChevronRight, Upload } from 'lucide-react';
+import { Loader2, Plus, Pencil, Search, UserPlus, Users, ChevronLeft, ChevronRight, Upload, RefreshCw } from 'lucide-react';
 import { EmployeeImport } from './EmployeeImport';
+import { AuthUserSync } from './AuthUserSync';
 import { toast } from '@/hooks/use-toast';
 
 type JobLevel = Database['public']['Enums']['job_level'];
@@ -83,6 +84,7 @@ export const EmployeeManager = () => {
   const [statusFilter, setStatusFilter] = useState<'all' | 'active' | 'inactive'>('active');
   const [currentPage, setCurrentPage] = useState(1);
   const [importDialogOpen, setImportDialogOpen] = useState(false);
+  const [syncDialogOpen, setSyncDialogOpen] = useState(false);
 
   useEffect(() => {
     fetchEmployees();
@@ -301,6 +303,10 @@ export const EmployeeManager = () => {
               </CardDescription>
             </div>
             <div className="flex gap-2">
+              <Button variant="outline" onClick={() => setSyncDialogOpen(true)} className="gap-2">
+                <RefreshCw className="w-4 h-4" />
+                Sync from Auth
+              </Button>
               <Button variant="outline" onClick={() => setImportDialogOpen(true)} className="gap-2">
                 <Upload className="w-4 h-4" />
                 Import CSV
@@ -614,6 +620,12 @@ export const EmployeeManager = () => {
         open={importDialogOpen}
         onOpenChange={setImportDialogOpen}
         onImportComplete={fetchEmployees}
+      />
+
+      <AuthUserSync
+        open={syncDialogOpen}
+        onOpenChange={setSyncDialogOpen}
+        onSyncComplete={fetchEmployees}
       />
     </>
   );
