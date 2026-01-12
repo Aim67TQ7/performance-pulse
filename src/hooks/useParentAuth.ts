@@ -94,16 +94,18 @@ export function useParentAuth(): ParentAuthState {
     // Request immediately
     requestAuth();
 
-    // Retry a few times in case of race condition
+    // Retry quickly in case of race condition (max 3 retries, 200ms apart)
+    let retryCount = 0;
     const retryInterval = setInterval(() => {
-      if (!authAttempted.current) {
+      if (!authAttempted.current && retryCount < 3) {
+        retryCount++;
         requestAuth();
       } else {
         clearInterval(retryInterval);
       }
-    }, 1000);
+    }, 200);
 
-    // Timeout after 10 seconds
+    // Timeout after 3 seconds (parent should respond nearly instantly)
     const timeout = setTimeout(() => {
       clearInterval(retryInterval);
       if (!authAttempted.current) {
@@ -111,7 +113,7 @@ export function useParentAuth(): ParentAuthState {
         setError('Authentication timeout - parent did not respond');
         setIsLoading(false);
       }
-    }, 10000);
+    }, 3000);
 
     return () => {
       window.removeEventListener('message', handleMessage);
