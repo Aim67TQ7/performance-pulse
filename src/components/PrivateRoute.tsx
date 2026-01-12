@@ -1,78 +1,104 @@
-import { useEffect } from 'react';
-import { useAuth } from '@/contexts/AuthContext';
-import { Loader2, LogIn } from 'lucide-react';
-import { Button } from '@/components/ui/button';
+/**
+ * PrivateRoute Component for BuntingGPT Subdomain Apps
+ * 
+ * This component protects routes and handles both:
+ * 1. Standalone mode: Normal Supabase auth flow
+ * 2. Embedded mode: Receives auth from parent buntinggpt.com app
+ */
+
+import { ReactNode } from "react";
+import { Navigate, useLocation } from "react-router-dom";
+import { useAuth } from "@/contexts/AuthContext";
+import { useParentAuth } from "@/hooks/useParentAuth";
 
 interface PrivateRouteProps {
-  children: React.ReactNode;
+  children: ReactNode;
 }
 
-export const PrivateRoute = ({ children }: PrivateRouteProps) => {
-  const { isLoading, isAuthenticated, redirectToLogin, isEmbedded } = useAuth();
+export function PrivateRoute({ children }: PrivateRouteProps) {
+  const { user, isLoading: authLoading, sessionChecked } = useAuth();
+  const { isEmbedded, authReceived, isLoading: parentAuthLoading, error: parentAuthError } = useParentAuth();
+  const location = useLocation();
 
-  useEffect(() => {
-    // Auto-redirect after a brief delay if not authenticated and not embedded
-    if (!isLoading && !isAuthenticated && !isEmbedded) {
-      const timer = setTimeout(() => {
-        redirectToLogin();
-      }, 3000);
-      return () => clearTimeout(timer);
-    }
-  }, [isLoading, isAuthenticated, isEmbedded, redirectToLogin]);
-
-  if (isLoading) {
-    return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
-        <div className="flex flex-col items-center gap-4">
+  // ==========================================================================
+  // EMBEDDED MODE: Wait for parent auth instead of redirecting to /auth
+  // ==========================================================================
+  if (isEmbedded) {
+    // Still waiting for parent to send auth
+    if (parentAuthLoading && !authReceived && !parentAuthError) {
+      return (
+        <div className="flex flex-col items-center justify-center h-screen gap-4">
           <img 
             src="/bunting-logo.png" 
             alt="Bunting Magnetics" 
             className="h-16 w-auto mb-4"
           />
-          <Loader2 className="w-8 h-8 animate-spin text-primary" />
-          <p className="text-muted-foreground">
-            {isEmbedded ? 'Waiting for authentication...' : 'Checking authentication...'}
-          </p>
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />
+          <p className="text-sm text-muted-foreground">Authenticating with parent app...</p>
         </div>
-      </div>
-    );
-  }
+      );
+    }
 
-  if (!isAuthenticated) {
-    return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
-        <div className="flex flex-col items-center gap-6 text-center max-w-md px-4">
+    // Parent auth failed/timed out
+    if (parentAuthError && !user) {
+      return (
+        <div className="flex flex-col items-center justify-center h-screen gap-4 p-4 text-center">
           <img 
             src="/bunting-logo.png" 
             alt="Bunting Magnetics" 
-            className="h-20 w-auto"
+            className="h-16 w-auto mb-4"
           />
-          <div>
-            <h1 className="text-2xl font-display font-semibold text-foreground mb-2">
-              {isEmbedded ? 'Waiting for Authentication' : 'Authentication Required'}
-            </h1>
-            <p className="text-muted-foreground">
-              {isEmbedded 
-                ? 'Please ensure you are logged in to the parent application.'
-                : 'You need to be logged in to access the Performance Self-Evaluation. Redirecting to login...'
-              }
-            </p>
-          </div>
-          {!isEmbedded && (
-            <>
-              <Button onClick={redirectToLogin} className="gap-2">
-                <LogIn className="w-4 h-4" />
-                Go to Login
-              </Button>
-              <p className="text-xs text-muted-foreground">
-                You will be redirected automatically in a few seconds.
-              </p>
-            </>
-          )}
+          <div className="text-destructive text-lg font-semibold">Authentication Failed</div>
+          <p className="text-muted-foreground text-sm max-w-md">
+            Unable to receive authentication from the parent application.
+            Please ensure you are logged in to buntinggpt.com and try refreshing.
+          </p>
+          <p className="text-xs text-muted-foreground">Error: {parentAuthError}</p>
         </div>
+      );
+    }
+
+    // Auth received or user exists - render children
+    if (authReceived || user) {
+      return <>{children}</>;
+    }
+
+    // Fallback loading state
+    return (
+      <div className="flex items-center justify-center h-screen">
+        <img 
+          src="/bunting-logo.png" 
+          alt="Bunting Magnetics" 
+          className="h-16 w-auto mb-4"
+        />
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />
       </div>
     );
   }
 
+  // ==========================================================================
+  // STANDALONE MODE: Normal auth flow
+  // ==========================================================================
+  
+  // Show loading while checking authentication
+  if (authLoading || !sessionChecked) {
+    return (
+      <div className="flex flex-col items-center justify-center h-screen gap-4">
+        <img 
+          src="/bunting-logo.png" 
+          alt="Bunting Magnetics" 
+          className="h-16 w-auto"
+        />
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary" />
+      </div>
+    );
+  }
+
+  // Redirect to auth page if not logged in
+  if (!user) {
+    return <Navigate to="/auth" state={{ from: location }} replace />;
+  }
+
+  // Render the protected content
   return <>{children}</>;
-};
+}
