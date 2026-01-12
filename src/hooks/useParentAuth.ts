@@ -73,10 +73,24 @@ export function useParentAuth(): ParentAuthState {
             setError('Authentication error');
           }
         } else {
-          console.warn('[useParentAuth] No token in AUTH_TOKEN message');
-          setError('No authentication token received');
+          // Parent sent null token = logout signal
+          console.log('[useParentAuth] Received logout signal (null token) from parent');
+          await supabase.auth.signOut();
+          setUser(null);
+          setAuthReceived(false);
+          setError(null);
         }
 
+        setIsLoading(false);
+      }
+
+      // Handle explicit logout message type
+      if (event.data.type === 'AUTH_LOGOUT') {
+        console.log('[useParentAuth] Received AUTH_LOGOUT from parent');
+        await supabase.auth.signOut();
+        setUser(null);
+        setAuthReceived(false);
+        setError(null);
         setIsLoading(false);
       }
     };
