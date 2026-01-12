@@ -39,23 +39,43 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     let mounted = true;
 
+    console.log('[AuthContext] Initializing auth context...', {
+      timestamp: new Date().toISOString()
+    });
+
     // Set up auth state listener FIRST
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       (event, currentSession) => {
         if (!mounted) return;
 
-        console.log('[AuthContext] Auth state change:', event, currentSession?.user?.email);
+        console.log('[AuthContext] Auth state change:', {
+          event,
+          userId: currentSession?.user?.id,
+          email: currentSession?.user?.email,
+          expiresAt: currentSession?.expires_at,
+          hasAccessToken: !!currentSession?.access_token,
+          tokenExpiry: currentSession?.expires_at 
+            ? new Date(currentSession.expires_at * 1000).toISOString() 
+            : null,
+          timestamp: new Date().toISOString()
+        });
 
         if (event === 'SIGNED_OUT') {
+          console.log('[AuthContext] User signed out, clearing state');
           setSession(null);
           setUser(null);
         } else if (currentSession) {
+          console.log('[AuthContext] Setting session and user:', {
+            userId: currentSession.user?.id,
+            email: currentSession.user?.email
+          });
           setSession(currentSession);
           setUser(currentSession.user);
         }
 
         // Mark session as checked after any auth event
         if (event === 'INITIAL_SESSION' || event === 'SIGNED_IN' || event === 'SIGNED_OUT') {
+          console.log('[AuthContext] Session checked, setting loading false');
           setSessionChecked(true);
           setIsLoading(false);
         }
@@ -65,7 +85,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     // Then check for existing session
     const initializeAuth = async () => {
       try {
-        const { data: { session: existingSession } } = await supabase.auth.getSession();
+        console.log('[AuthContext] Calling getSession...');
+        const { data: { session: existingSession }, error } = await supabase.auth.getSession();
+        
+        console.log('[AuthContext] getSession result:', {
+          hasSession: !!existingSession,
+          userId: existingSession?.user?.id,
+          email: existingSession?.user?.email,
+          error: error?.message,
+          timestamp: new Date().toISOString()
+        });
         
         if (mounted) {
           if (existingSession) {
