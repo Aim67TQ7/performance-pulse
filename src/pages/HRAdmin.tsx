@@ -8,7 +8,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Loader2, Lock, Settings, Calendar, ArrowLeft, Save, Mail, Users, CheckCircle2, Clock, FileEdit, Award, Eye, ShieldCheck, UserCog } from 'lucide-react';
+import { Loader2, Lock, Settings, Calendar, ArrowLeft, Save, Mail, Users, CheckCircle2, Clock, FileEdit, Award, Eye, ShieldCheck, UserCog, FileText } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { toast } from '@/hooks/use-toast';
 import { VersionBadge } from '@/components/version/VersionBadge';
@@ -437,14 +437,18 @@ Thank you!`
 
           {/* Tabs */}
           <Tabs defaultValue="assessment" className="space-y-6">
-            <TabsList className="grid w-full grid-cols-2">
+            <TabsList className="grid w-full grid-cols-3">
               <TabsTrigger value="assessment" className="gap-2">
                 <Settings className="w-4 h-4" />
-                Assessment Settings
+                <span className="hidden sm:inline">Assessment</span> Settings
+              </TabsTrigger>
+              <TabsTrigger value="survey" className="gap-2">
+                <FileText className="w-4 h-4" />
+                Survey Content
               </TabsTrigger>
               <TabsTrigger value="employees" className="gap-2">
                 <UserCog className="w-4 h-4" />
-                Employee Management
+                <span className="hidden sm:inline">Employee</span> Management
               </TabsTrigger>
             </TabsList>
 
@@ -536,9 +540,6 @@ Thank you!`
             </CardContent>
           </Card>
 
-          {/* Performance Competencies Manager */}
-          <CompetencyManager />
-
           {/* Notification Card */}
           <Card>
             <CardHeader>
@@ -626,44 +627,51 @@ Thank you!`
             </CardContent>
           </Card>
 
-          {/* Security & Tools Card */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2 text-lg">
-                <ShieldCheck className="w-5 h-5" />
-                Security & Tools
-              </CardTitle>
-              <CardDescription>
-                Admin page security settings and preview tools
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-6">
-              {/* Auth Toggle */}
-              <div className="flex items-center justify-between">
-                <div className="space-y-1">
-                  <Label htmlFor="auth-mode" className="font-medium">Require User Authentication</Label>
-                  <p className="text-xs text-muted-foreground">
-                    When enabled, only users in hr_admin_users table can access this page (no passcode needed)
-                  </p>
-                </div>
-                <Switch
-                  id="auth-mode"
-                  checked={requireAuth}
-                  onCheckedChange={toggleAuthMode}
-                />
-              </div>
-              
-              <div className="border-t pt-4">
-                <Button onClick={() => setSurveyPreviewOpen(true)} variant="outline" className="w-full sm:w-auto">
-                  <Eye className="w-4 h-4 mr-2" />
-                  Preview Blank Survey Form
-                </Button>
-                <p className="text-xs text-muted-foreground mt-2">
-                  View and print a blank survey form for review or to share with developers
-                </p>
-              </div>
-            </CardContent>
-          </Card>
+            </TabsContent>
+
+            {/* Survey Content Tab */}
+            <TabsContent value="survey" className="space-y-6">
+              {/* Performance Competencies Manager */}
+              <CompetencyManager />
+
+              {/* Security & Tools Card */}
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2 text-lg">
+                    <ShieldCheck className="w-5 h-5" />
+                    Security & Tools
+                  </CardTitle>
+                  <CardDescription>
+                    Admin page security settings and preview tools
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-6">
+                  {/* Auth Toggle */}
+                  <div className="flex items-center justify-between">
+                    <div className="space-y-1">
+                      <Label htmlFor="auth-mode" className="font-medium">Require User Authentication</Label>
+                      <p className="text-xs text-muted-foreground">
+                        When enabled, only users in hr_admin_users table can access this page (no passcode needed)
+                      </p>
+                    </div>
+                    <Switch
+                      id="auth-mode"
+                      checked={requireAuth}
+                      onCheckedChange={toggleAuthMode}
+                    />
+                  </div>
+                  
+                  <div className="border-t pt-4">
+                    <Button onClick={() => setSurveyPreviewOpen(true)} variant="outline" className="w-full sm:w-auto">
+                      <Eye className="w-4 h-4 mr-2" />
+                      Preview Blank Survey Form
+                    </Button>
+                    <p className="text-xs text-muted-foreground mt-2">
+                      View and print a blank survey form for review or to share with developers
+                    </p>
+                  </div>
+                </CardContent>
+              </Card>
             </TabsContent>
 
             {/* Employee Management Tab */}
