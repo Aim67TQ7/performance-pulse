@@ -1,191 +1,118 @@
-import { createContext, useContext, useState, useEffect, useCallback, ReactNode } from 'react';
-import { User, Session } from '@supabase/supabase-js';
-import { supabase, isEmbedded } from '@/integrations/supabase/client';
+/**
+ * AuthContext for BuntingGPT Subdomain Apps
+ * 
+ * Simplified AuthContext for subdomain apps that:
+ * 1. Works with useParentAuth for embedded mode
+ * 2. Provides standard Supabase auth for standalone mode
+ */
+
+import { createContext, useContext, ReactNode, useState, useEffect } from 'react';
+import { Session, User } from '@supabase/supabase-js';
+import { supabase } from "@/integrations/supabase/client";
 
 interface AuthContextType {
   user: User | null;
   session: Session | null;
   isLoading: boolean;
-  isAuthenticated: boolean;
-  isEmbedded: boolean;
-  authSource: 'cookie' | 'postMessage' | null;
+  sessionChecked: boolean;
+  signIn: (email: string, password: string) => Promise<{ error: any | null }>;
   signOut: () => Promise<void>;
-  redirectToLogin: () => void;
 }
 
-const AuthContext = createContext<AuthContextType | undefined>(undefined);
+const AuthContext = createContext<AuthContextType>({
+  user: null,
+  session: null,
+  isLoading: true,
+  sessionChecked: false,
+  signIn: async () => ({ error: null }),
+  signOut: async () => {},
+});
 
-export const useAuth = () => {
-  const context = useContext(AuthContext);
-  if (!context) {
-    throw new Error('useAuth must be used within an AuthProvider');
-  }
-  return context;
-};
+export const useAuth = () => useContext(AuthContext);
 
-interface AuthProviderProps {
-  children: ReactNode;
-}
-
-export const AuthProvider = ({ children }: AuthProviderProps) => {
+export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [session, setSession] = useState<Session | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-  const [authSource, setAuthSource] = useState<'cookie' | 'postMessage' | null>(null);
+  const [sessionChecked, setSessionChecked] = useState(false);
 
   useEffect(() => {
-    // Handle postMessage from parent for embedded apps
-    const handleMessage = async (event: MessageEvent) => {
-      // Only accept from buntinggpt.com domains
-      if (!event.origin.endsWith('.buntinggpt.com') && 
-          event.origin !== 'https://buntinggpt.com') {
-        return;
-      }
-
-      // Handle new consolidated format
-      if (event.data?.type === 'BUNTINGGPT_AUTH_TOKEN' && 
-          event.data.accessToken && 
-          event.data.refreshToken) {
-        
-        console.log('[AuthContext] Received tokens from parent');
-        
-        const { data, error } = await supabase.auth.setSession({
-          access_token: event.data.accessToken,
-          refresh_token: event.data.refreshToken
-        });
-
-        if (!error && data.session) {
-          // Validate RLS context
-          const { data: { user: validatedUser } } = await supabase.auth.getUser();
-          if (validatedUser?.id === data.session.user.id) {
-            console.log('[AuthContext] RLS context validated ✓');
-            setUser(data.session.user);
-            setSession(data.session);
-            setAuthSource('postMessage');
-            setIsLoading(false);
-          }
-        } else if (error) {
-          console.error('[AuthContext] Failed to set session:', error);
-        }
-      }
-
-      // Handle legacy format
-      if (event.data?.type === 'PROVIDE_TOKEN' && 
-          event.data.access_token && 
-          event.data.refresh_token) {
-        
-        console.log('[AuthContext] Received legacy token format from parent');
-        
-        const { data, error } = await supabase.auth.setSession({
-          access_token: event.data.access_token,
-          refresh_token: event.data.refresh_token
-        });
-
-        if (!error && data.session) {
-          setUser(data.session.user);
-          setSession(data.session);
-          setAuthSource('postMessage');
-          setIsLoading(false);
-        }
-      }
-    };
-
-    // Add message listener for embedded apps
-    if (isEmbedded) {
-      window.addEventListener('message', handleMessage);
-      
-      // Request auth from parent
-      window.parent.postMessage({ 
-        type: 'REQUEST_TOKEN',
-        origin: window.location.origin,
-        timestamp: Date.now()
-      }, '*');
-    }
+    let mounted = true;
 
     // Set up auth state listener FIRST
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       (event, currentSession) => {
-        console.log('[AuthContext] Auth state change:', event);
-        
-        if (currentSession) {
-          setUser(currentSession.user);
-          setSession(currentSession);
-          if (!authSource) {
-            setAuthSource('cookie');
-          }
-        } else {
-          setUser(null);
+        if (!mounted) return;
+
+        console.log('[AuthContext] Auth state change:', event, currentSession?.user?.email);
+
+        if (event === 'SIGNED_OUT') {
           setSession(null);
+          setUser(null);
+        } else if (currentSession) {
+          setSession(currentSession);
+          setUser(currentSession.user);
         }
-        setIsLoading(false);
+
+        // Mark session as checked after any auth event
+        if (event === 'INITIAL_SESSION' || event === 'SIGNED_IN' || event === 'SIGNED_OUT') {
+          setSessionChecked(true);
+          setIsLoading(false);
+        }
       }
     );
 
-    // THEN check for existing session
-    supabase.auth.getSession().then(({ data: { session: existingSession } }) => {
-      if (existingSession) {
-        setUser(existingSession.user);
-        setSession(existingSession);
-        setAuthSource('cookie');
-      }
-      setIsLoading(false);
-    });
-
-    // 5-second timeout for embedded apps waiting for parent auth
-    let timeoutId: NodeJS.Timeout;
-    if (isEmbedded) {
-      timeoutId = setTimeout(() => {
-        if (isLoading) {
-          console.log('[AuthContext] Timeout waiting for parent auth');
+    // Then check for existing session
+    const initializeAuth = async () => {
+      try {
+        const { data: { session: existingSession } } = await supabase.auth.getSession();
+        
+        if (mounted) {
+          if (existingSession) {
+            setSession(existingSession);
+            setUser(existingSession.user);
+          }
+          setSessionChecked(true);
           setIsLoading(false);
         }
-      }, 5000);
-    }
+      } catch (error) {
+        console.error('[AuthContext] Error getting session:', error);
+        if (mounted) {
+          setSessionChecked(true);
+          setIsLoading(false);
+        }
+      }
+    };
+
+    initializeAuth();
 
     return () => {
+      mounted = false;
       subscription.unsubscribe();
-      if (isEmbedded) {
-        window.removeEventListener('message', handleMessage);
-      }
-      if (timeoutId) {
-        clearTimeout(timeoutId);
-      }
     };
   }, []);
 
-  const signOut = useCallback(async () => {
+  const signIn = async (email: string, password: string) => {
+    const { error } = await supabase.auth.signInWithPassword({ email, password });
+    return { error };
+  };
+
+  const signOut = async () => {
     await supabase.auth.signOut();
-    setUser(null);
     setSession(null);
-    setAuthSource(null);
-  }, []);
-
-  const redirectToLogin = useCallback(() => {
-    // Don't redirect if embedded - parent handles auth
-    if (isEmbedded) {
-      console.log('[AuthContext] Embedded app - waiting for parent auth');
-      return;
-    }
-    
-    // Redirect to main buntinggpt.com login with return URL
-    const returnUrl = encodeURIComponent(window.location.href);
-    window.location.href = `https://buntinggpt.com/login?redirect=${returnUrl}`;
-  }, []);
-
-  const value: AuthContextType = {
-    user,
-    session,
-    isLoading,
-    isAuthenticated: !!user,
-    isEmbedded,
-    authSource,
-    signOut,
-    redirectToLogin,
+    setUser(null);
   };
 
   return (
-    <AuthContext.Provider value={value}>
+    <AuthContext.Provider value={{
+      user,
+      session,
+      isLoading,
+      sessionChecked,
+      signIn,
+      signOut,
+    }}>
       {children}
     </AuthContext.Provider>
   );
-};
+}
