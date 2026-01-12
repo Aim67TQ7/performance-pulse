@@ -51,11 +51,16 @@ export function useParentAuth(): ParentAuthState {
         timestamp: new Date().toISOString()
       });
 
-      // Only accept from parent domain
-      if (event.origin !== 'https://buntinggpt.com') {
+      // Only accept from parent domain (www and non-www)
+      const ALLOWED_ORIGINS = [
+        'https://buntinggpt.com',
+        'https://www.buntinggpt.com'
+      ];
+      
+      if (!ALLOWED_ORIGINS.includes(event.origin)) {
         console.log('[useParentAuth] Rejected message: origin mismatch', { 
           received: event.origin, 
-          expected: 'https://buntinggpt.com' 
+          expected: ALLOWED_ORIGINS 
         });
         return;
       }
@@ -65,15 +70,22 @@ export function useParentAuth(): ParentAuthState {
         authAttempted.current = true;
 
         const token = event.data.token;
+        const refreshToken = event.data.refreshToken || ''; // Parent sends refreshToken (camelCase)
 
         if (token) {
           try {
             console.log('[useParentAuth] Attempting to set session with token...');
+            console.log('[useParentAuth] Token details:', {
+              hasAccessToken: !!token,
+              accessTokenLength: token?.length || 0,
+              hasRefreshToken: !!refreshToken,
+              refreshTokenLength: refreshToken?.length || 0
+            });
             
             // Set the session manually in Supabase client
             const { data, error: sessionError } = await supabase.auth.setSession({
               access_token: token,
-              refresh_token: '' // Parent handles refresh
+              refresh_token: refreshToken // Use refresh token from parent
             });
 
             console.log('[useParentAuth] setSession result:', {
@@ -137,14 +149,16 @@ export function useParentAuth(): ParentAuthState {
     window.addEventListener('message', handleMessage);
 
     // Request auth from parent on load
+    // Send to '*' since we don't know if parent is www or non-www
+    // Security is maintained via origin validation on incoming messages
     const requestAuth = () => {
       console.log('[useParentAuth] Sending REQUEST_AUTH to parent:', {
-        targetOrigin: 'https://buntinggpt.com',
+        targetOrigin: '*',
         timestamp: new Date().toISOString()
       });
       window.parent.postMessage({
         type: 'REQUEST_AUTH'
-      }, 'https://buntinggpt.com');
+      }, '*');
     };
 
     // Request immediately
