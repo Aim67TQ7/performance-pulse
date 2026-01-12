@@ -560,12 +560,12 @@ export const EmployeeManager = () => {
             {/* Reports To */}
             <div className="space-y-2">
               <Label htmlFor="reports_to">Reports To</Label>
-              <Select value={formData.reports_to} onValueChange={(v) => setFormData({ ...formData, reports_to: v })}>
+              <Select value={formData.reports_to || 'none'} onValueChange={(v) => setFormData({ ...formData, reports_to: v === 'none' ? '' : v })}>
                 <SelectTrigger>
                   <SelectValue placeholder="Select manager" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">No Manager (Root)</SelectItem>
+                  <SelectItem value="none">No Manager (Root)</SelectItem>
                   {allEmployees
                     .filter(e => e.id !== editingEmployee?.id && e.is_active)
                     .map(emp => (
