@@ -5,3 +5,6 @@ verify_jwt = false
 
 [functions.get-app-version]
 verify_jwt = false
+
+[functions.import-employees]
+verify_jwt = false

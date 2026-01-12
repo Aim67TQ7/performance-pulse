@@ -6521,6 +6521,7 @@ export type Database = {
           user_id: string
         }[]
       }
+      match_user_id_by_email: { Args: { p_email: string }; Returns: string }
       process_employee_census: {
         Args: never
         Returns: {
