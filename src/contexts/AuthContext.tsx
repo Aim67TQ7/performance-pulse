@@ -41,6 +41,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
+    // Debug: Log cookie state on mount
+    console.log('=== SELF.BUNTINGGPT.COM ===');
+    console.log('All cookies:', document.cookie);
+    console.log('Has sb- cookies:', document.cookie.includes('sb-'));
+    console.log('Has chunk cookies:', document.cookie.includes('__chunk__'));
+    
     // Set up auth state listener FIRST
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       (event, currentSession) => {
@@ -54,6 +60,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     // THEN check for existing session
     supabase.auth.getSession().then(({ data: { session: existingSession } }) => {
       console.log('[AuthContext] Initial session check:', existingSession?.user?.email ?? 'none');
+      console.log('Session exists:', !!existingSession);
+      console.log('User:', existingSession?.user?.email);
       setSession(existingSession);
       setUser(existingSession?.user ?? null);
       setIsLoading(false);
