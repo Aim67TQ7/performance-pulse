@@ -1,9 +1,7 @@
 /**
  * OAuth Callback Handler
  * 
- * Completes the OAuth token exchange after Azure (or other provider) redirects back.
- * Supabase client with detectSessionInUrl: true handles the exchange automatically,
- * but we need this route to exist and wait for the session to be set.
+ * Completes the OAuth token exchange after Microsoft redirects back.
  */
 
 import { useEffect, useState } from 'react';
@@ -18,13 +16,12 @@ export default function AuthCallback() {
   useEffect(() => {
     const handleCallback = async () => {
       try {
-        console.log('[AuthCallback] Starting OAuth callback handling...');
-        console.log('[AuthCallback] Current URL:', window.location.href);
+        console.log('[AuthCallback] Processing OAuth callback...');
 
         const params = new URLSearchParams(window.location.search);
         const hashParams = new URLSearchParams(window.location.hash.substring(1));
 
-        // Provider-sent errors
+        // Check for OAuth errors
         const error = params.get('error') || hashParams.get('error');
         const errorDescription = params.get('error_description') || hashParams.get('error_description');
         if (error) {
@@ -34,23 +31,23 @@ export default function AuthCallback() {
           return;
         }
 
-        // PKCE/Auth-Code flow: if we have a ?code=..., explicitly exchange it.
-        // This is the critical step that actually creates & persists the Supabase session.
+        // Exchange code for session (PKCE flow)
         const code = params.get('code');
         if (code) {
-          console.log('[AuthCallback] Exchanging OAuth code for session...');
+          console.log('[AuthCallback] Exchanging code for session...');
           const { error: exchangeError } = await supabase.auth.exchangeCodeForSession(window.location.href);
           if (exchangeError) {
-            console.error('[AuthCallback] Code exchange error:', exchangeError);
+            console.error('[AuthCallback] Exchange error:', exchangeError);
             setStatus('error');
             setErrorMessage(exchangeError.message);
             return;
           }
         } else {
-          // No code in URL (some providers return tokens via hash). Give detectSessionInUrl a moment.
+          // Give detectSessionInUrl a moment for implicit flows
           await new Promise(resolve => setTimeout(resolve, 300));
         }
 
+        // Verify session was created
         const { data: { session }, error: sessionError } = await supabase.auth.getSession();
         if (sessionError) {
           console.error('[AuthCallback] Session error:', sessionError);
@@ -60,19 +57,19 @@ export default function AuthCallback() {
         }
 
         if (!session) {
-          console.warn('[AuthCallback] No session after callback');
+          console.warn('[AuthCallback] No session created');
           setStatus('error');
           setErrorMessage('Authentication completed but no session was created. Please try again.');
           return;
         }
 
-        console.log('[AuthCallback] Session found, redirecting...');
-        console.log('[AuthCallback] User:', session.user.email);
+        console.log('[AuthCallback] Success! User:', session.user.email);
         setStatus('success');
 
-        // Small delay to ensure cookies/storage are written before leaving this page
+        // Small delay to ensure storage is written
         await new Promise(resolve => setTimeout(resolve, 200));
 
+        // Redirect to stored return URL or home
         const returnUrl = sessionStorage.getItem('auth_return_url');
         sessionStorage.removeItem('auth_return_url');
         navigate(returnUrl || '/', { replace: true });
@@ -88,11 +85,7 @@ export default function AuthCallback() {
 
   return (
     <div className="flex flex-col items-center justify-center h-screen gap-4 p-4 text-center">
-      <img 
-        src="/bunting-logo.png" 
-        alt="Bunting Magnetics" 
-        className="h-16 w-auto mb-4"
-      />
+      <img src="/bunting-logo.png" alt="Bunting Magnetics" className="h-16 w-auto mb-4" />
       
       {status === 'loading' && (
         <>
@@ -116,10 +109,10 @@ export default function AuthCallback() {
           </p>
           <button
             type="button"
-            onClick={() => navigate('/', { replace: true })}
+            onClick={() => navigate('/login', { replace: true })}
             className="mt-4 px-6 py-2 bg-primary text-primary-foreground rounded-md hover:bg-primary/90 transition-colors"
           >
-            Return to Home
+            Return to Login
           </button>
         </>
       )}

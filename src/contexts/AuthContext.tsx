@@ -1,29 +1,32 @@
 /**
- * AuthContext for BuntingGPT Subdomain Apps
+ * AuthContext - Simple Supabase Authentication
  * 
- * Uses useBuntingAuth for cookie-based authentication across all *.buntinggpt.com subdomains.
- * Works seamlessly in both embedded (iframe) and standalone modes.
+ * Provides authentication state and methods for the application.
+ * Uses Microsoft OAuth as the only authentication method.
  */
 
-import { createContext, useContext, ReactNode } from 'react';
-import { useBuntingAuth, UseBuntingAuthReturn } from '@/hooks/useBuntingAuth';
+import { createContext, useContext, useEffect, useState, ReactNode } from 'react';
+import { User, Session } from '@supabase/supabase-js';
+import { supabase } from '@/integrations/supabase/client';
 
-type AuthContextType = UseBuntingAuthReturn;
+interface AuthContextType {
+  user: User | null;
+  session: Session | null;
+  isLoading: boolean;
+  isAuthenticated: boolean;
+  displayName: string | null;
+  email: string | null;
+  logout: () => Promise<void>;
+}
 
-// Default context value for when accessed outside provider
 const defaultContextValue: AuthContextType = {
   user: null,
   session: null,
   isLoading: true,
   isAuthenticated: false,
-  isEmbedded: false,
-  authReceived: false,
-  error: null,
-  requestAuth: () => {},
   displayName: null,
   email: null,
-  login: () => {},
-  logout: () => {},
+  logout: async () => {},
 };
 
 const AuthContext = createContext<AuthContextType>(defaultContextValue);
@@ -33,11 +36,61 @@ export const useAuth = () => {
 };
 
 export function AuthProvider({ children }: { children: ReactNode }) {
-  // Don't auto-redirect at context level - let PrivateRoute handle that
-  const auth = useBuntingAuth({ requireAuth: false });
+  const [user, setUser] = useState<User | null>(null);
+  const [session, setSession] = useState<Session | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    // Set up auth state listener FIRST
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      (event, currentSession) => {
+        console.log('[AuthContext] Auth state changed:', event, currentSession?.user?.email);
+        setSession(currentSession);
+        setUser(currentSession?.user ?? null);
+        setIsLoading(false);
+      }
+    );
+
+    // THEN check for existing session
+    supabase.auth.getSession().then(({ data: { session: existingSession } }) => {
+      console.log('[AuthContext] Initial session check:', existingSession?.user?.email ?? 'none');
+      setSession(existingSession);
+      setUser(existingSession?.user ?? null);
+      setIsLoading(false);
+    });
+
+    return () => {
+      subscription.unsubscribe();
+    };
+  }, []);
+
+  const logout = async () => {
+    console.log('[AuthContext] Logging out...');
+    await supabase.auth.signOut();
+    setUser(null);
+    setSession(null);
+  };
+
+  // Extract display name from user metadata
+  const displayName = user?.user_metadata?.full_name 
+    || user?.user_metadata?.name 
+    || user?.email?.split('@')[0] 
+    || null;
+
+  const email = user?.email || null;
+
+  const value: AuthContextType = {
+    user,
+    session,
+    isLoading,
+    isAuthenticated: !!session && !!user,
+    displayName,
+    email,
+    logout,
+  };
 
   return (
-    <AuthContext.Provider value={auth}>
+    <AuthContext.Provider value={value}>
       {children}
     </AuthContext.Provider>
   );
