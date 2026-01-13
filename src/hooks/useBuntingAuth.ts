@@ -6,18 +6,17 @@
  * 2. Create a Supabase client with the same config (see below)
  * 3. Use the hook in your app's root or protected routes
  * 
- * REQUIRED SUPABASE CLIENT CONFIG:
+ * REQUIRED SUPABASE CLIENT CONFIG (this project already does this in src/integrations/supabase/client.ts):
  * ```typescript
  * import { createClient } from '@supabase/supabase-js';
- * 
- * const SUPABASE_URL = "https://qzwxisdfwswsrbzvpzlo.supabase.co";
- * const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...";
- * 
+ *
  * export const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
  *   auth: {
- *     storage: localStorage,
+ *     // In production on *.buntinggpt.com we use a cookie-based storage so sessions cross subdomains
  *     persistSession: true,
  *     autoRefreshToken: true,
+ *     detectSessionInUrl: true,
+ *     flowType: 'pkce',
  *   }
  * });
  * ```

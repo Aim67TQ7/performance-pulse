@@ -21,13 +21,12 @@ export default function AuthCallback() {
         console.log('[AuthCallback] Starting OAuth callback handling...');
         console.log('[AuthCallback] Current URL:', window.location.href);
 
-        // Check for error in URL params (OAuth error from provider)
         const params = new URLSearchParams(window.location.search);
         const hashParams = new URLSearchParams(window.location.hash.substring(1));
-        
+
+        // Provider-sent errors
         const error = params.get('error') || hashParams.get('error');
         const errorDescription = params.get('error_description') || hashParams.get('error_description');
-        
         if (error) {
           console.error('[AuthCallback] OAuth error:', error, errorDescription);
           setStatus('error');
@@ -35,13 +34,24 @@ export default function AuthCallback() {
           return;
         }
 
-        // Supabase should automatically handle the token exchange via detectSessionInUrl
-        // Give it a moment to process
-        await new Promise(resolve => setTimeout(resolve, 500));
+        // PKCE/Auth-Code flow: if we have a ?code=..., explicitly exchange it.
+        // This is the critical step that actually creates & persists the Supabase session.
+        const code = params.get('code');
+        if (code) {
+          console.log('[AuthCallback] Exchanging OAuth code for session...');
+          const { error: exchangeError } = await supabase.auth.exchangeCodeForSession(window.location.href);
+          if (exchangeError) {
+            console.error('[AuthCallback] Code exchange error:', exchangeError);
+            setStatus('error');
+            setErrorMessage(exchangeError.message);
+            return;
+          }
+        } else {
+          // No code in URL (some providers return tokens via hash). Give detectSessionInUrl a moment.
+          await new Promise(resolve => setTimeout(resolve, 300));
+        }
 
-        // Now check if session was set
         const { data: { session }, error: sessionError } = await supabase.auth.getSession();
-
         if (sessionError) {
           console.error('[AuthCallback] Session error:', sessionError);
           setStatus('error');
@@ -49,24 +59,23 @@ export default function AuthCallback() {
           return;
         }
 
-        if (session) {
-          console.log('[AuthCallback] Session found, redirecting to dashboard...');
-          console.log('[AuthCallback] User:', session.user.email);
-          setStatus('success');
-          
-          // Small delay to ensure cookies are written
-          await new Promise(resolve => setTimeout(resolve, 200));
-          
-          // Check for return_url in sessionStorage or just go to dashboard
-          const returnUrl = sessionStorage.getItem('auth_return_url');
-          sessionStorage.removeItem('auth_return_url');
-          
-          navigate(returnUrl || '/', { replace: true });
-        } else {
+        if (!session) {
           console.warn('[AuthCallback] No session after callback');
           setStatus('error');
           setErrorMessage('Authentication completed but no session was created. Please try again.');
+          return;
         }
+
+        console.log('[AuthCallback] Session found, redirecting...');
+        console.log('[AuthCallback] User:', session.user.email);
+        setStatus('success');
+
+        // Small delay to ensure cookies/storage are written before leaving this page
+        await new Promise(resolve => setTimeout(resolve, 200));
+
+        const returnUrl = sessionStorage.getItem('auth_return_url');
+        sessionStorage.removeItem('auth_return_url');
+        navigate(returnUrl || '/', { replace: true });
       } catch (err) {
         console.error('[AuthCallback] Unexpected error:', err);
         setStatus('error');
