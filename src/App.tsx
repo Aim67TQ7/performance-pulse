@@ -10,6 +10,7 @@ import Dashboard from "./pages/Dashboard";
 import Evaluation from "./pages/Evaluation";
 import TeamStatus from "./pages/TeamStatus";
 import HRAdmin from "./pages/HRAdmin";
+import AuthCallback from "./pages/AuthCallback";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -22,16 +23,19 @@ const App = () => (
         <Sonner position="top-center" />
         <BrowserRouter>
           <AuthProvider>
-            <PrivateRoute>
-              <Routes>
-                <Route path="/" element={<Dashboard />} />
-                <Route path="/evaluation" element={<Evaluation />} />
-                <Route path="/team-status" element={<TeamStatus />} />
-                <Route path="/hr-admin" element={<HRAdmin />} />
-                {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
-                <Route path="*" element={<NotFound />} />
-              </Routes>
-            </PrivateRoute>
+            <Routes>
+              {/* Auth callback must be OUTSIDE PrivateRoute */}
+              <Route path="/auth/callback" element={<AuthCallback />} />
+              
+              {/* Protected routes */}
+              <Route element={<PrivateRoute><Dashboard /></PrivateRoute>} path="/" />
+              <Route path="/evaluation" element={<PrivateRoute><Evaluation /></PrivateRoute>} />
+              <Route path="/team-status" element={<PrivateRoute><TeamStatus /></PrivateRoute>} />
+              <Route path="/hr-admin" element={<PrivateRoute><HRAdmin /></PrivateRoute>} />
+              
+              {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
+              <Route path="*" element={<NotFound />} />
+            </Routes>
           </AuthProvider>
         </BrowserRouter>
       </TooltipProvider>
