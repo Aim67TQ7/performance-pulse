@@ -11,7 +11,7 @@ import Evaluation from "./pages/Evaluation";
 import TeamStatus from "./pages/TeamStatus";
 import HRAdmin from "./pages/HRAdmin";
 import Login from "./pages/Login";
-import AuthCallback from "./pages/AuthCallback";
+
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -27,7 +27,7 @@ const App = () => (
             <Routes>
               {/* Public routes */}
               <Route path="/login" element={<Login />} />
-              <Route path="/auth/callback" element={<AuthCallback />} />
+              
               
               {/* Protected routes */}
               <Route path="/" element={<PrivateRoute><Dashboard /></PrivateRoute>} />
