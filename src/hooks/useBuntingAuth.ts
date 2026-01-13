@@ -23,23 +23,32 @@
  * ```
  */
 
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useRef } from 'react';
 import { User, Session } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
 
 // Configuration - Update these for your environment
 const AUTH_HUB_URL = 'https://login.buntinggpt.com';
 const ALLOWED_DOMAINS = ['.buntinggpt.com', 'localhost'];
+const ALLOWED_PARENT_ORIGINS = ['https://buntinggpt.com', 'https://www.buntinggpt.com', 'http://localhost:5173'];
 
 export interface BuntingAuthState {
   user: User | null;
   session: Session | null;
   isLoading: boolean;
   isAuthenticated: boolean;
+  /** True when running inside an iframe */
+  isEmbedded: boolean;
+  /** In embedded mode, becomes true once we've received/attempted parent auth */
+  authReceived: boolean;
+  /** Error message if auth failed */
+  error: string | null;
+  /** Request auth from parent window (embedded mode only) */
+  requestAuth: () => void;
 }
 
 interface UseBuntingAuthOptions {
-  /** If true, automatically redirects to login when not authenticated */
+  /** If true, automatically redirects to login when not authenticated (standalone only) */
   requireAuth?: boolean;
   /** Custom return URL after login (defaults to current page) */
   returnUrl?: string;
@@ -70,6 +79,25 @@ const isAllowedDomain = (): boolean => {
   );
 };
 
+const isEmbedded = (): boolean => {
+  try {
+    return window.self !== window.top;
+  } catch {
+    return true;
+  }
+};
+
+const isAllowedParentOrigin = (origin: string): boolean => {
+  if (ALLOWED_PARENT_ORIGINS.includes(origin)) return true;
+  // allow any subdomain of buntinggpt.com that ends with buntinggpt.com over https
+  try {
+    const url = new URL(origin);
+    return url.protocol === 'https:' && url.hostname.endsWith('buntinggpt.com');
+  } catch {
+    return false;
+  }
+};
+
 /**
  * Bunting Authentication Hook
  * 
@@ -98,11 +126,17 @@ const isAllowedDomain = (): boolean => {
 export function useBuntingAuth(options: UseBuntingAuthOptions = {}): UseBuntingAuthReturn {
   const { requireAuth = false, returnUrl, onAuthChange } = options;
 
+  const embedded = isEmbedded();
+
   const [state, setState] = useState<BuntingAuthState>({
     user: null,
     session: null,
     isLoading: true,
     isAuthenticated: false,
+    isEmbedded: embedded,
+    authReceived: !embedded, // in standalone we consider "received" immediately
+    error: null,
+    requestAuth: () => {},
   });
 
   // Redirect to the central login hub
@@ -122,27 +156,109 @@ export function useBuntingAuth(options: UseBuntingAuthOptions = {}): UseBuntingA
     // Validate domain
     if (!isAllowedDomain()) {
       console.warn('[BuntingAuth] This hook only works on *.buntinggpt.com domains');
-      setState(prev => ({ ...prev, isLoading: false }));
+      setState(prev => ({ ...prev, isLoading: false, error: 'Invalid domain' }));
       return;
     }
+
+    const embeddedMode = isEmbedded();
+
+    // Request auth from parent (embedded mode)
+    const requestAuth = () => {
+      if (!embeddedMode) return;
+      try {
+        window.parent?.postMessage({ type: 'REQUEST_AUTH' }, '*');
+      } catch (e) {
+        console.warn('[BuntingAuth] Failed to postMessage REQUEST_AUTH', e);
+      }
+    };
+
+    setState(prev => ({ ...prev, isEmbedded: embeddedMode, requestAuth }));
+
+    // Handle parent -> child auth messages
+    const handleMessage = async (event: MessageEvent) => {
+      if (!embeddedMode) return;
+      if (!isAllowedParentOrigin(event.origin)) return;
+
+      const data: any = event.data;
+      const type = data?.type;
+
+      if (type === 'AUTH_LOGOUT' || (type === 'AUTH_TOKEN' && !data?.token)) {
+        await supabase.auth.signOut();
+        setState(prev => ({
+          ...prev,
+          user: null,
+          session: null,
+          isAuthenticated: false,
+          isLoading: false,
+          authReceived: true,
+          error: null,
+        }));
+        return;
+      }
+
+      if (type !== 'AUTH_TOKEN') return;
+
+      const token = data?.token;
+      const refreshToken = data?.refreshToken;
+
+      if (typeof token !== 'string' || token.length < 20) {
+        setState(prev => ({ ...prev, isLoading: false, authReceived: true, error: 'Invalid access token' }));
+        return;
+      }
+      if (typeof refreshToken !== 'string' || refreshToken.length < 20) {
+        setState(prev => ({ ...prev, isLoading: false, authReceived: true, error: 'Invalid refresh token' }));
+        return;
+      }
+
+      const { data: setData, error } = await supabase.auth.setSession({
+        access_token: token,
+        refresh_token: refreshToken,
+      });
+
+      if (error) {
+        setState(prev => ({ ...prev, isLoading: false, authReceived: true, error: error.message }));
+        return;
+      }
+
+      const session = setData.session ?? null;
+      const newState: BuntingAuthState = {
+        user: session?.user ?? null,
+        session,
+        isLoading: false,
+        isAuthenticated: !!session?.user,
+        isEmbedded: embeddedMode,
+        authReceived: true,
+        error: null,
+        requestAuth,
+      };
+
+      setState(newState);
+      onAuthChange?.(newState);
+    };
+
+    window.addEventListener('message', handleMessage);
 
     // Set up auth state listener FIRST
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       (event, session) => {
         console.log('[BuntingAuth] Auth state changed:', event);
-        
+
         const newState: BuntingAuthState = {
           user: session?.user ?? null,
           session,
           isLoading: false,
           isAuthenticated: !!session?.user,
+          isEmbedded: embeddedMode,
+          authReceived: embeddedMode ? event !== 'INITIAL_SESSION' : true,
+          error: null,
+          requestAuth,
         };
-        
+
         setState(newState);
         onAuthChange?.(newState);
 
-        // Redirect to login if auth is required and user is not authenticated
-        if (requireAuth && !session?.user && event !== 'INITIAL_SESSION') {
+        // Redirect to login ONLY in standalone mode
+        if (!embeddedMode && requireAuth && !session?.user && event !== 'INITIAL_SESSION') {
           login();
         }
       }
@@ -159,18 +275,37 @@ export function useBuntingAuth(options: UseBuntingAuthOptions = {}): UseBuntingA
         session,
         isLoading: false,
         isAuthenticated: !!session?.user,
+        isEmbedded: embeddedMode,
+        authReceived: !embeddedMode, // in embedded mode, wait for parent auth attempt
+        error: null,
+        requestAuth,
       };
-      
+
       setState(newState);
       onAuthChange?.(newState);
 
-      // Redirect to login if auth is required and no session
-      if (requireAuth && !session?.user) {
+      if (embeddedMode && !session?.user) {
+        // Kick off parent auth request + retries for ~3s
+        requestAuth();
+        const start = Date.now();
+        const interval = setInterval(() => {
+          if (Date.now() - start > 3000) {
+            clearInterval(interval);
+            setState(prev => ({ ...prev, authReceived: true }));
+            return;
+          }
+          requestAuth();
+        }, 200);
+      }
+
+      // Redirect to login ONLY in standalone mode
+      if (!embeddedMode && requireAuth && !session?.user) {
         login();
       }
     });
 
     return () => {
+      window.removeEventListener('message', handleMessage);
       subscription.unsubscribe();
     };
   }, [requireAuth, login, onAuthChange]);
