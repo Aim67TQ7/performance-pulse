@@ -41,12 +41,12 @@ export function TokenProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     const verifyToken = async () => {
       try {
-        // Read token and employee_id from URL params
+        // Read token and user_id from URL params
         const params = new URLSearchParams(window.location.search);
         const urlToken = params.get('token');
-        const urlEmployeeId = params.get('employee_id');
+        const urlUserId = params.get('user_id');
 
-        console.log('[TokenContext] URL params:', { token: urlToken, employee_id: urlEmployeeId });
+        console.log('[TokenContext] URL params:', { token: urlToken, user_id: urlUserId });
 
         if (!urlToken) {
           setError('Missing access token');
@@ -54,8 +54,8 @@ export function TokenProvider({ children }: { children: ReactNode }) {
           return;
         }
 
-        if (!urlEmployeeId) {
-          setError('Missing employee identifier');
+        if (!urlUserId) {
+          setError('Missing user identifier');
           setIsLoading(false);
           return;
         }
@@ -83,23 +83,23 @@ export function TokenProvider({ children }: { children: ReactNode }) {
 
         console.log('[TokenContext] Token verified for app:', appItem.name);
 
-        // Verify employee exists
+        // Look up employee by user_id
         const { data: employee, error: empError } = await supabase
           .from('employees')
           .select('id')
-          .eq('id', urlEmployeeId)
+          .eq('user_id', urlUserId)
           .maybeSingle();
 
         if (empError || !employee) {
-          console.error('[TokenContext] Employee not found:', empError);
-          setError('Invalid employee identifier');
+          console.error('[TokenContext] Employee not found for user_id:', empError);
+          setError('Invalid user identifier');
           setIsLoading(false);
           return;
         }
 
-        // All valid
+        // All valid - store employee.id for internal use
         setToken(urlToken);
-        setEmployeeId(urlEmployeeId);
+        setEmployeeId(employee.id);
         setIsValid(true);
         setIsLoading(false);
       } catch (err) {
