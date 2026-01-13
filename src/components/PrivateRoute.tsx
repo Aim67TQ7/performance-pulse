@@ -42,6 +42,15 @@ export function PrivateRoute({ children }: PrivateRouteProps) {
         <button onClick={() => {
           window.location.href = 'https://self.buntinggpt.com?debug=stop';
         }}>Go to self.buntinggpt.com (with debug)</button>
+        <br/><br/>
+        <button onClick={() => {
+          document.cookie.split(';').forEach(c => {
+            document.cookie = c.trim().split('=')[0] + '=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/; domain=.buntinggpt.com';
+          });
+          localStorage.clear();
+          sessionStorage.clear();
+          alert('Cleared all cookies, localStorage, and sessionStorage');
+        }} style={{ background: 'red', color: 'white', padding: '10px' }}>🔥 Nuclear Clear</button>
       </div>
     );
   }
