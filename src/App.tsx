@@ -10,6 +10,7 @@ import Dashboard from "./pages/Dashboard";
 import Evaluation from "./pages/Evaluation";
 import TeamStatus from "./pages/TeamStatus";
 import HRAdmin from "./pages/HRAdmin";
+import Login from "./pages/Login";
 import AuthCallback from "./pages/AuthCallback";
 import NotFound from "./pages/NotFound";
 
@@ -24,16 +25,17 @@ const App = () => (
         <BrowserRouter>
           <AuthProvider>
             <Routes>
-              {/* Auth callback must be OUTSIDE PrivateRoute */}
+              {/* Public routes */}
+              <Route path="/login" element={<Login />} />
               <Route path="/auth/callback" element={<AuthCallback />} />
               
               {/* Protected routes */}
-              <Route element={<PrivateRoute><Dashboard /></PrivateRoute>} path="/" />
+              <Route path="/" element={<PrivateRoute><Dashboard /></PrivateRoute>} />
               <Route path="/evaluation" element={<PrivateRoute><Evaluation /></PrivateRoute>} />
               <Route path="/team-status" element={<PrivateRoute><TeamStatus /></PrivateRoute>} />
               <Route path="/hr-admin" element={<PrivateRoute><HRAdmin /></PrivateRoute>} />
               
-              {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
+              {/* Catch-all */}
               <Route path="*" element={<NotFound />} />
             </Routes>
           </AuthProvider>
