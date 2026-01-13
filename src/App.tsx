@@ -10,8 +10,6 @@ import Dashboard from "./pages/Dashboard";
 import Evaluation from "./pages/Evaluation";
 import TeamStatus from "./pages/TeamStatus";
 import HRAdmin from "./pages/HRAdmin";
-import Login from "./pages/Login";
-
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -25,10 +23,7 @@ const App = () => (
         <BrowserRouter>
           <AuthProvider>
             <Routes>
-              {/* Public routes */}
-              <Route path="/login" element={<Login />} />
-              
-              
+              {/* Protected routes */}
               {/* Protected routes */}
               <Route path="/" element={<PrivateRoute><Dashboard /></PrivateRoute>} />
               <Route path="/evaluation" element={<PrivateRoute><Evaluation /></PrivateRoute>} />
