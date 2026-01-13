@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Helmet } from 'react-helmet-async';
 import { supabase } from '@/integrations/supabase/client';
+import { useToken } from '@/contexts/TokenContext';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Loader2, FileText, Users, CheckCircle, ArrowRight, Settings } from 'lucide-react';
@@ -11,6 +12,7 @@ import { EvaluationData, EmployeeInfo, QuantitativeData, QualitativeFactors, Sum
 
 export const Dashboard = () => {
   const navigate = useNavigate();
+  const { employeeId } = useToken();
   const [isLoading, setIsLoading] = useState(true);
   const [hasSubordinates, setHasSubordinates] = useState(false);
   const [evaluationStatus, setEvaluationStatus] = useState<'none' | 'draft' | 'submitted' | 'reopened'>('none');
@@ -19,30 +21,17 @@ export const Dashboard = () => {
 
   useEffect(() => {
     const fetchUserData = async () => {
+      if (!employeeId) {
+        setIsLoading(false);
+        return;
+      }
+
       try {
-        const { data: { user } } = await supabase.auth.getUser();
-        if (!user) {
-          setIsLoading(false);
-          return;
-        }
-
-        // Get current user's employee record
-        const { data: currentUserEmployee } = await supabase
-          .from('employees')
-          .select('id')
-          .eq('user_id', user.id)
-          .single();
-
-        if (!currentUserEmployee) {
-          setIsLoading(false);
-          return;
-        }
-
         // Check if user has any direct reports
         const { count } = await supabase
           .from('employees')
           .select('id', { count: 'exact', head: true })
-          .eq('reports_to', currentUserEmployee.id)
+          .eq('reports_to', employeeId)
           .eq('benefit_class', 'salary')
           .eq('is_active', true);
 
@@ -52,7 +41,7 @@ export const Dashboard = () => {
         const { data: hrAdminRecord } = await supabase
           .from('hr_admin_users')
           .select('id')
-          .eq('employee_id', currentUserEmployee.id)
+          .eq('employee_id', employeeId)
           .maybeSingle();
 
         setIsHrAdmin(!!hrAdminRecord);
@@ -62,7 +51,7 @@ export const Dashboard = () => {
         const { data: evaluation } = await supabase
           .from('pep_evaluations')
           .select('*')
-          .eq('employee_id', currentUserEmployee.id)
+          .eq('employee_id', employeeId)
           .eq('period_year', ASSESSMENT_YEAR)
           .single();
 
@@ -130,7 +119,7 @@ export const Dashboard = () => {
     };
 
     fetchUserData();
-  }, []);
+  }, [employeeId]);
 
   // Loading state
   if (isLoading) {
