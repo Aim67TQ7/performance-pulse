@@ -1,28 +1,25 @@
 /**
  * AuthContext for BuntingGPT Subdomain Apps
  * 
- * Wraps useParentAuth to provide a single source of truth for auth state.
+ * Uses useBuntingAuth for cookie-based authentication across all *.buntinggpt.com subdomains.
  * Works seamlessly in both embedded (iframe) and standalone modes.
  */
 
 import { createContext, useContext, ReactNode } from 'react';
-import { useParentAuth, ParentAuthState } from '@/hooks/useParentAuth';
-import { supabase } from '@/integrations/supabase/client';
+import { useBuntingAuth, UseBuntingAuthReturn } from '@/hooks/useBuntingAuth';
 
-interface AuthContextType extends ParentAuthState {
-  signOut: () => Promise<void>;
-}
+type AuthContextType = UseBuntingAuthReturn;
 
-// Default context value for when accessed outside provider (should not happen in normal use)
+// Default context value for when accessed outside provider
 const defaultContextValue: AuthContextType = {
   user: null,
   session: null,
   isLoading: true,
-  isEmbedded: false,
-  authReceived: false,
-  error: null,
-  requestAuth: () => {},
-  signOut: async () => {},
+  isAuthenticated: false,
+  displayName: null,
+  email: null,
+  login: () => {},
+  logout: () => {},
 };
 
 const AuthContext = createContext<AuthContextType>(defaultContextValue);
@@ -32,14 +29,11 @@ export const useAuth = () => {
 };
 
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const auth = useParentAuth();
-
-  const signOut = async () => {
-    await supabase.auth.signOut();
-  };
+  // Don't auto-redirect at context level - let PrivateRoute handle that
+  const auth = useBuntingAuth({ requireAuth: false });
 
   return (
-    <AuthContext.Provider value={{ ...auth, signOut }}>
+    <AuthContext.Provider value={auth}>
       {children}
     </AuthContext.Provider>
   );
