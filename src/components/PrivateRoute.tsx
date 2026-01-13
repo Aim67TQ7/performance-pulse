@@ -36,15 +36,14 @@ export function PrivateRoute({ children }: PrivateRouteProps) {
     }
   }, [isEmbedded, isLoading, isAuthenticated, authReceived, requestAuth]);
 
-  // Standalone mode: redirect to login after load
+  // Standalone mode: DO NOT auto-redirect (prevents login loops).
+  // Show an access screen and let the user opt-in to login.
   useEffect(() => {
-    if (isEmbedded) return;
-    if (!isLoading && !isAuthenticated && !hasRedirected.current) {
-      hasRedirected.current = true;
-      const timer = setTimeout(() => login(), 50);
-      return () => clearTimeout(timer);
+    // keep effect only to avoid stale hasRedirected in future changes
+    if (!isEmbedded) {
+      hasRedirected.current = false;
     }
-  }, [isEmbedded, isLoading, isAuthenticated, login]);
+  }, [isEmbedded]);
 
   if (isLoading) {
     return (
@@ -80,11 +79,22 @@ export function PrivateRoute({ children }: PrivateRouteProps) {
     );
   }
 
+  // Standalone mode: do not loop-redirect. Show an access screen.
   if (!isAuthenticated) {
     return (
-      <div className="flex flex-col items-center justify-center h-screen gap-4">
-        <img src="/bunting-logo.png" alt="Bunting Magnetics" className="h-16 w-auto" />
-        <p className="text-sm text-muted-foreground">Redirecting to login...</p>
+      <div className="flex flex-col items-center justify-center h-screen gap-4 p-4 text-center">
+        <img src="/bunting-logo.png" alt="Bunting Magnetics" className="h-16 w-auto mb-4" />
+        <div className="text-xl font-semibold text-foreground">Sign in required</div>
+        <p className="text-muted-foreground text-sm max-w-md">
+          To access this app outside the portal, please sign in via the Bunting login hub.
+        </p>
+        <button
+          type="button"
+          onClick={login}
+          className="mt-2 px-6 py-2 bg-primary text-primary-foreground rounded-md hover:bg-primary/90 transition-colors"
+        >
+          Go to login.buntinggpt.com
+        </button>
       </div>
     );
   }
