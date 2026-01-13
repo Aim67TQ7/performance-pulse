@@ -23,14 +23,21 @@ const cookieStorage = {
   getItem: (key: string): string | null => {
     try {
       const cookies = document.cookie.split('; ');
-      const chunks: { index: number; value: string }[] = [];
-      
-      // Find all chunks for this key (pattern: key_chunk_N)
+
+      // 1) Backwards-compatible: try non-chunk cookie first
       for (const cookie of cookies) {
         const [cookieKey, ...valueParts] = cookie.split('=');
-        const cookieValue = valueParts.join('='); // Handle values with = in them
-        
-        // Match pattern: key_chunk_0, key_chunk_1, etc.
+        if (cookieKey === key) {
+          return decodeURIComponent(valueParts.join('=')) || null;
+        }
+      }
+
+      // 2) Chunked cookies: key_chunk_0, key_chunk_1, ...
+      const chunks: { index: number; value: string }[] = [];
+      for (const cookie of cookies) {
+        const [cookieKey, ...valueParts] = cookie.split('=');
+        const cookieValue = valueParts.join('=');
+
         if (cookieKey.startsWith(`${key}_chunk_`)) {
           const indexStr = cookieKey.substring(`${key}_chunk_`.length);
           const index = parseInt(indexStr, 10);
@@ -39,10 +46,8 @@ const cookieStorage = {
           }
         }
       }
-      
+
       if (chunks.length === 0) return null;
-      
-      // CRITICAL: Sort by index before joining
       chunks.sort((a, b) => a.index - b.index);
       return chunks.map(c => c.value).join('') || null;
     } catch (e) {
@@ -69,7 +74,8 @@ const cookieStorage = {
         const encodedChunk = encodeURIComponent(chunk);
         
         // CRITICAL: domain=.buntinggpt.com (with leading dot) for cross-subdomain sharing
-        document.cookie = `${chunkKey}=${encodedChunk}; path=/; domain=.buntinggpt.com; max-age=${maxAge}; SameSite=Lax; Secure`;
+        // Use SameSite=None to allow session cookies to be read in iframes.
+        document.cookie = `${chunkKey}=${encodedChunk}; path=/; domain=.buntinggpt.com; max-age=${maxAge}; SameSite=None; Secure`;
       });
     } catch (e) {
       console.error('Cookie write error:', e);
@@ -79,7 +85,11 @@ const cookieStorage = {
   removeItem: (key: string): void => {
     try {
       const cookies = document.cookie.split('; ');
-      
+
+      // Remove non-chunk cookie
+      document.cookie = `${key}=; path=/; domain=.buntinggpt.com; max-age=0`;
+
+      // Remove chunked cookies
       for (const cookie of cookies) {
         const [cookieKey] = cookie.split('=');
         if (cookieKey.startsWith(`${key}_chunk_`)) {
