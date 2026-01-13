@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import { Helmet } from 'react-helmet-async';
 import { supabase } from '@/integrations/supabase/client';
-import { useAuth } from '@/contexts/AuthContext';
+import { useToken } from '@/contexts/TokenContext';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -27,7 +27,7 @@ interface AssessmentDates {
 }
 
 const HRAdmin = () => {
-  const { user } = useAuth();
+  const { employeeId } = useToken();
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [passcodeInput, setPasscodeInput] = useState('');
   const [passcodeError, setPasscodeError] = useState('');
@@ -55,12 +55,12 @@ const HRAdmin = () => {
 
   // Check if user has auth-based access when requireAuth is enabled
   useEffect(() => {
-    if (!isLoading && requireAuth && user) {
+    if (!isLoading && requireAuth && employeeId) {
       checkAuthAccess();
     } else if (!isLoading) {
       setIsCheckingAuth(false);
     }
-  }, [isLoading, requireAuth, user]);
+  }, [isLoading, requireAuth, employeeId]);
 
   // Load company hierarchy after authentication
   useEffect(() => {
@@ -87,28 +87,17 @@ const HRAdmin = () => {
   };
 
   const checkAuthAccess = async () => {
-    if (!user) {
+    if (!employeeId) {
       setIsCheckingAuth(false);
       return;
     }
 
     try {
       // Check if user is in hr_admin_users table via their employee record
-      const { data: employee, error: empError } = await supabase
-        .from('employees')
-        .select('id')
-        .eq('user_id', user.id)
-        .single();
-
-      if (empError || !employee) {
-        setIsCheckingAuth(false);
-        return;
-      }
-
       const { data: adminUser, error: adminError } = await supabase
         .from('hr_admin_users')
         .select('id')
-        .eq('employee_id', employee.id)
+        .eq('employee_id', employeeId)
         .single();
 
       if (!adminError && adminUser) {
@@ -321,8 +310,8 @@ Thank you!`
 
   // Auth Gate - show passcode if not using auth mode, or if auth check didn't pass
   if (!isAuthenticated) {
-    // If requireAuth is true and user is logged in but not authorized
-    if (requireAuth && user) {
+    // If requireAuth is true and user is identified but not authorized
+    if (requireAuth && employeeId) {
       return (
         <>
           <Helmet>
@@ -456,234 +445,200 @@ Thank you!`
             <TabsContent value="assessment" className="space-y-6">
               {/* Assessment Dates Card */}
               <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2 text-lg">
-                <Calendar className="w-5 h-5" />
-                Assessment Dates
-              </CardTitle>
-              <CardDescription>
-                Configure the assessment period and self-assessment availability dates
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-6">
-              {/* Assessment Period */}
-              <div className="space-y-4">
-                <h3 className="font-medium text-sm text-muted-foreground uppercase tracking-wide">
-                  Assessment Period (Performance Year)
-                </h3>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="period_start">Period Start</Label>
-                    <Input
-                      id="period_start"
-                      type="date"
-                      value={dates.period_start}
-                      onChange={(e) => setDates({ ...dates, period_start: e.target.value })}
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="period_end">Period End</Label>
-                    <Input
-                      id="period_end"
-                      type="date"
-                      value={dates.period_end}
-                      onChange={(e) => setDates({ ...dates, period_end: e.target.value })}
-                    />
-                  </div>
-                </div>
-              </div>
-
-              {/* Survey Availability */}
-              <div className="space-y-4">
-                <h3 className="font-medium text-sm text-muted-foreground uppercase tracking-wide">
-                  Self-Assessment Availability
-                </h3>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="open_date">Open Date</Label>
-                    <Input
-                      id="open_date"
-                      type="date"
-                      value={dates.open_date}
-                      onChange={(e) => setDates({ ...dates, open_date: e.target.value })}
-                    />
-                    <p className="text-xs text-muted-foreground">
-                      When employees can start their evaluations
-                    </p>
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="close_date">Close Date (Due Date)</Label>
-                    <Input
-                      id="close_date"
-                      type="date"
-                      value={dates.close_date}
-                      onChange={(e) => setDates({ ...dates, close_date: e.target.value })}
-                    />
-                    <p className="text-xs text-muted-foreground">
-                      Deadline for completing evaluations
-                    </p>
-                  </div>
-                </div>
-              </div>
-
-              {/* Save Button */}
-              <div className="pt-4 border-t">
-                <Button onClick={handleSave} disabled={isSaving} className="w-full sm:w-auto">
-                  {isSaving ? (
-                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                  ) : (
-                    <Save className="w-4 h-4 mr-2" />
-                  )}
-                  Save Settings
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Notification Card */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2 text-lg">
-                <Mail className="w-5 h-5" />
-                Send Notifications
-              </CardTitle>
-              <CardDescription>
-                Send email notifications to employees about the assessment
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <Button onClick={handleSendOpenNotification} variant="secondary" className="w-full sm:w-auto">
-                <Mail className="w-4 h-4 mr-2" />
-                Send "Self-Assessment Open" Email
-              </Button>
-              <p className="text-xs text-muted-foreground mt-2">
-                Opens your email client with a pre-filled message including dates and login instructions
-              </p>
-            </CardContent>
-          </Card>
-
-          {/* Company-Wide Status Card */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2 text-lg">
-                <Users className="w-5 h-5" />
-                Company-Wide Evaluation Status
-              </CardTitle>
-              <CardDescription>
-                View evaluation status for all employees in the organization
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              {isLoadingHierarchy ? (
-                <div className="flex items-center justify-center py-8">
-                  <Loader2 className="w-6 h-6 animate-spin text-primary" />
-                </div>
-              ) : (
-                <>
-                  {/* Stats Summary */}
-                  <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
-                    <div className="flex items-center gap-2 p-3 bg-muted/50 rounded-lg">
-                      <Users className="w-5 h-5 text-muted-foreground" />
-                      <div>
-                        <p className="text-lg font-bold">{hierarchyStats.total}</p>
-                        <p className="text-xs text-muted-foreground">Total</p>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2 text-lg">
+                    <Calendar className="w-5 h-5" />
+                    Assessment Dates
+                  </CardTitle>
+                  <CardDescription>
+                    Configure the assessment period and self-assessment availability dates
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-6">
+                  {/* Assessment Period */}
+                  <div className="space-y-4">
+                    <h3 className="font-medium text-sm text-muted-foreground uppercase tracking-wide">
+                      Assessment Period (Performance Year)
+                    </h3>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <Label htmlFor="period_start">Period Start</Label>
+                        <Input
+                          id="period_start"
+                          type="date"
+                          value={dates.period_start}
+                          onChange={(e) => setDates({ ...dates, period_start: e.target.value })}
+                        />
                       </div>
-                    </div>
-                    <div className="flex items-center gap-2 p-3 bg-muted/50 rounded-lg">
-                      <CheckCircle2 className="w-5 h-5 text-green-600" />
-                      <div>
-                        <p className="text-lg font-bold">{hierarchyStats.submitted}</p>
-                        <p className="text-xs text-muted-foreground">Submitted</p>
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-2 p-3 bg-muted/50 rounded-lg">
-                      <FileEdit className="w-5 h-5 text-primary" />
-                      <div>
-                        <p className="text-lg font-bold">{hierarchyStats.inProgress}</p>
-                        <p className="text-xs text-muted-foreground">In Progress</p>
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-2 p-3 bg-muted/50 rounded-lg">
-                      <Clock className="w-5 h-5 text-warning" />
-                      <div>
-                        <p className="text-lg font-bold">{hierarchyStats.notStarted}</p>
-                        <p className="text-xs text-muted-foreground">Not Started</p>
+                      <div className="space-y-2">
+                        <Label htmlFor="period_end">Period End</Label>
+                        <Input
+                          id="period_end"
+                          type="date"
+                          value={dates.period_end}
+                          onChange={(e) => setDates({ ...dates, period_end: e.target.value })}
+                        />
                       </div>
                     </div>
                   </div>
 
-                  {/* Hierarchy Tree */}
-                  {companyHierarchy.length === 0 ? (
+                  {/* Self-Assessment Window */}
+                  <div className="space-y-4">
+                    <h3 className="font-medium text-sm text-muted-foreground uppercase tracking-wide">
+                      Self-Assessment Window
+                    </h3>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <Label htmlFor="open_date">Open Date</Label>
+                        <Input
+                          id="open_date"
+                          type="date"
+                          value={dates.open_date}
+                          onChange={(e) => setDates({ ...dates, open_date: e.target.value })}
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="close_date">Close Date (Due)</Label>
+                        <Input
+                          id="close_date"
+                          type="date"
+                          value={dates.close_date}
+                          onChange={(e) => setDates({ ...dates, close_date: e.target.value })}
+                        />
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="flex flex-col sm:flex-row gap-3">
+                    <Button onClick={handleSave} disabled={isSaving} className="gap-2">
+                      {isSaving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+                      Save Changes
+                    </Button>
+                    <Button variant="outline" onClick={handleSendOpenNotification} className="gap-2">
+                      <Mail className="w-4 h-4" />
+                      Send Opening Notification
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Company Hierarchy Card */}
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2 text-lg">
+                    <Users className="w-5 h-5" />
+                    Company Evaluation Status
+                  </CardTitle>
+                  <CardDescription>
+                    View evaluation status for all employees in the organization
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  {isLoadingHierarchy ? (
+                    <div className="flex items-center justify-center py-8">
+                      <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
+                    </div>
+                  ) : companyHierarchy.length === 0 ? (
                     <div className="text-center py-8 text-muted-foreground">
-                      No employee data found.
+                      No employees found
                     </div>
                   ) : (
-                    <div className="border rounded-lg p-4 max-h-[600px] overflow-y-auto">
+                    <>
+                      {/* Stats */}
+                      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+                        <div className="flex items-center gap-2">
+                          <Users className="w-5 h-5 text-muted-foreground" />
+                          <div>
+                            <p className="text-lg font-bold">{hierarchyStats.total}</p>
+                            <p className="text-xs text-muted-foreground">Total</p>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <CheckCircle2 className="w-5 h-5 text-green-600" />
+                          <div>
+                            <p className="text-lg font-bold">{hierarchyStats.submitted}</p>
+                            <p className="text-xs text-muted-foreground">Submitted</p>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <FileEdit className="w-5 h-5 text-primary" />
+                          <div>
+                            <p className="text-lg font-bold">{hierarchyStats.inProgress}</p>
+                            <p className="text-xs text-muted-foreground">In Progress</p>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <Clock className="w-5 h-5 text-warning" />
+                          <div>
+                            <p className="text-lg font-bold">{hierarchyStats.notStarted}</p>
+                            <p className="text-xs text-muted-foreground">Not Started</p>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Hierarchy Tree */}
                       <HierarchyTree data={companyHierarchy} defaultExpanded={false} />
-                    </div>
+                    </>
                   )}
-                </>
-              )}
-            </CardContent>
-          </Card>
+                </CardContent>
+              </Card>
 
-            </TabsContent>
-
-            {/* Survey Content Tab */}
-            <TabsContent value="survey" className="space-y-6">
-              {/* Performance Competencies Manager */}
-              <CompetencyManager />
-
-              {/* Security & Tools Card */}
+              {/* Admin Settings Card */}
               <Card>
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2 text-lg">
                     <ShieldCheck className="w-5 h-5" />
-                    Security & Tools
+                    Admin Access Settings
                   </CardTitle>
                   <CardDescription>
-                    Admin page security settings and preview tools
+                    Configure how HR Admin access is controlled
                   </CardDescription>
                 </CardHeader>
-                <CardContent className="space-y-6">
-                  {/* Auth Toggle */}
+                <CardContent>
                   <div className="flex items-center justify-between">
                     <div className="space-y-1">
-                      <Label htmlFor="auth-mode" className="font-medium">Require User Authentication</Label>
-                      <p className="text-xs text-muted-foreground">
-                        When enabled, only users in hr_admin_users table can access this page (no passcode needed)
+                      <Label>Require User Authentication</Label>
+                      <p className="text-sm text-muted-foreground">
+                        When enabled, only users in the hr_admin_users table can access this panel.
+                        When disabled, anyone with the passcode can access.
                       </p>
                     </div>
-                    <Switch
-                      id="auth-mode"
-                      checked={requireAuth}
-                      onCheckedChange={toggleAuthMode}
-                    />
-                  </div>
-                  
-                  <div className="border-t pt-4">
-                    <Button onClick={() => setSurveyPreviewOpen(true)} variant="outline" className="w-full sm:w-auto">
-                      <Eye className="w-4 h-4 mr-2" />
-                      Preview Blank Survey Form
-                    </Button>
-                    <p className="text-xs text-muted-foreground mt-2">
-                      View and print a blank survey form for review or to share with developers
-                    </p>
+                    <Switch checked={requireAuth} onCheckedChange={toggleAuthMode} />
                   </div>
                 </CardContent>
               </Card>
             </TabsContent>
 
+            {/* Survey Content Tab */}
+            <TabsContent value="survey" className="space-y-6">
+              <CompetencyManager />
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2 text-lg">
+                    <Eye className="w-5 h-5" />
+                    Survey Preview
+                  </CardTitle>
+                  <CardDescription>
+                    Preview the current survey structure as employees will see it
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <Button variant="outline" onClick={() => setSurveyPreviewOpen(true)} className="gap-2">
+                    <Eye className="w-4 h-4" />
+                    Open Survey Preview
+                  </Button>
+                </CardContent>
+              </Card>
+              <SurveyPreview open={surveyPreviewOpen} onOpenChange={setSurveyPreviewOpen} />
+            </TabsContent>
+
             {/* Employee Management Tab */}
-            <TabsContent value="employees">
+            <TabsContent value="employees" className="space-y-6">
               <EmployeeManager />
             </TabsContent>
           </Tabs>
         </div>
       </div>
-
-      {/* Survey Preview Dialog */}
-      <SurveyPreview open={surveyPreviewOpen} onOpenChange={setSurveyPreviewOpen} />
     </>
   );
 };

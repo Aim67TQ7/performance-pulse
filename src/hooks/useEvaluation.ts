@@ -1,8 +1,9 @@
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback, useEffect, useContext } from 'react';
 import { EvaluationData } from '@/types/evaluation';
 import { useErrorLogger } from './useErrorLogger';
 import { supabase } from '@/integrations/supabase/client';
 import { generateEvaluationPdf } from '@/lib/pdfGenerator';
+import { useToken } from '@/contexts/TokenContext';
 
 const STORAGE_KEY = 'pep_evaluation_draft';
 
@@ -69,6 +70,7 @@ const getInitialData = (): EvaluationData => ({
 });
 
 export const useEvaluation = () => {
+  const { employeeId: tokenEmployeeId } = useToken();
   const [data, setData] = useState<EvaluationData>(getInitialData);
   const [isSaving, setIsSaving] = useState(false);
   const [lastSaved, setLastSaved] = useState<Date | null>(null);
@@ -81,23 +83,20 @@ export const useEvaluation = () => {
   // Load employee data and existing evaluation
   useEffect(() => {
     const loadData = async () => {
-      try {
-        const { data: { user } } = await supabase.auth.getUser();
-        
-        if (!user) {
-          // Not authenticated - AuthGate will handle redirect
-          setIsLoading(false);
-          return;
-        }
+      if (!tokenEmployeeId) {
+        setIsLoading(false);
+        return;
+      }
 
+      try {
         // Use hardcoded assessment year
         const periodYear = ASSESSMENT_YEAR;
 
-        // Get current employee record
+        // Get current employee record using employee_id from token
         const { data: employeeData, error: employeeError } = await supabase
           .from('employees')
           .select('id, name_first, name_last, job_title, department, reports_to, user_id, benefit_class')
-          .eq('user_id', user.id)
+          .eq('id', tokenEmployeeId)
           .eq('benefit_class', 'salary')
           .single();
 
@@ -182,7 +181,7 @@ export const useEvaluation = () => {
     };
 
     loadData();
-  }, [logError]);
+  }, [tokenEmployeeId, logError]);
 
   // Save to Supabase
   const saveToDatabase = useCallback(async (newData: EvaluationData) => {
@@ -201,19 +200,6 @@ export const useEvaluation = () => {
     
     setIsSaving(true);
     try {
-      const { data: { user } } = await supabase.auth.getUser();
-      
-      if (!user) {
-        // Fallback to localStorage if not authenticated
-        const saveData = {
-          ...newData,
-          lastSavedAt: new Date().toISOString(),
-        };
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(saveData));
-        setLastSaved(new Date());
-        return;
-      }
-
       const evalPayload = {
         employee_id: currentEmployee.id,
         period_year: newData.employeeInfo.periodYear,
@@ -438,16 +424,13 @@ export const useEvaluation = () => {
 
   const reopenEvaluation = useCallback(async (reason: string) => {
     try {
-      if (!data.id) return false;
+      if (!data.id || !tokenEmployeeId) return false;
 
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return false;
-
-      // Get manager's employee record
+      // Get the manager's employee record (the person reopening)
       const { data: managerEmployee } = await supabase
         .from('employees')
         .select('id')
-        .eq('user_id', user.id)
+        .eq('id', tokenEmployeeId)
         .single();
 
       if (!managerEmployee) return false;
@@ -478,7 +461,7 @@ export const useEvaluation = () => {
       logError('save', 'Failed to reopen evaluation', { error });
       return false;
     }
-  }, [data.id, logError]);
+  }, [data.id, tokenEmployeeId, logError]);
 
   const resetEvaluation = useCallback(() => {
     localStorage.removeItem(STORAGE_KEY);

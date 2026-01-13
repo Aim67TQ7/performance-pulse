@@ -4,8 +4,8 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { HelmetProvider } from "react-helmet-async";
-import { AuthProvider } from "@/contexts/AuthContext";
-import { PrivateRoute } from "@/components/PrivateRoute";
+import { TokenProvider } from "@/contexts/TokenContext";
+import { TokenGate } from "@/components/TokenGate";
 import Dashboard from "./pages/Dashboard";
 import Evaluation from "./pages/Evaluation";
 import TeamStatus from "./pages/TeamStatus";
@@ -21,19 +21,20 @@ const App = () => (
         <Toaster />
         <Sonner position="top-center" />
         <BrowserRouter>
-          <AuthProvider>
-            <Routes>
-              {/* Protected routes */}
-              {/* Protected routes */}
-              <Route path="/" element={<PrivateRoute><Dashboard /></PrivateRoute>} />
-              <Route path="/evaluation" element={<PrivateRoute><Evaluation /></PrivateRoute>} />
-              <Route path="/team-status" element={<PrivateRoute><TeamStatus /></PrivateRoute>} />
-              <Route path="/hr-admin" element={<PrivateRoute><HRAdmin /></PrivateRoute>} />
-              
-              {/* Catch-all */}
-              <Route path="*" element={<NotFound />} />
-            </Routes>
-          </AuthProvider>
+          <TokenProvider>
+            <TokenGate>
+              <Routes>
+                {/* Protected routes - all require valid token */}
+                <Route path="/" element={<Dashboard />} />
+                <Route path="/evaluation" element={<Evaluation />} />
+                <Route path="/team-status" element={<TeamStatus />} />
+                <Route path="/hr-admin" element={<HRAdmin />} />
+                
+                {/* Catch-all */}
+                <Route path="*" element={<NotFound />} />
+              </Routes>
+            </TokenGate>
+          </TokenProvider>
         </BrowserRouter>
       </TooltipProvider>
     </QueryClientProvider>

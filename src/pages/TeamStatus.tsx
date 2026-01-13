@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import { Helmet } from 'react-helmet-async';
 import { supabase } from '@/integrations/supabase/client';
+import { useToken } from '@/contexts/TokenContext';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Loader2, Users, CheckCircle2, Clock, FileEdit, ArrowLeft, Mail } from 'lucide-react';
@@ -19,12 +20,18 @@ interface AssessmentDates {
 const ASSESSMENT_YEAR = 2025;
 
 const TeamStatus = () => {
+  const { employeeId } = useToken();
   const [hierarchy, setHierarchy] = useState<HierarchyMember[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [assessmentDates, setAssessmentDates] = useState<AssessmentDates | null>(null);
 
   useEffect(() => {
     const loadData = async () => {
+      if (!employeeId) {
+        setIsLoading(false);
+        return;
+      }
+
       // Fetch assessment dates from settings (for display purposes only)
       try {
         const { data: settingsData } = await supabase
@@ -43,21 +50,6 @@ const TeamStatus = () => {
 
       // Load hierarchical subordinates
       try {
-        const { data: { user } } = await supabase.auth.getUser();
-        if (!user) return;
-
-        // Get current user's employee record
-        const { data: currentEmployee } = await supabase
-          .from('employees')
-          .select('id')
-          .eq('user_id', user.id)
-          .single();
-
-        if (!currentEmployee) {
-          setIsLoading(false);
-          return;
-        }
-
         // Fetch all subordinates recursively
         const { data: allEmployees, error } = await supabase
           .from('employees')
@@ -83,7 +75,7 @@ const TeamStatus = () => {
             }
           });
         };
-        findSubordinates(currentEmployee.id);
+        findSubordinates(employeeId);
 
         if (subordinateIds.size === 0) {
           setHierarchy([]);
@@ -121,7 +113,7 @@ const TeamStatus = () => {
           });
 
         // Build tree starting from current employee's direct reports
-        const tree = buildHierarchyTree(flatList, currentEmployee.id);
+        const tree = buildHierarchyTree(flatList, employeeId);
         setHierarchy(tree);
       } catch (error) {
         console.error('Error loading subordinates:', error);
@@ -131,7 +123,7 @@ const TeamStatus = () => {
     };
 
     loadData();
-  }, []);
+  }, [employeeId]);
 
   const stats = useMemo(() => countHierarchyStats(hierarchy), [hierarchy]);
 

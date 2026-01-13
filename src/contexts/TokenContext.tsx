@@ -1,0 +1,128 @@
+/**
+ * TokenContext - Token-Based Access Control
+ * 
+ * Reads token and employee_id from URL parameters.
+ * Verifies token exists in app_items table.
+ * Provides employee_id for data queries throughout the app.
+ */
+
+import { createContext, useContext, useEffect, useState, ReactNode } from 'react';
+import { supabase } from '@/integrations/supabase/client';
+
+interface TokenContextType {
+  isLoading: boolean;
+  isValid: boolean;
+  employeeId: string | null;
+  token: string | null;
+  error: string | null;
+}
+
+const defaultContextValue: TokenContextType = {
+  isLoading: true,
+  isValid: false,
+  employeeId: null,
+  token: null,
+  error: null,
+};
+
+const TokenContext = createContext<TokenContextType>(defaultContextValue);
+
+export const useToken = () => {
+  return useContext(TokenContext);
+};
+
+export function TokenProvider({ children }: { children: ReactNode }) {
+  const [isLoading, setIsLoading] = useState(true);
+  const [isValid, setIsValid] = useState(false);
+  const [employeeId, setEmployeeId] = useState<string | null>(null);
+  const [token, setToken] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    const verifyToken = async () => {
+      try {
+        // Read token and employee_id from URL params
+        const params = new URLSearchParams(window.location.search);
+        const urlToken = params.get('token');
+        const urlEmployeeId = params.get('employee_id');
+
+        console.log('[TokenContext] URL params:', { token: urlToken, employee_id: urlEmployeeId });
+
+        if (!urlToken) {
+          setError('Missing access token');
+          setIsLoading(false);
+          return;
+        }
+
+        if (!urlEmployeeId) {
+          setError('Missing employee identifier');
+          setIsLoading(false);
+          return;
+        }
+
+        // Verify token exists in app_items table
+        const { data: appItem, error: queryError } = await supabase
+          .from('app_items')
+          .select('id, name')
+          .eq('token', urlToken)
+          .maybeSingle();
+
+        if (queryError) {
+          console.error('[TokenContext] Query error:', queryError);
+          setError('Failed to verify access');
+          setIsLoading(false);
+          return;
+        }
+
+        if (!appItem) {
+          console.log('[TokenContext] Token not found in app_items');
+          setError('Invalid access token');
+          setIsLoading(false);
+          return;
+        }
+
+        console.log('[TokenContext] Token verified for app:', appItem.name);
+
+        // Verify employee exists
+        const { data: employee, error: empError } = await supabase
+          .from('employees')
+          .select('id')
+          .eq('id', urlEmployeeId)
+          .maybeSingle();
+
+        if (empError || !employee) {
+          console.error('[TokenContext] Employee not found:', empError);
+          setError('Invalid employee identifier');
+          setIsLoading(false);
+          return;
+        }
+
+        // All valid
+        setToken(urlToken);
+        setEmployeeId(urlEmployeeId);
+        setIsValid(true);
+        setIsLoading(false);
+      } catch (err) {
+        console.error('[TokenContext] Verification error:', err);
+        setError('An error occurred during verification');
+        setIsLoading(false);
+      }
+    };
+
+    verifyToken();
+  }, []);
+
+  const value: TokenContextType = {
+    isLoading,
+    isValid,
+    employeeId,
+    token,
+    error,
+  };
+
+  return (
+    <TokenContext.Provider value={value}>
+      {children}
+    </TokenContext.Provider>
+  );
+}

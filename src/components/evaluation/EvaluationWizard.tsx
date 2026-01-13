@@ -12,6 +12,7 @@ import { ReopenDialog } from './ReopenDialog';
 import { VersionBadge } from '@/components/version/VersionBadge';
 import { useEvaluation } from '@/hooks/useEvaluation';
 import { useErrorLogger } from '@/hooks/useErrorLogger';
+import { useToken } from '@/contexts/TokenContext';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Loader2, Lock, RotateCcw, AlertTriangle, Users } from 'lucide-react';
@@ -26,6 +27,7 @@ const STEPS = [
 ];
 
 export const EvaluationWizard = () => {
+  const { employeeId: tokenEmployeeId } = useToken();
   const [currentStep, setCurrentStep] = useState(1);
   const [showConfirmation, setShowConfirmation] = useState(false);
   const [showReopenDialog, setShowReopenDialog] = useState(false);
@@ -56,24 +58,14 @@ export const EvaluationWizard = () => {
   // Check if current user has subordinates and if they can reopen evaluations
   useEffect(() => {
     const checkUserAccess = async () => {
+      if (!tokenEmployeeId) return;
+
       try {
-        const { data: { user } } = await supabase.auth.getUser();
-        if (!user) return;
-
-        // Get current user's employee record
-        const { data: currentUserEmployee } = await supabase
-          .from('employees')
-          .select('id')
-          .eq('user_id', user.id)
-          .single();
-
-        if (!currentUserEmployee) return;
-
         // Check if user has any direct reports
         const { count } = await supabase
           .from('employees')
           .select('id', { count: 'exact', head: true })
-          .eq('reports_to', currentUserEmployee.id)
+          .eq('reports_to', tokenEmployeeId)
           .eq('benefit_class', 'salary')
           .eq('is_active', true);
 
@@ -87,7 +79,7 @@ export const EvaluationWizard = () => {
             .eq('id', data.employeeId)
             .single();
 
-          setCanReopen(evalOwner?.reports_to === currentUserEmployee.id);
+          setCanReopen(evalOwner?.reports_to === tokenEmployeeId);
         } else {
           setCanReopen(false);
         }
@@ -97,7 +89,7 @@ export const EvaluationWizard = () => {
     };
 
     checkUserAccess();
-  }, [data.employeeId, data.status]);
+  }, [tokenEmployeeId, data.employeeId, data.status]);
 
   const completedSteps = useMemo(() => {
     const completed: number[] = [];
