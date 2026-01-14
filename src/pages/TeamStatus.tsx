@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import { Helmet } from 'react-helmet-async';
 import { supabase } from '@/integrations/supabase/client';
-import { useToken } from '@/contexts/TokenContext';
+import { useAuth } from '@/hooks/useAuth';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Loader2, Users, CheckCircle2, Clock, FileEdit, ArrowLeft, Mail } from 'lucide-react';
@@ -20,7 +20,7 @@ interface AssessmentDates {
 const ASSESSMENT_YEAR = 2025;
 
 const TeamStatus = () => {
-  const { employeeId } = useToken();
+  const { employeeId } = useAuth();
   const [hierarchy, setHierarchy] = useState<HierarchyMember[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [assessmentDates, setAssessmentDates] = useState<AssessmentDates | null>(null);
