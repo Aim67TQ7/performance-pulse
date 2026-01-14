@@ -83,15 +83,28 @@ export function TokenProvider({ children }: { children: ReactNode }) {
 
         console.log('[TokenContext] Token verified for app:', appItem.name);
 
-        // Look up employee by user_id
-        const { data: employee, error: empError } = await supabase
+        // First try: Look up employee by user_id (for salary employees with auth)
+        let { data: employee, error: empError } = await supabase
           .from('employees')
           .select('id')
           .eq('user_id', urlUserId)
           .maybeSingle();
 
+        // Fallback: If not found by user_id, try by id (for hourly employees)
+        if (!employee && !empError) {
+          console.log('[TokenContext] user_id lookup failed, trying by id');
+          const fallbackResult = await supabase
+            .from('employees')
+            .select('id')
+            .eq('id', urlUserId)
+            .maybeSingle();
+          
+          employee = fallbackResult.data;
+          empError = fallbackResult.error;
+        }
+
         if (empError || !employee) {
-          console.error('[TokenContext] Employee not found for user_id:', empError);
+          console.error('[TokenContext] Employee not found:', empError);
           setError('Invalid user identifier');
           setIsLoading(false);
           return;

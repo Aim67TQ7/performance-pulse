@@ -42,10 +42,10 @@ export function TokenGate({ children }: TokenGateProps) {
           <p className="text-muted-foreground">
             Please access this app from{" "}
             <a 
-              href="https://buntinggpt.com" 
+              href="https://login.buntinggpt.com" 
               className="text-primary hover:underline font-medium"
             >
-              buntinggpt.com
+              login.buntinggpt.com
             </a>
           </p>
           {error && (
