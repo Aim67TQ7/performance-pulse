@@ -34,6 +34,19 @@ export const useToken = () => {
 
 const AUTH_HUB_URL = 'https://login.buntinggpt.com';
 
+function setAuthIssuedAtCookie(timestampMs: number) {
+  if (typeof document === 'undefined' || typeof window === 'undefined') return;
+
+  // Only set cross-subdomain cookie on buntinggpt.com
+  const isBuntingDomain = window.location.hostname.endsWith('.buntinggpt.com');
+  if (!isBuntingDomain) return;
+
+  // Keep cookie readable by the Edge Function (not HttpOnly).
+  // Edge Function enforces the 24h window; we set a 30d max-age to avoid churn.
+  const maxAgeSeconds = 60 * 60 * 24 * 30;
+  document.cookie = `bunting_auth_issued_at=${timestampMs}; Domain=.buntinggpt.com; Path=/; SameSite=Lax; Secure; Max-Age=${maxAgeSeconds}`;
+}
+
 export function TokenProvider({ children }: { children: ReactNode }) {
   const [isLoading, setIsLoading] = useState(true);
   const [isValid, setIsValid] = useState(false);
@@ -45,12 +58,15 @@ export function TokenProvider({ children }: { children: ReactNode }) {
     const verifySession = async () => {
       try {
         // Check for existing Supabase session from cookies
-        const { data: { session: currentSession }, error: sessionError } = await supabase.auth.getSession();
+        const {
+          data: { session: currentSession },
+          error: sessionError,
+        } = await supabase.auth.getSession();
 
         console.log('[TokenContext] Session check:', {
           hasSession: !!currentSession,
           userId: currentSession?.user?.id,
-          error: sessionError
+          error: sessionError,
         });
 
         if (sessionError) {
@@ -110,6 +126,11 @@ export function TokenProvider({ children }: { children: ReactNode }) {
         setSession(currentSession);
         setEmployeeId(employee.id);
         setIsValid(true);
+
+        // Ensure the 24h freshness cookie exists for the Edge Function.
+        // This prevents redirect loops for users whose login flow didn't set it yet.
+        setAuthIssuedAtCookie(Date.now());
+
         setIsLoading(false);
       } catch (err) {
         console.error('[TokenContext] Verification error:', err);
@@ -121,19 +142,26 @@ export function TokenProvider({ children }: { children: ReactNode }) {
     verifySession();
 
     // Listen for auth state changes
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (event, newSession) => {
-        console.log('[TokenContext] Auth state change:', event);
-        if (event === 'SIGNED_OUT') {
-          setSession(null);
-          setEmployeeId(null);
-          setIsValid(false);
-          // Redirect to login hub
-          const returnUrl = encodeURIComponent(window.location.href);
-          window.location.href = `${AUTH_HUB_URL}?return_url=${returnUrl}`;
-        }
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange(async (event, newSession) => {
+      console.log('[TokenContext] Auth state change:', event);
+
+      if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
+        // Keep freshness marker up-to-date whenever Supabase refreshes tokens.
+        setAuthIssuedAtCookie(Date.now());
+        if (newSession) setSession(newSession);
       }
-    );
+
+      if (event === 'SIGNED_OUT') {
+        setSession(null);
+        setEmployeeId(null);
+        setIsValid(false);
+        // Redirect to login hub
+        const returnUrl = encodeURIComponent(window.location.href);
+        window.location.href = `${AUTH_HUB_URL}?return_url=${returnUrl}`;
+      }
+    });
 
     return () => {
       subscription.unsubscribe();
