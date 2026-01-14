@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Helmet } from 'react-helmet-async';
 import { supabase } from '@/integrations/supabase/client';
-import { useToken } from '@/contexts/TokenContext';
+import { useAuth } from '@/hooks/useAuth';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Loader2, FileText, Users, CheckCircle, ArrowRight, Settings } from 'lucide-react';
@@ -12,7 +12,7 @@ import { EvaluationData, EmployeeInfo, QuantitativeData, QualitativeFactors, Sum
 
 export const Dashboard = () => {
   const navigate = useNavigate();
-  const { employeeId } = useToken();
+  const { employeeId } = useAuth();
   const [isLoading, setIsLoading] = useState(true);
   const [hasSubordinates, setHasSubordinates] = useState(false);
   const [evaluationStatus, setEvaluationStatus] = useState<'none' | 'draft' | 'submitted' | 'reopened'>('none');

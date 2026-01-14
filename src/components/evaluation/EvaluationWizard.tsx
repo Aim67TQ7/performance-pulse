@@ -12,7 +12,7 @@ import { ReopenDialog } from './ReopenDialog';
 import { VersionBadge } from '@/components/version/VersionBadge';
 import { useEvaluation } from '@/hooks/useEvaluation';
 import { useErrorLogger } from '@/hooks/useErrorLogger';
-import { useToken } from '@/contexts/TokenContext';
+import { useAuth } from '@/hooks/useAuth';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Loader2, Lock, RotateCcw, AlertTriangle, Users } from 'lucide-react';
@@ -27,7 +27,7 @@ const STEPS = [
 ];
 
 export const EvaluationWizard = () => {
-  const { employeeId: tokenEmployeeId } = useToken();
+  const { employeeId: tokenEmployeeId } = useAuth();
   const [currentStep, setCurrentStep] = useState(1);
   const [showConfirmation, setShowConfirmation] = useState(false);
   const [showReopenDialog, setShowReopenDialog] = useState(false);

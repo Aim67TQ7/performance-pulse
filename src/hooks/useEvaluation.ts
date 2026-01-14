@@ -1,9 +1,9 @@
-import { useState, useCallback, useEffect, useContext } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { EvaluationData } from '@/types/evaluation';
 import { useErrorLogger } from './useErrorLogger';
 import { supabase } from '@/integrations/supabase/client';
 import { generateEvaluationPdf } from '@/lib/pdfGenerator';
-import { useToken } from '@/contexts/TokenContext';
+import { useAuth } from '@/hooks/useAuth';
 
 const STORAGE_KEY = 'pep_evaluation_draft';
 
@@ -15,12 +15,6 @@ interface Employee {
   department: string | null;
   reports_to: string;
   user_id: string | null;
-}
-
-interface ManagerInfo {
-  id: string;
-  name_first: string;
-  name_last: string;
 }
 
 // Hardcoded assessment year - do not change without HR approval
@@ -70,7 +64,7 @@ const getInitialData = (): EvaluationData => ({
 });
 
 export const useEvaluation = () => {
-  const { employeeId: tokenEmployeeId } = useToken();
+  const { employeeId: tokenEmployeeId } = useAuth();
   const [data, setData] = useState<EvaluationData>(getInitialData);
   const [isSaving, setIsSaving] = useState(false);
   const [lastSaved, setLastSaved] = useState<Date | null>(null);
@@ -500,8 +494,8 @@ export const useEvaluation = () => {
     lastSaved,
     isLoading,
     isReadOnly,
-    isManager,
     currentEmployee,
+    isManager,
     updateEmployeeInfo,
     updateQuantitative,
     updateQualitative,

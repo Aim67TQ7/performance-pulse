@@ -4,8 +4,8 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { HelmetProvider } from "react-helmet-async";
-import { TokenProvider } from "@/contexts/TokenContext";
-import { TokenGate } from "@/components/TokenGate";
+import { AuthProvider } from "@/contexts/AuthContext";
+import { ProtectedRoute } from "@/components/ProtectedRoute";
 import Dashboard from "./pages/Dashboard";
 import Evaluation from "./pages/Evaluation";
 import TeamStatus from "./pages/TeamStatus";
@@ -21,10 +21,10 @@ const App = () => (
         <Toaster />
         <Sonner position="top-center" />
         <BrowserRouter>
-          <TokenProvider>
-            <TokenGate>
+          <AuthProvider>
+            <ProtectedRoute>
               <Routes>
-                {/* Protected routes - all require valid token */}
+                {/* Protected routes - all require valid auth */}
                 <Route path="/" element={<Dashboard />} />
                 <Route path="/evaluation" element={<Evaluation />} />
                 <Route path="/team-status" element={<TeamStatus />} />
@@ -33,8 +33,8 @@ const App = () => (
                 {/* Catch-all */}
                 <Route path="*" element={<NotFound />} />
               </Routes>
-            </TokenGate>
-          </TokenProvider>
+            </ProtectedRoute>
+          </AuthProvider>
         </BrowserRouter>
       </TooltipProvider>
     </QueryClientProvider>
