@@ -1,24 +1,33 @@
 /**
  * TokenGate Component
- * 
- * Wraps protected content and shows appropriate UI based on token verification:
+ *
+ * Wraps protected content and shows appropriate UI based on session verification:
  * - Loading spinner while verifying
- * - Error screen if token invalid
- * - Children if token valid
+ * - Error screen if session invalid
+ * - Children if session valid
  */
 
-import { ReactNode } from "react";
+import { ReactNode, useMemo } from "react";
 import { useToken } from "@/contexts/TokenContext";
-import { AlertTriangle, Loader2 } from "lucide-react";
+import { AlertTriangle } from "lucide-react";
 
 interface TokenGateProps {
   children: ReactNode;
 }
 
+const AUTH_HUB_URL = 'https://login.buntinggpt.com';
+
 export function TokenGate({ children }: TokenGateProps) {
   const { isLoading, isValid, error } = useToken();
 
-  // Show loading state while verifying token
+  // Build login URL with return_url parameter
+  const loginUrl = useMemo(() => {
+    if (typeof window === 'undefined') return AUTH_HUB_URL;
+    const returnUrl = encodeURIComponent(window.location.href);
+    return `${AUTH_HUB_URL}?return_url=${returnUrl}`;
+  }, []);
+
+  // Show loading state while verifying session
   if (isLoading) {
     return (
       <div className="flex flex-col items-center justify-center h-screen gap-4 bg-background">
@@ -29,7 +38,7 @@ export function TokenGate({ children }: TokenGateProps) {
     );
   }
 
-  // Show error screen if token is invalid
+  // Show error screen if session is invalid
   if (!isValid) {
     return (
       <div className="flex flex-col items-center justify-center h-screen gap-6 bg-background p-4">
@@ -41,8 +50,8 @@ export function TokenGate({ children }: TokenGateProps) {
           <h1 className="text-xl font-semibold text-foreground">Access Denied</h1>
           <p className="text-muted-foreground">
             Please access this app from{" "}
-            <a 
-              href="https://login.buntinggpt.com" 
+            <a
+              href={loginUrl}
               className="text-primary hover:underline font-medium"
             >
               login.buntinggpt.com
@@ -58,6 +67,6 @@ export function TokenGate({ children }: TokenGateProps) {
     );
   }
 
-  // Token is valid, render children
+  // Session is valid, render children
   return <>{children}</>;
 }
