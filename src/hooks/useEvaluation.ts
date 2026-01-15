@@ -271,7 +271,21 @@ export const useEvaluation = () => {
     return () => window.removeEventListener('beforeunload', handleBeforeUnload);
   }, [saveToLocalStorage]);
 
-  // Save to Supabase
+  // Get auth token from localStorage
+  const getAuthToken = useCallback(() => {
+    try {
+      const stored = localStorage.getItem('pep_auth');
+      if (stored) {
+        const { token } = JSON.parse(stored);
+        return token;
+      }
+    } catch {
+      console.error('[PEP] Could not get auth token');
+    }
+    return null;
+  }, []);
+
+  // Save to Supabase via edge function (bypasses RLS)
   const saveToDatabase = useCallback(async (newData: EvaluationData) => {
     if (isReadOnly || isLoading) return;
     
@@ -283,11 +297,17 @@ export const useEvaluation = () => {
       console.log('[PEP] Employee not loaded yet, saved to localStorage only');
       return;
     }
+
+    const authToken = getAuthToken();
+    if (!authToken) {
+      console.log('[PEP] No auth token, saved to localStorage only');
+      return;
+    }
     
     setIsSaving(true);
     try {
       const evalPayload = {
-        employee_id: currentEmployee.id,
+        evaluation_id: newData.id || null,
         period_year: newData.employeeInfo.periodYear,
         status: newData.status,
         employee_info_json: JSON.parse(JSON.stringify(newData.employeeInfo)),
@@ -296,40 +316,39 @@ export const useEvaluation = () => {
         summary_json: JSON.parse(JSON.stringify(newData.summary)),
       };
 
-      if (newData.id) {
-        // Update existing
-        const { error } = await supabase
-          .from('pep_evaluations')
-          .update(evalPayload)
-          .eq('id', newData.id);
+      const response = await fetch(
+        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/submit-evaluation/save`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${authToken}`,
+          },
+          body: JSON.stringify(evalPayload),
+        }
+      );
 
-        if (error) throw error;
-      } else {
-        // Insert new
-        const { data: insertedData, error } = await supabase
-          .from('pep_evaluations')
-          .insert(evalPayload)
-          .select('id')
-          .single();
+      const result = await response.json();
 
-        if (error) throw error;
-        
-        // Update data with new ID
-        setData(prev => ({ ...prev, id: insertedData.id }));
-        
-        // Also update localStorage with the new ID
-        saveToLocalStorage({ ...newData, id: insertedData.id });
+      if (!response.ok) {
+        throw new Error(result.error || 'Failed to save');
+      }
+
+      // If this was a new evaluation, update with the returned ID
+      if (!newData.id && result.id) {
+        setData(prev => ({ ...prev, id: result.id }));
+        saveToLocalStorage({ ...newData, id: result.id });
       }
       
       setLastSaved(new Date());
-      console.log('[PEP] Saved to database');
+      console.log('[PEP] Saved to database via edge function');
     } catch (error) {
       // Log error silently without showing toast for auto-save failures
       console.error('[PEP] Auto-save to DB failed, data preserved in localStorage:', error);
     } finally {
       setIsSaving(false);
     }
-  }, [currentEmployee, isReadOnly, isLoading, saveToLocalStorage]);
+  }, [currentEmployee, isReadOnly, isLoading, saveToLocalStorage, getAuthToken]);
 
   // Sync employee info changes to the employees table
   const syncEmployeeToDatabase = useCallback(async (updates: Partial<EvaluationData['employeeInfo']>) => {
@@ -428,12 +447,17 @@ export const useEvaluation = () => {
         return { success: false };
       }
 
+      const authToken = getAuthToken();
+      if (!authToken) {
+        logError('submit', 'Cannot submit: not authenticated');
+        return { success: false };
+      }
+
       let evaluationId = data.id;
 
-      // If no evaluation ID exists, create the record first
+      // If no evaluation ID exists, create the record first via edge function
       if (!evaluationId) {
         const evalPayload = {
-          employee_id: currentEmployee.id,
           period_year: data.employeeInfo.periodYear,
           status: 'draft',
           employee_info_json: JSON.parse(JSON.stringify(data.employeeInfo)),
@@ -442,18 +466,26 @@ export const useEvaluation = () => {
           summary_json: JSON.parse(JSON.stringify(data.summary)),
         };
 
-        const { data: insertedData, error: insertError } = await supabase
-          .from('pep_evaluations')
-          .insert(evalPayload)
-          .select('id')
-          .single();
+        const response = await fetch(
+          `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/submit-evaluation/save`,
+          {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${authToken}`,
+            },
+            body: JSON.stringify(evalPayload),
+          }
+        );
 
-        if (insertError) {
-          logError('submit', 'Failed to create evaluation record', { error: insertError });
+        const result = await response.json();
+
+        if (!response.ok) {
+          logError('submit', 'Failed to create evaluation record', { error: result.error });
           return { success: false };
         }
 
-        evaluationId = insertedData.id;
+        evaluationId = result.id;
         setData(prev => ({ ...prev, id: evaluationId }));
       }
 
@@ -471,8 +503,7 @@ export const useEvaluation = () => {
         remotePdfUrl = existingEval.pdf_url;
         console.log('[PEP] Reusing existing PDF', { pdf_url: remotePdfUrl });
       } else {
-        // Generate PDF (while evaluation is still in a draft/reopened state so RLS allows updating pdf_url)
-        // Important: only persist *remote* URLs (never store blob: URLs in the DB)
+        // Generate PDF (while evaluation is still in a draft/reopened state)
         try {
           const pdfUrl = await generateEvaluationPdf({ ...data, id: evaluationId });
           remotePdfUrl = pdfUrl && /^https?:\/\//.test(pdfUrl) ? pdfUrl : undefined;
@@ -481,21 +512,31 @@ export const useEvaluation = () => {
         }
       }
 
-      // Update status to submitted (include pdf_url only if it successfully uploaded to Storage)
-      const { error: updateError } = await supabase
-        .from('pep_evaluations')
-        .update({
-          status: 'submitted',
-          submitted_at: new Date().toISOString(),
-          pdf_url: remotePdfUrl,
-          employee_info_json: JSON.parse(JSON.stringify(data.employeeInfo)),
-          quantitative_json: JSON.parse(JSON.stringify(data.quantitative)),
-          qualitative_json: JSON.parse(JSON.stringify(data.qualitative)),
-          summary_json: JSON.parse(JSON.stringify(data.summary)),
-        })
-        .eq('id', evaluationId);
+      // Submit via edge function (bypasses RLS)
+      const submitResponse = await fetch(
+        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/submit-evaluation/submit`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${authToken}`,
+          },
+          body: JSON.stringify({
+            evaluation_id: evaluationId,
+            pdf_url: remotePdfUrl,
+            employee_info_json: JSON.parse(JSON.stringify(data.employeeInfo)),
+            quantitative_json: JSON.parse(JSON.stringify(data.quantitative)),
+            qualitative_json: JSON.parse(JSON.stringify(data.qualitative)),
+            summary_json: JSON.parse(JSON.stringify(data.summary)),
+          }),
+        }
+      );
 
-      if (updateError) throw updateError;
+      const submitResult = await submitResponse.json();
+
+      if (!submitResponse.ok) {
+        throw new Error(submitResult.error || 'Failed to submit');
+      }
 
       setData(prev => ({
         ...prev,
@@ -511,38 +552,44 @@ export const useEvaluation = () => {
       logError('submit', 'Failed to submit evaluation', { error });
       return { success: false };
     }
-  }, [data, currentEmployee, logError]);
+  }, [data, currentEmployee, logError, getAuthToken]);
 
   const reopenEvaluation = useCallback(async (reason: string) => {
     try {
-      if (!data.id || !tokenEmployeeId) return false;
+      if (!data.id) return false;
 
-      // Get the manager's employee record (the person reopening)
-      const { data: managerEmployee } = await supabase
-        .from('employees')
-        .select('id')
-        .eq('id', tokenEmployeeId)
-        .single();
+      const authToken = getAuthToken();
+      if (!authToken) {
+        logError('save', 'Cannot reopen: not authenticated');
+        return false;
+      }
 
-      if (!managerEmployee) return false;
+      const response = await fetch(
+        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/submit-evaluation/reopen`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${authToken}`,
+          },
+          body: JSON.stringify({
+            evaluation_id: data.id,
+            reason,
+          }),
+        }
+      );
 
-      const { error } = await supabase
-        .from('pep_evaluations')
-        .update({
-          status: 'reopened',
-          reopened_at: new Date().toISOString(),
-          reopened_by: managerEmployee.id,
-          reopen_reason: reason,
-        })
-        .eq('id', data.id);
+      const result = await response.json();
 
-      if (error) throw error;
+      if (!response.ok) {
+        throw new Error(result.error || 'Failed to reopen');
+      }
 
       setData(prev => ({
         ...prev,
         status: 'reopened',
         reopenedAt: new Date(),
-        reopenedBy: managerEmployee.id,
+        reopenedBy: tokenEmployeeId || '',
         reopenReason: reason,
       }));
       setIsReadOnly(false);
@@ -552,7 +599,7 @@ export const useEvaluation = () => {
       logError('save', 'Failed to reopen evaluation', { error });
       return false;
     }
-  }, [data.id, tokenEmployeeId, logError]);
+  }, [data.id, tokenEmployeeId, logError, getAuthToken]);
 
   const resetEvaluation = useCallback(() => {
     localStorage.removeItem(STORAGE_KEY);
