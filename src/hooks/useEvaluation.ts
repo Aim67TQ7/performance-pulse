@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback, useEffect, useRef } from 'react';
 import { EvaluationData } from '@/types/evaluation';
 import { useErrorLogger } from './useErrorLogger';
 import { supabase } from '@/integrations/supabase/client';
@@ -73,6 +73,19 @@ export const useEvaluation = () => {
   const [isReadOnly, setIsReadOnly] = useState(false);
   const [isManager, setIsManager] = useState(false);
   const { logError } = useErrorLogger();
+  
+  // Ref to track latest data for beforeunload handler
+  const dataRef = useRef<EvaluationData>(data);
+  const currentEmployeeRef = useRef<Employee | null>(null);
+  
+  // Keep refs in sync
+  useEffect(() => {
+    dataRef.current = data;
+  }, [data]);
+  
+  useEffect(() => {
+    currentEmployeeRef.current = currentEmployee;
+  }, [currentEmployee]);
 
   // Load employee data and existing evaluation
   useEffect(() => {
@@ -127,16 +140,32 @@ export const useEvaluation = () => {
           }
         }
 
-        // Check for existing evaluation
-        const { data: evalData } = await supabase
+        // Check for existing evaluation in DB
+        const { data: evalData, error: evalError } = await supabase
           .from('pep_evaluations')
           .select('*')
           .eq('employee_id', employeeData.id)
           .eq('period_year', periodYear)
           .single();
 
+        // Also check localStorage for any unsaved changes
+        let localData: EvaluationData | null = null;
+        try {
+          const stored = localStorage.getItem(STORAGE_KEY);
+          if (stored) {
+            const parsed = JSON.parse(stored);
+            // Only use localStorage data if it matches the current employee
+            if (parsed.employeeId === employeeData.id) {
+              localData = parsed;
+              console.log('[PEP] Found localStorage data for this employee');
+            }
+          }
+        } catch {
+          console.log('[PEP] Could not parse localStorage data');
+        }
+
         if (evalData) {
-          // Load existing evaluation
+          // Load existing evaluation from DB
           const loadedData: EvaluationData = {
             id: evalData.id,
             employeeId: evalData.employee_id,
@@ -161,9 +190,33 @@ export const useEvaluation = () => {
             reopenReason: evalData.reopen_reason || undefined,
           };
           
+          // Check if localStorage has newer data (compare timestamps)
+          if (localData?.lastSavedAt && loadedData.lastSavedAt) {
+            const localTime = new Date(localData.lastSavedAt).getTime();
+            const dbTime = new Date(loadedData.lastSavedAt).getTime();
+            if (localTime > dbTime && evalData.status !== 'submitted') {
+              console.log('[PEP] Using newer localStorage data over DB data');
+              // Merge localStorage data but keep the DB id
+              setData({ ...localData, id: evalData.id });
+              setLastSaved(new Date(localData.lastSavedAt));
+              setIsReadOnly(false);
+              return;
+            }
+          }
+          
           setData(loadedData);
           setIsReadOnly(evalData.status === 'submitted' || evalData.status === 'reviewed' || evalData.status === 'signed');
           setLastSaved(evalData.updated_at ? new Date(evalData.updated_at) : null);
+          
+          // Clear localStorage if DB data is current
+          localStorage.removeItem(STORAGE_KEY);
+        } else if (localData && !evalError) {
+          // No DB record but we have localStorage data - use it
+          console.log('[PEP] Using localStorage data (no DB record)');
+          setData(localData);
+          if (localData.lastSavedAt) {
+            setLastSaved(new Date(localData.lastSavedAt));
+          }
         } else {
           // Create new evaluation with employee info pre-populated
           const newData = getInitialData();
@@ -186,20 +239,65 @@ export const useEvaluation = () => {
     };
 
     loadData();
-  }, [tokenEmployeeId, logError]);
+  }, [tokenEmployeeId, authEmployee, logError]);
 
-  // Save to Supabase
-  const saveToDatabase = useCallback(async (newData: EvaluationData) => {
-    if (isReadOnly || isLoading) return;
-    
-    // Wait for employee data to load before attempting to save
-    if (!currentEmployee) {
-      // Silently save to localStorage while employee data loads
+  // Save to localStorage helper (always available, no async)
+  const saveToLocalStorage = useCallback((newData: EvaluationData) => {
+    try {
       const saveData = {
         ...newData,
         lastSavedAt: new Date().toISOString(),
       };
       localStorage.setItem(STORAGE_KEY, JSON.stringify(saveData));
+      console.log('[PEP] Saved to localStorage');
+    } catch (error) {
+      console.error('[PEP] localStorage save failed:', error);
+    }
+  }, []);
+
+  // Save on page unload/close
+  useEffect(() => {
+    const handleBeforeUnload = () => {
+      const currentData = dataRef.current;
+      const employee = currentEmployeeRef.current;
+      
+      // Always save to localStorage before leaving
+      if (currentData && currentData.status !== 'submitted') {
+        saveToLocalStorage(currentData);
+        
+        // Attempt sync save to DB using sendBeacon if we have employee data
+        if (employee && currentData.id) {
+          const payload = {
+            employee_id: employee.id,
+            period_year: currentData.employeeInfo.periodYear,
+            status: currentData.status,
+            employee_info_json: currentData.employeeInfo,
+            quantitative_json: currentData.quantitative,
+            qualitative_json: currentData.qualitative,
+            summary_json: currentData.summary,
+          };
+          
+          // Use sendBeacon for reliable saves on page close
+          const url = `${import.meta.env.VITE_SUPABASE_URL || 'https://your-project.supabase.co'}/rest/v1/pep_evaluations?id=eq.${currentData.id}`;
+          navigator.sendBeacon?.(url, JSON.stringify(payload));
+        }
+      }
+    };
+
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    return () => window.removeEventListener('beforeunload', handleBeforeUnload);
+  }, [saveToLocalStorage]);
+
+  // Save to Supabase
+  const saveToDatabase = useCallback(async (newData: EvaluationData) => {
+    if (isReadOnly || isLoading) return;
+    
+    // Always save to localStorage as backup first
+    saveToLocalStorage(newData);
+    
+    // Wait for employee data to load before attempting DB save
+    if (!currentEmployee) {
+      console.log('[PEP] Employee not loaded yet, saved to localStorage only');
       return;
     }
     
@@ -233,17 +331,22 @@ export const useEvaluation = () => {
 
         if (error) throw error;
         
+        // Update data with new ID
         setData(prev => ({ ...prev, id: insertedData.id }));
+        
+        // Also update localStorage with the new ID
+        saveToLocalStorage({ ...newData, id: insertedData.id });
       }
       
       setLastSaved(new Date());
+      console.log('[PEP] Saved to database');
     } catch (error) {
       // Log error silently without showing toast for auto-save failures
-      console.error('[PEP] Auto-save failed:', error);
+      console.error('[PEP] Auto-save to DB failed, data preserved in localStorage:', error);
     } finally {
       setIsSaving(false);
     }
-  }, [currentEmployee, isReadOnly, isLoading]);
+  }, [currentEmployee, isReadOnly, isLoading, saveToLocalStorage]);
 
   // Sync employee info changes to the employees table
   const syncEmployeeToDatabase = useCallback(async (updates: Partial<EvaluationData['employeeInfo']>) => {
