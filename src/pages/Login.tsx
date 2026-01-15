@@ -126,6 +126,15 @@ export default function Login() {
                   'Sign In'
                 )}
               </Button>
+
+              <div className="text-center">
+                <a
+                  href={`mailto:aahlers@buntingmagnetics.com,Cvogt@buntingmagnetics.com,rclausing@buntingmagnetics.com?subject=RESET&body=Please reset my password for ${encodeURIComponent(email || '[your email]')}`}
+                  className="text-sm text-primary hover:underline"
+                >
+                  Forgot password? Request a reset
+                </a>
+              </div>
             </form>
           </CardContent>
         </Card>
