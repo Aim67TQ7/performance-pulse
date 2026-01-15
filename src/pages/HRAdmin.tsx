@@ -8,7 +8,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Loader2, Lock, Settings, Calendar, ArrowLeft, Save, Mail, Users, CheckCircle2, Clock, FileEdit, Award, Eye, ShieldCheck, UserCog, FileText, Key, AlertTriangle } from 'lucide-react';
+import { Loader2, Lock, Settings, Calendar, ArrowLeft, Save, Mail, Users, CheckCircle2, Clock, FileEdit, Award, Eye, ShieldCheck, UserCog, FileText, AlertTriangle } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { toast } from '@/hooks/use-toast';
 import { VersionBadge } from '@/components/version/VersionBadge';
@@ -17,7 +17,7 @@ import { HierarchyTree, HierarchyMember, buildHierarchyTree, countHierarchyStats
 import { CompetencyManager } from '@/components/admin/CompetencyManager';
 import { SurveyPreview } from '@/components/admin/SurveyPreview';
 import { EmployeeManager } from '@/components/admin/EmployeeManager';
-import { PasswordManagement } from '@/components/admin/PasswordManagement';
+
 
 const HR_PASSCODE = '4155';
 
@@ -399,7 +399,7 @@ Thank you!`
 
           {/* Tabs */}
           <Tabs defaultValue="assessment" className="space-y-6">
-            <TabsList className="grid w-full grid-cols-4">
+            <TabsList className="grid w-full grid-cols-3">
               <TabsTrigger value="assessment" className="gap-2">
                 <Settings className="w-4 h-4" />
                 <span className="hidden sm:inline">Assessment</span>
@@ -411,10 +411,6 @@ Thank you!`
               <TabsTrigger value="employees" className="gap-2">
                 <UserCog className="w-4 h-4" />
                 <span className="hidden sm:inline">Employees</span>
-              </TabsTrigger>
-              <TabsTrigger value="passwords" className="gap-2">
-                <Key className="w-4 h-4" />
-                <span className="hidden sm:inline">Passwords</span>
               </TabsTrigger>
             </TabsList>
 
@@ -623,10 +619,6 @@ Thank you!`
               <EmployeeManager />
             </TabsContent>
 
-            {/* Password Management Tab */}
-            <TabsContent value="passwords" className="space-y-6">
-              <PasswordManagement />
-            </TabsContent>
           </Tabs>
         </div>
       </div>
