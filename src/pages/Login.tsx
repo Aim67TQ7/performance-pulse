@@ -106,7 +106,6 @@ export default function Login() {
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
                     className="pl-10"
-                    required
                     autoComplete="current-password"
                     disabled={isLoading}
                   />
@@ -132,7 +131,7 @@ export default function Login() {
         </Card>
 
         <p className="text-center text-sm text-muted-foreground">
-          First time signing in? Use your company email and leave the password blank.
+          First time signing in? Enter your company email and leave password empty to set up your account.
         </p>
       </div>
     </div>
