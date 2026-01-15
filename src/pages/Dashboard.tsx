@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { Helmet } from 'react-helmet-async';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
+import { useAuthContext } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Loader2, FileText, Users, CheckCircle, ArrowRight, Settings } from 'lucide-react';
@@ -14,11 +15,14 @@ import { EvaluationData, EmployeeInfo, QuantitativeData, QualitativeFactors, Sum
 export const Dashboard = () => {
   const navigate = useNavigate();
   const { employeeId } = useAuth();
+  const { employee: authEmployee } = useAuthContext();
   const [isLoading, setIsLoading] = useState(true);
   const [hasSubordinates, setHasSubordinates] = useState(false);
   const [evaluationStatus, setEvaluationStatus] = useState<'none' | 'draft' | 'submitted' | 'reopened'>('none');
   const [evaluationData, setEvaluationData] = useState<EvaluationData | null>(null);
-  const [isHrAdmin, setIsHrAdmin] = useState(false);
+  
+  // HR Admin status comes from JWT/auth context, not from querying the hr_admin_users table
+  const isHrAdmin = authEmployee?.is_hr_admin || false;
 
   useEffect(() => {
     const fetchUserData = async () => {
@@ -38,14 +42,8 @@ export const Dashboard = () => {
 
         setHasSubordinates((count || 0) > 0);
 
-        // Check if user is an HR Admin
-        const { data: hrAdminRecord } = await supabase
-          .from('hr_admin_users')
-          .select('id')
-          .eq('employee_id', employeeId)
-          .maybeSingle();
-
-        setIsHrAdmin(!!hrAdminRecord);
+        // HR Admin status is already set from authEmployee.is_hr_admin (from JWT)
+        // No need to query hr_admin_users table which has RLS blocking access
 
         // Hardcoded assessment year - do not change without HR approval
         const ASSESSMENT_YEAR = 2025;

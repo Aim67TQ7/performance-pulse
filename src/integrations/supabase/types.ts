@@ -1468,6 +1468,7 @@ export type Database = {
           hire_date: string | null
           id: string
           is_active: boolean
+          is_hr_admin: boolean
           job_level: Database["public"]["Enums"]["job_level"] | null
           job_title: string | null
           location: string | null
@@ -1495,6 +1496,7 @@ export type Database = {
           hire_date?: string | null
           id?: string
           is_active?: boolean
+          is_hr_admin?: boolean
           job_level?: Database["public"]["Enums"]["job_level"] | null
           job_title?: string | null
           location?: string | null
@@ -1522,6 +1524,7 @@ export type Database = {
           hire_date?: string | null
           id?: string
           is_active?: boolean
+          is_hr_admin?: boolean
           job_level?: Database["public"]["Enums"]["job_level"] | null
           job_title?: string | null
           location?: string | null

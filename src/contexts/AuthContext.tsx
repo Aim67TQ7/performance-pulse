@@ -24,6 +24,7 @@ export interface Employee {
   badge_number: string | null;
   reports_to: string | null;
   supervisor_name: string | null;
+  is_hr_admin: boolean;
 }
 
 export interface LoginResult {
