@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Loader2, Users, CheckCircle2, Clock, FileEdit, ArrowLeft, Mail } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { VersionBadge } from '@/components/version/VersionBadge';
+import { UserMenu } from '@/components/UserMenu';
 import { HierarchyTree, HierarchyMember, buildHierarchyTree, collectIncompleteEmails, countHierarchyStats } from '@/components/evaluation/HierarchyTree';
 
 interface AssessmentDates {
@@ -264,6 +265,7 @@ const TeamStatus = () => {
                   Dashboard
                 </Link>
               </Button>
+              <UserMenu />
             </div>
           </div>
 

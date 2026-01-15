@@ -12,6 +12,7 @@ import { Loader2, Lock, Settings, Calendar, ArrowLeft, Save, Mail, Users, CheckC
 import { Link } from 'react-router-dom';
 import { toast } from '@/hooks/use-toast';
 import { VersionBadge } from '@/components/version/VersionBadge';
+import { UserMenu } from '@/components/UserMenu';
 import { HierarchyTree, HierarchyMember, buildHierarchyTree, countHierarchyStats } from '@/components/evaluation/HierarchyTree';
 import { CompetencyManager } from '@/components/admin/CompetencyManager';
 import { SurveyPreview } from '@/components/admin/SurveyPreview';
@@ -417,12 +418,15 @@ Thank you!`
                 </div>
               </div>
             </div>
-            <Button variant="outline" size="sm" asChild>
-              <Link to="/" className="gap-2">
-                <ArrowLeft className="w-4 h-4" />
-                Dashboard
-              </Link>
-            </Button>
+            <div className="flex items-center gap-2">
+              <Button variant="outline" size="sm" asChild>
+                <Link to="/" className="gap-2">
+                  <ArrowLeft className="w-4 h-4" />
+                  Dashboard
+                </Link>
+              </Button>
+              <UserMenu />
+            </div>
           </div>
 
           {/* Tabs */}

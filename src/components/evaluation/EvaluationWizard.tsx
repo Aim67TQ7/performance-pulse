@@ -7,11 +7,10 @@ import { SummaryStep } from './SummaryStep';
 import { NavigationButtons } from './NavigationButtons';
 import { SubmitConfirmation } from './SubmitConfirmation';
 import { SuccessScreen } from './SuccessScreen';
-import { ErrorLogPanel } from './ErrorLogPanel';
 import { ReopenDialog } from './ReopenDialog';
 import { VersionBadge } from '@/components/version/VersionBadge';
+import { UserMenu } from '@/components/UserMenu';
 import { useEvaluation } from '@/hooks/useEvaluation';
-import { useErrorLogger } from '@/hooks/useErrorLogger';
 import { useAuth } from '@/hooks/useAuth';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
@@ -50,8 +49,6 @@ export const EvaluationWizard = () => {
     resetEvaluation,
     calculateProgress,
   } = useEvaluation();
-
-  const { errors, resolveError, clearErrors } = useErrorLogger();
 
   const { sections, total: progress } = useMemo(() => calculateProgress(), [calculateProgress]);
 
@@ -205,11 +202,7 @@ export const EvaluationWizard = () => {
                 </Link>
               </Button>
             )}
-            <ErrorLogPanel
-              errors={errors}
-              onResolve={resolveError}
-              onClear={clearErrors}
-            />
+            <UserMenu />
           </div>
         </div>
 

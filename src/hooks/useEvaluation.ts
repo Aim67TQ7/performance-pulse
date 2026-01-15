@@ -64,7 +64,7 @@ const getInitialData = (): EvaluationData => ({
 });
 
 export const useEvaluation = () => {
-  const { employeeId: tokenEmployeeId } = useAuth();
+  const { employeeId: tokenEmployeeId, employee: authEmployee } = useAuth();
   const [data, setData] = useState<EvaluationData>(getInitialData);
   const [isSaving, setIsSaving] = useState(false);
   const [lastSaved, setLastSaved] = useState<Date | null>(null);
@@ -77,7 +77,7 @@ export const useEvaluation = () => {
   // Load employee data and existing evaluation
   useEffect(() => {
     const loadData = async () => {
-      if (!tokenEmployeeId) {
+      if (!tokenEmployeeId || !authEmployee) {
         setIsLoading(false);
         return;
       }
@@ -86,33 +86,44 @@ export const useEvaluation = () => {
         // Use hardcoded assessment year
         const periodYear = ASSESSMENT_YEAR;
 
-        // Get current employee record using employee_id from token
-        const { data: employeeData, error: employeeError } = await supabase
-          .from('employees')
-          .select('id, name_first, name_last, job_title, department, reports_to, user_id, benefit_class')
-          .eq('id', tokenEmployeeId)
-          .eq('benefit_class', 'salary')
-          .single();
+        // Use employee data from AuthContext instead of fetching from DB
+        // This avoids RLS issues since the data comes from JWT verification
+        const employeeData: Employee = {
+          id: authEmployee.id,
+          name_first: authEmployee.name_first,
+          name_last: authEmployee.name_last,
+          job_title: authEmployee.job_title,
+          department: authEmployee.department,
+          reports_to: authEmployee.reports_to || '',
+          user_id: null, // Not needed for evaluation
+        };
 
-        if (employeeError || !employeeData) {
-          logError('network', 'Could not load employee data', { error: employeeError });
+        // Check if user is a salary employee
+        if (authEmployee.benefit_class !== 'salary') {
+          logError('validation', 'Only salaried employees can complete evaluations');
           setIsLoading(false);
           return;
         }
 
         setCurrentEmployee(employeeData);
 
-        // Get manager info
+        // Get manager info - this still needs a DB query, but managers are fewer
+        // and RLS should allow reading public employee names
         let managerName = '';
         if (employeeData.reports_to) {
-          const { data: managerData } = await supabase
-            .from('employees')
-            .select('id, name_first, name_last')
-            .eq('id', employeeData.reports_to)
-            .single();
-          
-          if (managerData) {
-            managerName = `${managerData.name_first} ${managerData.name_last}`;
+          try {
+            const { data: managerData } = await supabase
+              .from('employees')
+              .select('id, name_first, name_last')
+              .eq('id', employeeData.reports_to)
+              .single();
+            
+            if (managerData) {
+              managerName = `${managerData.name_first} ${managerData.name_last}`;
+            }
+          } catch {
+            // If we can't get manager name, continue without it
+            console.log('[PEP] Could not fetch manager name, continuing');
           }
         }
 
