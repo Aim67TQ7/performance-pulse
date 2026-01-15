@@ -166,10 +166,10 @@ serve(async (req) => {
         );
       }
 
-      // Verify ownership
+      // Verify ownership and check current status
       const { data: existing } = await supabase
         .from('pep_evaluations')
-        .select('employee_id')
+        .select('employee_id, status')
         .eq('id', evaluation_id)
         .single();
 
@@ -177,6 +177,14 @@ serve(async (req) => {
         return new Response(
           JSON.stringify({ error: "Not authorized to submit this evaluation" }),
           { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
+      // Prevent duplicate submissions
+      if (existing.status === 'submitted' || existing.status === 'reviewed' || existing.status === 'signed') {
+        return new Response(
+          JSON.stringify({ error: "Evaluation has already been submitted and cannot be resubmitted" }),
+          { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
         );
       }
 
