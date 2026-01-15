@@ -10,6 +10,8 @@ import Dashboard from "./pages/Dashboard";
 import Evaluation from "./pages/Evaluation";
 import TeamStatus from "./pages/TeamStatus";
 import HRAdmin from "./pages/HRAdmin";
+import Login from "./pages/Login";
+import SetPassword from "./pages/SetPassword";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -22,18 +24,20 @@ const App = () => (
         <Sonner position="top-center" />
         <BrowserRouter>
           <AuthProvider>
-            <ProtectedRoute>
-              <Routes>
-                {/* Protected routes - all require valid auth */}
-                <Route path="/" element={<Dashboard />} />
-                <Route path="/evaluation" element={<Evaluation />} />
-                <Route path="/team-status" element={<TeamStatus />} />
-                <Route path="/hr-admin" element={<HRAdmin />} />
-                
-                {/* Catch-all */}
-                <Route path="*" element={<NotFound />} />
-              </Routes>
-            </ProtectedRoute>
+            <Routes>
+              {/* Public routes */}
+              <Route path="/login" element={<Login />} />
+              <Route path="/set-password" element={<SetPassword />} />
+              
+              {/* Protected routes */}
+              <Route path="/" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
+              <Route path="/evaluation" element={<ProtectedRoute><Evaluation /></ProtectedRoute>} />
+              <Route path="/team-status" element={<ProtectedRoute><TeamStatus /></ProtectedRoute>} />
+              <Route path="/hr-admin" element={<ProtectedRoute><HRAdmin /></ProtectedRoute>} />
+              
+              {/* Catch-all */}
+              <Route path="*" element={<NotFound />} />
+            </Routes>
           </AuthProvider>
         </BrowserRouter>
       </TooltipProvider>
