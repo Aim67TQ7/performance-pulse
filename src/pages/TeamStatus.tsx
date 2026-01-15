@@ -4,7 +4,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuthContext } from '@/contexts/AuthContext';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Loader2, Users, CheckCircle2, Clock, FileEdit, ArrowLeft, Mail } from 'lucide-react';
+import { Loader2, Users, CheckCircle2, Clock, FileEdit, ArrowLeft, Mail, AlertTriangle } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { VersionBadge } from '@/components/version/VersionBadge';
 import { UserMenu } from '@/components/UserMenu';
@@ -23,11 +23,12 @@ interface AssessmentDates {
 const ASSESSMENT_YEAR = 2025;
 
 const TeamStatus = () => {
-  const { employeeId, token } = useAuthContext();
+  const { employeeId, token, signOut } = useAuthContext();
   const [hierarchy, setHierarchy] = useState<HierarchyMember[]>([]);
   const [stats, setStats] = useState({ total: 0, submitted: 0, inProgress: 0, notStarted: 0 });
   const [isLoading, setIsLoading] = useState(true);
   const [assessmentDates, setAssessmentDates] = useState<AssessmentDates | null>(null);
+  const [authError, setAuthError] = useState<string | null>(null);
 
   useEffect(() => {
     const loadData = async () => {
@@ -63,6 +64,15 @@ const TeamStatus = () => {
             }
           }
         );
+
+        if (response.status === 401 || response.status === 403) {
+          const errorData = await response.json();
+          console.error('Auth error loading hierarchy:', errorData);
+          setAuthError(errorData.error || 'Session expired. Please log in again.');
+          setHierarchy([]);
+          setIsLoading(false);
+          return;
+        }
 
         if (!response.ok) {
           console.error('Error loading hierarchy:', response.status);
@@ -275,7 +285,20 @@ const TeamStatus = () => {
           </div>
 
           {/* Team Hierarchy */}
-          {hierarchy.length === 0 ? (
+          {authError ? (
+            <Card>
+              <CardContent className="py-12 text-center">
+                <AlertTriangle className="w-12 h-12 mx-auto text-destructive mb-4" />
+                <h3 className="text-lg font-medium text-foreground mb-2">Session Expired</h3>
+                <p className="text-muted-foreground mb-4">
+                  {authError}
+                </p>
+                <Button onClick={() => { signOut(); window.location.href = '/login'; }}>
+                  Log In Again
+                </Button>
+              </CardContent>
+            </Card>
+          ) : hierarchy.length === 0 ? (
             <Card>
               <CardContent className="py-12 text-center">
                 <Users className="w-12 h-12 mx-auto text-muted-foreground mb-4" />
