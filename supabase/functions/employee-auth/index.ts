@@ -1,6 +1,5 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
-import * as bcrypt from "https://deno.land/x/bcrypt@v0.4.1/mod.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -14,6 +13,72 @@ const JWT_SECRET = Deno.env.get("JWT_SECRET") || Deno.env.get("SUPABASE_SERVICE_
 const MAX_LOGIN_ATTEMPTS = 5;
 const LOCKOUT_DURATION_MINUTES = 15;
 const TOKEN_EXPIRY_HOURS = 8;
+
+// Password hashing using Web Crypto API (PBKDF2)
+async function hashPassword(password: string): Promise<string> {
+  const encoder = new TextEncoder();
+  const salt = crypto.getRandomValues(new Uint8Array(16));
+  const keyMaterial = await crypto.subtle.importKey(
+    "raw",
+    encoder.encode(password),
+    "PBKDF2",
+    false,
+    ["deriveBits"]
+  );
+  const derivedBits = await crypto.subtle.deriveBits(
+    {
+      name: "PBKDF2",
+      salt: salt,
+      iterations: 100000,
+      hash: "SHA-256",
+    },
+    keyMaterial,
+    256
+  );
+  const hashArray = new Uint8Array(derivedBits);
+  const combined = new Uint8Array(salt.length + hashArray.length);
+  combined.set(salt);
+  combined.set(hashArray, salt.length);
+  return btoa(String.fromCharCode(...combined));
+}
+
+async function verifyPassword(password: string, storedHash: string): Promise<boolean> {
+  try {
+    const encoder = new TextEncoder();
+    const combined = Uint8Array.from(atob(storedHash), c => c.charCodeAt(0));
+    const salt = combined.slice(0, 16);
+    const storedKey = combined.slice(16);
+    
+    const keyMaterial = await crypto.subtle.importKey(
+      "raw",
+      encoder.encode(password),
+      "PBKDF2",
+      false,
+      ["deriveBits"]
+    );
+    const derivedBits = await crypto.subtle.deriveBits(
+      {
+        name: "PBKDF2",
+        salt: salt,
+        iterations: 100000,
+        hash: "SHA-256",
+      },
+      keyMaterial,
+      256
+    );
+    const derivedKey = new Uint8Array(derivedBits);
+    
+    // Constant-time comparison
+    if (derivedKey.length !== storedKey.length) return false;
+    let result = 0;
+    for (let i = 0; i < derivedKey.length; i++) {
+      result |= derivedKey[i] ^ storedKey[i];
+    }
+    return result === 0;
+  } catch {
+    return false;
+  }
+}
 
 // Simple JWT implementation
 function base64UrlEncode(str: string): string {
@@ -71,9 +136,9 @@ serve(async (req) => {
     if (req.method === "POST" && (path === "/login" || path === "")) {
       const { email, password } = await req.json();
 
-      if (!email || !password) {
+      if (!email) {
         return new Response(
-          JSON.stringify({ error: "Email and password are required" }),
+          JSON.stringify({ error: "Email is required" }),
           { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
         );
       }
@@ -134,8 +199,16 @@ serve(async (req) => {
         );
       }
 
+      // Password is required for login if hash exists
+      if (!password) {
+        return new Response(
+          JSON.stringify({ error: "Password is required" }),
+          { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
       // Verify password
-      const passwordValid = await bcrypt.compare(password, employee.badge_pin_hash);
+      const passwordValid = await verifyPassword(password, employee.badge_pin_hash);
 
       if (!passwordValid) {
         // Increment failed attempts
@@ -245,7 +318,7 @@ serve(async (req) => {
           );
         }
 
-        const currentValid = await bcrypt.compare(current_password, employee.badge_pin_hash);
+        const currentValid = await verifyPassword(current_password, employee.badge_pin_hash);
         if (!currentValid) {
           return new Response(
             JSON.stringify({ error: "Current password is incorrect" }),
@@ -255,7 +328,7 @@ serve(async (req) => {
       }
 
       // Hash new password and update
-      const hashedPassword = await bcrypt.hash(new_password);
+      const hashedPassword = await hashPassword(new_password);
 
       const { error: updateError } = await supabase
         .from("employees")
