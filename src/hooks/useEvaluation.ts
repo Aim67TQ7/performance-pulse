@@ -271,18 +271,19 @@ export const useEvaluation = () => {
     return () => window.removeEventListener('beforeunload', handleBeforeUnload);
   }, [saveToLocalStorage]);
 
-  // Get auth token from localStorage
+  // Get auth token from localStorage (custom auth)
   const getAuthToken = useCallback(() => {
     try {
-      const stored = localStorage.getItem('pep_auth');
-      if (stored) {
-        const { token } = JSON.parse(stored);
-        return token;
-      }
+      // Matches AuthContext storage keys
+      return (
+        localStorage.getItem('pep_auth_token') ||
+        localStorage.getItem('pep_temp_token') ||
+        null
+      );
     } catch {
       console.error('[PEP] Could not get auth token');
+      return null;
     }
-    return null;
   }, []);
 
   // Save to Supabase via edge function (bypasses RLS)
