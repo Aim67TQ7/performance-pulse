@@ -14,3 +14,6 @@ verify_jwt = false
 
 [functions.submit-evaluation]
 verify_jwt = false
+
+[functions.team-hierarchy]
+verify_jwt = false
