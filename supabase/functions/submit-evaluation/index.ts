@@ -61,6 +61,31 @@ serve(async (req) => {
 
     const employeeId = payload.employee_id as string;
 
+    // GET /fetch - Fetch employee's evaluation (bypasses RLS)
+    if (req.method === "GET" && path === "/fetch") {
+      const periodYear = url.searchParams.get("period_year") || "2025";
+      
+      const { data: evalData, error } = await supabase
+        .from('pep_evaluations')
+        .select('*')
+        .eq('employee_id', employeeId)
+        .eq('period_year', parseInt(periodYear))
+        .maybeSingle();
+
+      if (error) {
+        console.error("Fetch error:", error);
+        return new Response(
+          JSON.stringify({ error: "Failed to fetch evaluation" }),
+          { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
+      return new Response(
+        JSON.stringify({ evaluation: evalData }),
+        { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
     // POST /save - Save evaluation draft (bypasses RLS)
     if (req.method === "POST" && (path === "/save" || path === "")) {
       const body = await req.json();

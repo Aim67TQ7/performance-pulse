@@ -123,13 +123,35 @@ export const useEvaluation = () => {
         // Get supervisor name directly from auth context (populated by edge function)
         const managerName = authEmployee.supervisor_name || '';
 
-        // Check for existing evaluation in DB
-        const { data: evalData, error: evalError } = await supabase
-          .from('pep_evaluations')
-          .select('*')
-          .eq('employee_id', employeeData.id)
-          .eq('period_year', periodYear)
-          .single();
+        // Check for existing evaluation via edge function (bypasses RLS)
+        const token = localStorage.getItem('pep_auth_token');
+        const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+        
+        let evalData = null;
+        let evalError = null;
+        
+        try {
+          const response = await fetch(
+            `${supabaseUrl}/functions/v1/submit-evaluation/fetch?period_year=${periodYear}`,
+            {
+              method: 'GET',
+              headers: {
+                'Authorization': `Bearer ${token}`,
+                'Content-Type': 'application/json',
+              },
+            }
+          );
+          
+          if (response.ok) {
+            const result = await response.json();
+            evalData = result.evaluation;
+          } else {
+            evalError = await response.json();
+          }
+        } catch (err) {
+          console.error('[PEP] Failed to fetch evaluation:', err);
+          evalError = err;
+        }
 
         // Also check localStorage for any unsaved changes
         let localData: EvaluationData | null = null;
