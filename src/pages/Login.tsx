@@ -129,7 +129,7 @@ export default function Login() {
 
               <div className="text-center">
                 <a
-                  href={`mailto:aahlers@buntingmagnetics.com,Cvogt@buntingmagnetics.com,rclausing@buntingmagnetics.com?subject=RESET&body=Please reset my password for ${encodeURIComponent(email || '[your email]')}`}
+                  href={`mailto:aahlers@buntingmagnetics.com,Cvogt@buntingmagnetics.com,rclausing@buntingmagnetics.com?subject=RESET&body=${encodeURIComponent(`This is a request for a password reset for ${email || '[your email]'}. Please reply when this is complete.`)}`}
                   className="text-sm text-primary hover:underline"
                 >
                   Forgot password? Request a reset
