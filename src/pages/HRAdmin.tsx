@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import { Helmet } from 'react-helmet-async';
 import { supabase } from '@/integrations/supabase/client';
-import { useAuth } from '@/hooks/useAuth';
+import { useAuthContext } from '@/contexts/AuthContext';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -29,7 +29,7 @@ interface AssessmentDates {
 }
 
 const HRAdmin = () => {
-  const { employeeId } = useAuth();
+  const { employee, token } = useAuthContext();
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [passcodeInput, setPasscodeInput] = useState('');
   const [passcodeError, setPasscodeError] = useState('');
@@ -57,12 +57,12 @@ const HRAdmin = () => {
 
   // Check if user has auth-based access when requireAuth is enabled
   useEffect(() => {
-    if (!isLoading && requireAuth && employeeId) {
+    if (!isLoading && requireAuth && employee) {
       checkAuthAccess();
     } else if (!isLoading) {
       setIsCheckingAuth(false);
     }
-  }, [isLoading, requireAuth, employeeId]);
+  }, [isLoading, requireAuth, employee]);
 
   // Load company hierarchy after authentication
   useEffect(() => {
@@ -89,27 +89,16 @@ const HRAdmin = () => {
   };
 
   const checkAuthAccess = async () => {
-    if (!employeeId) {
+    if (!employee) {
       setIsCheckingAuth(false);
       return;
     }
 
-    try {
-      // Check if user is in hr_admin_users table via their employee record
-      const { data: adminUser, error: adminError } = await supabase
-        .from('hr_admin_users')
-        .select('id')
-        .eq('employee_id', employeeId)
-        .single();
-
-      if (!adminError && adminUser) {
-        setIsAuthenticated(true);
-      }
-    } catch (error) {
-      console.error('Error checking auth access:', error);
-    } finally {
-      setIsCheckingAuth(false);
+    // Use is_hr_admin from the JWT/employee context instead of querying hr_admin_users table
+    if (employee.is_hr_admin) {
+      setIsAuthenticated(true);
     }
+    setIsCheckingAuth(false);
   };
 
   const fetchSettings = async () => {
@@ -163,67 +152,34 @@ const HRAdmin = () => {
   };
 
   const loadCompanyHierarchy = async () => {
+    if (!token) {
+      console.error('No auth token available');
+      return;
+    }
+    
     setIsLoadingHierarchy(true);
     try {
-      // Find the top-level employee (reports_to is null or self-referential for root)
-      const { data: allEmployees, error } = await supabase
-        .from('employees')
-        .select('id, name_first, name_last, job_title, department, user_email, reports_to')
-        .eq('is_active', true)
-        .eq('benefit_class', 'salary');
-
-      if (error) throw error;
-
-      if (!allEmployees || allEmployees.length === 0) {
-        setCompanyHierarchy([]);
-        return;
-      }
-
-      // Find root employee(s) - those who don't report to anyone or report to themselves
-      const rootEmployees = allEmployees.filter(emp => 
-        !emp.reports_to || emp.reports_to === emp.id
+      // Use edge function to bypass RLS and get full company hierarchy
+      const response = await fetch(
+        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/team-hierarchy/company-hierarchy?year=${ASSESSMENT_YEAR}`,
+        {
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json',
+          },
+        }
       );
 
-      if (rootEmployees.length === 0) {
-        setCompanyHierarchy([]);
-        return;
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to load company hierarchy');
       }
 
-      // Get all employee IDs for fetching evaluations
-      const allIds = allEmployees.map(e => e.id);
-
-      // Get evaluations for all employees using hardcoded year
-      const { data: evaluations } = await supabase
-        .from('pep_evaluations')
-        .select('employee_id, status, submitted_at, pdf_url')
-        .in('employee_id', allIds)
-        .eq('period_year', ASSESSMENT_YEAR);
-
-      const evalMap = new Map(
-        evaluations?.map(e => [e.employee_id, e]) || []
-      );
-
-      // Build flat list with evaluation data
-      const flatList = allEmployees.map(emp => {
-        const eval_ = evalMap.get(emp.id);
-        return {
-          id: emp.id,
-          name: `${emp.name_first} ${emp.name_last}`,
-          job_title: emp.job_title,
-          department: emp.department,
-          evaluation_status: eval_?.status || 'not_started',
-          submitted_at: eval_?.submitted_at || null,
-          pdf_url: eval_?.pdf_url || null,
-          email: emp.user_email || null,
-          reports_to: emp.reports_to === emp.id ? null : emp.reports_to,
-        };
-      });
-
-      // Build tree starting from null (root level)
-      const tree = buildHierarchyTree(flatList, null);
-      setCompanyHierarchy(tree);
+      const { hierarchy } = await response.json();
+      setCompanyHierarchy(hierarchy || []);
     } catch (error) {
       console.error('Error loading company hierarchy:', error);
+      setCompanyHierarchy([]);
     } finally {
       setIsLoadingHierarchy(false);
     }
@@ -313,7 +269,7 @@ Thank you!`
   // Auth Gate - show passcode if not using auth mode, or if auth check didn't pass
   if (!isAuthenticated) {
     // If requireAuth is true and user is identified but not authorized
-    if (requireAuth && employeeId) {
+    if (requireAuth && employee) {
       return (
         <>
           <Helmet>

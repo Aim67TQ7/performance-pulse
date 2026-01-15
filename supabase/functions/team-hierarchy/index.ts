@@ -224,6 +224,99 @@ Deno.serve(async (req) => {
       );
     }
 
+    // ==== COMPANY-HIERARCHY ENDPOINT (HR Admin only) ====
+    if (path === "company-hierarchy") {
+      // Verify user is an HR Admin
+      if (!payload.is_hr_admin) {
+        return new Response(
+          JSON.stringify({ error: "Access denied. HR Admin privileges required." }),
+          { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
+      const year = parseInt(url.searchParams.get("year") || new Date().getFullYear().toString());
+
+      // Fetch ALL active salaried employees (full company)
+      const { data: allEmployees, error: empError } = await supabase
+        .from("employees")
+        .select("id, name_first, name_last, job_title, department, user_email, reports_to")
+        .eq("is_active", true)
+        .eq("benefit_class", "salary");
+
+      if (empError) {
+        console.error("[team-hierarchy] Error fetching employees:", empError);
+        return new Response(
+          JSON.stringify({ error: "Failed to fetch employees" }),
+          { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
+      if (!allEmployees || allEmployees.length === 0) {
+        return new Response(
+          JSON.stringify({ hierarchy: [], stats: { total: 0, submitted: 0, draft: 0, not_started: 0 } }),
+          { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
+      // Get all employee IDs
+      const allIds = allEmployees.map(e => e.id);
+
+      // Get evaluations for all employees
+      const { data: evaluations } = await supabase
+        .from("pep_evaluations")
+        .select("employee_id, status, submitted_at, pdf_url")
+        .in("employee_id", allIds)
+        .eq("period_year", year);
+
+      const evalMap = new Map(
+        evaluations?.map(e => [e.employee_id, e]) || []
+      );
+
+      // Build flat list with evaluation data
+      const flatList = allEmployees.map(emp => {
+        const eval_ = evalMap.get(emp.id);
+        return {
+          id: emp.id,
+          name: `${emp.name_first} ${emp.name_last}`,
+          job_title: emp.job_title,
+          department: emp.department,
+          evaluation_status: eval_?.status || "not_started",
+          submitted_at: eval_?.submitted_at || null,
+          pdf_url: eval_?.pdf_url || null,
+          email: emp.user_email || null,
+          reports_to: emp.reports_to === emp.id ? null : emp.reports_to,
+        };
+      });
+
+      // Build tree starting from null (root level)
+      const buildHierarchyTree = (employees: any[], parentId: string | null): any[] => {
+        return employees
+          .filter(emp => emp.reports_to === parentId)
+          .map(emp => ({
+            ...emp,
+            children: buildHierarchyTree(employees, emp.id),
+          }));
+      };
+
+      const hierarchy = buildHierarchyTree(flatList, null);
+
+      // Calculate stats
+      let submitted = 0, draft = 0, not_started = 0;
+      flatList.forEach(emp => {
+        if (emp.evaluation_status === "submitted") submitted++;
+        else if (emp.evaluation_status === "draft" || emp.evaluation_status === "reopened") draft++;
+        else not_started++;
+      });
+
+      return new Response(
+        JSON.stringify({
+          hierarchy,
+          stats: { total: flatList.length, submitted, draft, not_started }
+        }),
+        { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
     return new Response(
       JSON.stringify({ error: "Unknown endpoint" }),
       { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } }

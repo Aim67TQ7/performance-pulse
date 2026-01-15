@@ -140,14 +140,15 @@ export const Dashboard = () => {
     );
   }
 
-  // Non-manager with no submitted evaluation -> redirect to evaluation
-  if (!hasSubordinates && (evaluationStatus === 'none' || evaluationStatus === 'draft' || evaluationStatus === 'reopened')) {
+  // Non-manager, non-HR-admin with no submitted evaluation -> redirect to evaluation
+  // HR Admins should always see the dashboard even if they have no subordinates
+  if (!hasSubordinates && !isHrAdmin && (evaluationStatus === 'none' || evaluationStatus === 'draft' || evaluationStatus === 'reopened')) {
     navigate('/evaluation');
     return null;
   }
 
-  // Non-manager with submitted evaluation -> show success screen
-  if (!hasSubordinates && evaluationStatus === 'submitted' && evaluationData) {
+  // Non-manager, non-HR-admin with submitted evaluation -> show success screen
+  if (!hasSubordinates && !isHrAdmin && evaluationStatus === 'submitted' && evaluationData) {
     return (
       <>
         <Helmet>
