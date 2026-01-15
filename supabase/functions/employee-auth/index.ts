@@ -425,6 +425,106 @@ serve(async (req) => {
       );
     }
 
+    // POST /admin/set-default-passwords - Set default password for all employees
+    if (req.method === "POST" && path === "/admin/set-default-passwords") {
+      const { admin_key, default_password } = await req.json();
+
+      // Simple admin key check using service role key
+      if (admin_key !== SUPABASE_SERVICE_ROLE_KEY) {
+        return new Response(
+          JSON.stringify({ error: "Unauthorized" }),
+          { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
+      const passwordToSet = default_password || "Welcome2Bunting!";
+      
+      if (passwordToSet.length < 8) {
+        return new Response(
+          JSON.stringify({ error: "Password must be at least 8 characters" }),
+          { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
+      // Hash the default password
+      const hashedPassword = await hashPassword(passwordToSet);
+
+      // Update all active employees with email addresses
+      const { data: updated, error: updateError } = await supabase
+        .from("employees")
+        .update({
+          badge_pin_hash: hashedPassword,
+          badge_pin_is_default: true,
+          badge_pin_attempts: 0,
+          badge_pin_locked_until: null
+        })
+        .eq("is_active", true)
+        .not("user_email", "is", null)
+        .select("id, user_email");
+
+      if (updateError) {
+        console.error("Update error:", updateError);
+        return new Response(
+          JSON.stringify({ error: "Failed to update passwords" }),
+          { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
+      return new Response(
+        JSON.stringify({
+          success: true,
+          message: `Default password set for ${updated?.length || 0} employees`,
+          employees_updated: updated?.length || 0
+        }),
+        { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    // POST /admin/reset-employee-password - Reset a specific employee's password
+    if (req.method === "POST" && path === "/admin/reset-employee-password") {
+      const { admin_key, employee_id, default_password } = await req.json();
+
+      if (admin_key !== SUPABASE_SERVICE_ROLE_KEY) {
+        return new Response(
+          JSON.stringify({ error: "Unauthorized" }),
+          { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
+      if (!employee_id) {
+        return new Response(
+          JSON.stringify({ error: "Employee ID is required" }),
+          { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
+      const passwordToSet = default_password || "Welcome2Bunting!";
+      const hashedPassword = await hashPassword(passwordToSet);
+
+      const { error: updateError } = await supabase
+        .from("employees")
+        .update({
+          badge_pin_hash: hashedPassword,
+          badge_pin_is_default: true,
+          badge_pin_attempts: 0,
+          badge_pin_locked_until: null
+        })
+        .eq("id", employee_id);
+
+      if (updateError) {
+        console.error("Update error:", updateError);
+        return new Response(
+          JSON.stringify({ error: "Failed to reset password" }),
+          { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
+      return new Response(
+        JSON.stringify({ success: true, message: "Password reset successfully" }),
+        { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
     return new Response(
       JSON.stringify({ error: "Not found" }),
       { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } }
