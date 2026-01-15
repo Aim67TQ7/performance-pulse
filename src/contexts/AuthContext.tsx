@@ -3,7 +3,13 @@ import { User, Session } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
 
 const PARENT_ORIGIN = 'https://buntinggpt.com';
-const AUTH_REDIRECT_URL = 'https://buntinggpt.com/auth';
+const LOGIN_HUB_URL = 'https://login.buntinggpt.com';
+
+// Build auth redirect URL with return_url pointing back to this app
+function getAuthRedirectUrl(): string {
+  const returnUrl = encodeURIComponent(window.location.origin);
+  return `${LOGIN_HUB_URL}?return_url=${returnUrl}`;
+}
 
 interface AuthContextType {
   user: User | null;
@@ -150,14 +156,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             setIsLoading(false);
           } else {
             // No session - redirect to auth
-            window.location.href = AUTH_REDIRECT_URL;
+            window.location.href = getAuthRedirectUrl();
             return;
           }
 
           return () => subscription.unsubscribe();
         } catch (err) {
           console.error('[AuthContext] Auth initialization error:', err);
-          window.location.href = AUTH_REDIRECT_URL;
+          window.location.href = getAuthRedirectUrl();
         }
       };
 
