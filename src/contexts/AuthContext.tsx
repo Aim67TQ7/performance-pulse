@@ -16,7 +16,13 @@ export interface Employee {
   job_title: string | null;
   department: string | null;
   job_level: string | null;
-  reports_to?: string;
+  location: string | null;
+  business_unit: string | null;
+  benefit_class: string | null;
+  hire_date: string | null;
+  employee_number: string | null;
+  badge_number: string | null;
+  reports_to: string | null;
 }
 
 export interface LoginResult {

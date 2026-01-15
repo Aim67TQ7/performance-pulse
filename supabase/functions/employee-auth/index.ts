@@ -146,7 +146,7 @@ serve(async (req) => {
       // Find employee by email
       const { data: employee, error: findError } = await supabase
         .from("employees")
-        .select("id, name_first, name_last, user_email, job_title, department, job_level, badge_pin_hash, badge_pin_attempts, badge_pin_locked_until, badge_pin_is_default, is_active, reports_to")
+        .select("id, name_first, name_last, user_email, job_title, department, job_level, location, business_unit, benefit_class, hire_date, employee_number, badge_number, badge_pin_hash, badge_pin_attempts, badge_pin_locked_until, badge_pin_is_default, is_active, reports_to")
         .eq("user_email", email.toLowerCase().trim())
         .eq("is_active", true)
         .maybeSingle();
@@ -193,6 +193,16 @@ serve(async (req) => {
               name_first: employee.name_first,
               name_last: employee.name_last,
               user_email: employee.user_email,
+              job_title: employee.job_title,
+              department: employee.department,
+              job_level: employee.job_level,
+              location: employee.location,
+              business_unit: employee.business_unit,
+              benefit_class: employee.benefit_class,
+              hire_date: employee.hire_date,
+              employee_number: employee.employee_number,
+              badge_number: employee.badge_number,
+              reports_to: employee.reports_to
             }
           }),
           { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
@@ -264,6 +274,12 @@ serve(async (req) => {
             job_title: employee.job_title,
             department: employee.department,
             job_level: employee.job_level,
+            location: employee.location,
+            business_unit: employee.business_unit,
+            benefit_class: employee.benefit_class,
+            hire_date: employee.hire_date,
+            employee_number: employee.employee_number,
+            badge_number: employee.badge_number,
             reports_to: employee.reports_to
           }
         }),
@@ -351,7 +367,7 @@ serve(async (req) => {
       // Get full employee data for new token
       const { data: updatedEmployee } = await supabase
         .from("employees")
-        .select("id, name_first, name_last, user_email, job_title, department, job_level, reports_to")
+        .select("id, name_first, name_last, user_email, job_title, department, job_level, location, business_unit, benefit_class, hire_date, employee_number, badge_number, reports_to")
         .eq("id", employeeId)
         .single();
 
@@ -395,7 +411,7 @@ serve(async (req) => {
       // Fetch current employee data
       const { data: employee } = await supabase
         .from("employees")
-        .select("id, name_first, name_last, user_email, job_title, department, job_level, reports_to, badge_pin_is_default, is_active")
+        .select("id, name_first, name_last, user_email, job_title, department, job_level, location, business_unit, benefit_class, hire_date, employee_number, badge_number, reports_to, badge_pin_is_default, is_active")
         .eq("id", payload.employee_id as string)
         .single();
 
@@ -418,6 +434,12 @@ serve(async (req) => {
             job_title: employee.job_title,
             department: employee.department,
             job_level: employee.job_level,
+            location: employee.location,
+            business_unit: employee.business_unit,
+            benefit_class: employee.benefit_class,
+            hire_date: employee.hire_date,
+            employee_number: employee.employee_number,
+            badge_number: employee.badge_number,
             reports_to: employee.reports_to
           }
         }),
