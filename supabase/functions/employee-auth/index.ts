@@ -396,6 +396,9 @@ serve(async (req) => {
         .eq("id", employeeId)
         .single();
 
+      // Lookup supervisor name
+      const supervisorName = await getSupervisorName(supabase, updatedEmployee?.reports_to);
+
       // Issue new full token
       const newToken = createJWT({
         employee_id: employeeId,
@@ -407,7 +410,10 @@ serve(async (req) => {
         JSON.stringify({
           success: true,
           token: newToken,
-          employee: updatedEmployee
+          employee: {
+            ...updatedEmployee,
+            supervisor_name: supervisorName
+          }
         }),
         { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
