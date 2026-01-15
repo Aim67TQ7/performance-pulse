@@ -28,8 +28,10 @@ interface AssessmentDates {
   period_end: string;
 }
 
+const SUPABASE_URL = "https://qzwxisdfwswsrbzvpzlo.supabase.co";
+
 const HRAdmin = () => {
-  const { employee, token } = useAuthContext();
+  const { employee, token, signOut } = useAuthContext();
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [passcodeInput, setPasscodeInput] = useState('');
   const [passcodeError, setPasscodeError] = useState('');
@@ -46,6 +48,7 @@ const HRAdmin = () => {
   });
   const [companyHierarchy, setCompanyHierarchy] = useState<HierarchyMember[]>([]);
   const [isLoadingHierarchy, setIsLoadingHierarchy] = useState(false);
+  const [hierarchyError, setHierarchyError] = useState<string | null>(null);
   
   // Hardcoded assessment year - do not change without HR approval
   const ASSESSMENT_YEAR = 2025;
@@ -158,10 +161,11 @@ const HRAdmin = () => {
     }
     
     setIsLoadingHierarchy(true);
+    setHierarchyError(null);
     try {
       // Use edge function to bypass RLS and get full company hierarchy
       const response = await fetch(
-        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/team-hierarchy/company-hierarchy?year=${ASSESSMENT_YEAR}`,
+        `${SUPABASE_URL}/functions/v1/team-hierarchy/company-hierarchy?year=${ASSESSMENT_YEAR}`,
         {
           headers: {
             'Authorization': `Bearer ${token}`,
@@ -169,6 +173,14 @@ const HRAdmin = () => {
           },
         }
       );
+
+      if (response.status === 401 || response.status === 403) {
+        const errorData = await response.json();
+        console.error('Auth error loading company hierarchy:', errorData);
+        setHierarchyError(errorData.error || 'Session expired. Please log in again.');
+        setCompanyHierarchy([]);
+        return;
+      }
 
       if (!response.ok) {
         const errorData = await response.json();
@@ -502,6 +514,15 @@ Thank you!`
                   {isLoadingHierarchy ? (
                     <div className="flex items-center justify-center py-8">
                       <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
+                    </div>
+                  ) : hierarchyError ? (
+                    <div className="text-center py-8">
+                      <AlertTriangle className="w-12 h-12 mx-auto text-destructive mb-4" />
+                      <h3 className="text-lg font-medium text-foreground mb-2">Session Expired</h3>
+                      <p className="text-muted-foreground mb-4">{hierarchyError}</p>
+                      <Button onClick={() => { signOut(); window.location.href = '/login'; }}>
+                        Log In Again
+                      </Button>
                     </div>
                   ) : companyHierarchy.length === 0 ? (
                     <div className="text-center py-8 text-muted-foreground">

@@ -97,43 +97,111 @@ async function verifyPassword(password: string, storedHash: string): Promise<boo
   }
 }
 
-// Simple JWT implementation
-function base64UrlEncode(str: string): string {
+// Real HS256 JWT implementation using WebCrypto
+function base64UrlEncode(buffer: ArrayBuffer): string {
+  const bytes = new Uint8Array(buffer);
+  let binary = '';
+  for (let i = 0; i < bytes.length; i++) {
+    binary += String.fromCharCode(bytes[i]);
+  }
+  return btoa(binary).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+}
+
+function base64UrlEncodeString(str: string): string {
   return btoa(str).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
 }
 
-function createJWT(payload: Record<string, unknown>): string {
+function base64UrlDecode(str: string): Uint8Array {
+  // Add padding if needed
+  let base64 = str.replace(/-/g, "+").replace(/_/g, "/");
+  while (base64.length % 4) {
+    base64 += "=";
+  }
+  const binary = atob(base64);
+  const bytes = new Uint8Array(binary.length);
+  for (let i = 0; i < binary.length; i++) {
+    bytes[i] = binary.charCodeAt(i);
+  }
+  return bytes;
+}
+
+async function createJWT(payload: Record<string, unknown>): Promise<string> {
   const header = { alg: "HS256", typ: "JWT" };
   const now = Math.floor(Date.now() / 1000);
   const exp = now + TOKEN_EXPIRY_HOURS * 60 * 60;
   
   const fullPayload = { ...payload, iat: now, exp };
   
-  const encodedHeader = base64UrlEncode(JSON.stringify(header));
-  const encodedPayload = base64UrlEncode(JSON.stringify(fullPayload));
-  const signature = base64UrlEncode(
-    String.fromCharCode(...new Uint8Array(
-      new TextEncoder().encode(`${encodedHeader}.${encodedPayload}.${JWT_SECRET}`)
-    ))
+  const encodedHeader = base64UrlEncodeString(JSON.stringify(header));
+  const encodedPayload = base64UrlEncodeString(JSON.stringify(fullPayload));
+  const signatureInput = `${encodedHeader}.${encodedPayload}`;
+  
+  // Create HMAC-SHA256 signature using WebCrypto
+  const encoder = new TextEncoder();
+  const key = await crypto.subtle.importKey(
+    "raw",
+    encoder.encode(JWT_SECRET),
+    { name: "HMAC", hash: "SHA-256" },
+    false,
+    ["sign"]
   );
   
-  return `${encodedHeader}.${encodedPayload}.${signature}`;
+  const signatureBuffer = await crypto.subtle.sign(
+    "HMAC",
+    key,
+    encoder.encode(signatureInput)
+  );
+  
+  const encodedSignature = base64UrlEncode(signatureBuffer);
+  
+  return `${encodedHeader}.${encodedPayload}.${encodedSignature}`;
 }
 
-function verifyJWT(token: string): Record<string, unknown> | null {
+async function verifyJWT(token: string): Promise<Record<string, unknown> | null> {
   try {
     const parts = token.split(".");
     if (parts.length !== 3) return null;
     
-    const payload = JSON.parse(atob(parts[1].replace(/-/g, "+").replace(/_/g, "/")));
+    const [headerB64, payloadB64, signatureB64] = parts;
+    
+    // Verify signature using WebCrypto
+    const encoder = new TextEncoder();
+    const key = await crypto.subtle.importKey(
+      "raw",
+      encoder.encode(JWT_SECRET),
+      { name: "HMAC", hash: "SHA-256" },
+      false,
+      ["verify"]
+    );
+    
+    const signatureInput = `${headerB64}.${payloadB64}`;
+    const signatureBytes = base64UrlDecode(signatureB64);
+    // Create a new ArrayBuffer copy for crypto.subtle.verify
+    const signatureBuffer = new Uint8Array(signatureBytes).buffer;
+    
+    const isValid = await crypto.subtle.verify(
+      "HMAC",
+      key,
+      signatureBuffer,
+      encoder.encode(signatureInput)
+    );
+    
+    if (!isValid) {
+      console.log("[employee-auth] Invalid JWT signature");
+      return null;
+    }
+    
+    const payload = JSON.parse(atob(payloadB64.replace(/-/g, "+").replace(/_/g, "/")));
     
     // Check expiry
     if (payload.exp && payload.exp < Math.floor(Date.now() / 1000)) {
+      console.log("[employee-auth] JWT expired");
       return null;
     }
     
     return payload;
-  } catch {
+  } catch (error) {
+    console.error("[employee-auth] JWT verification error:", error);
     return null;
   }
 }
@@ -193,8 +261,8 @@ serve(async (req) => {
 
       // Check if password is set
       if (!employee.badge_pin_hash) {
-        // No password set - this is first login, generate temp token for password setup
-        const tempToken = createJWT({
+      // No password set - this is first login, generate temp token for password setup
+        const tempToken = await createJWT({
           employee_id: employee.id,
           email: employee.user_email,
           temp: true,
@@ -278,10 +346,11 @@ serve(async (req) => {
         })
         .eq("id", employee.id);
 
-      const token = createJWT({
+      const token = await createJWT({
         employee_id: employee.id,
         email: employee.user_email,
-        name: `${employee.name_first} ${employee.name_last}`
+        name: `${employee.name_first} ${employee.name_last}`,
+        is_hr_admin: employee.is_hr_admin || false
       });
 
       // Lookup supervisor name
@@ -325,7 +394,7 @@ serve(async (req) => {
       }
 
       const token = authHeader.substring(7);
-      const payload = verifyJWT(token);
+      const payload = await verifyJWT(token);
       
       if (!payload || !payload.employee_id) {
         return new Response(
@@ -402,10 +471,11 @@ serve(async (req) => {
       const supervisorName = await getSupervisorName(supabase, updatedEmployee?.reports_to);
 
       // Issue new full token
-      const newToken = createJWT({
+      const newToken = await createJWT({
         employee_id: employeeId,
         email: updatedEmployee?.user_email,
-        name: `${updatedEmployee?.name_first} ${updatedEmployee?.name_last}`
+        name: `${updatedEmployee?.name_first} ${updatedEmployee?.name_last}`,
+        is_hr_admin: updatedEmployee?.is_hr_admin || false
       });
 
       return new Response(
@@ -432,7 +502,7 @@ serve(async (req) => {
       }
 
       const token = authHeader.substring(7);
-      const payload = verifyJWT(token);
+      const payload = await verifyJWT(token);
 
       if (!payload || payload.temp) {
         return new Response(

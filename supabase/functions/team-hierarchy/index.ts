@@ -247,6 +247,7 @@ Deno.serve(async (req) => {
       }
 
       const year = parseInt(url.searchParams.get("year") || new Date().getFullYear().toString());
+      console.log(`[team-hierarchy] Processing company-hierarchy request for year: ${year}`);
 
       // Fetch ALL active salaried employees (full company)
       const { data: allEmployees, error: empError } = await supabase
@@ -263,6 +264,8 @@ Deno.serve(async (req) => {
         );
       }
 
+      console.log(`[team-hierarchy] Fetched ${allEmployees?.length || 0} active salaried employees for company hierarchy`);
+
       if (!allEmployees || allEmployees.length === 0) {
         return new Response(
           JSON.stringify({ hierarchy: [], stats: { total: 0, submitted: 0, draft: 0, not_started: 0 } }),
@@ -270,14 +273,14 @@ Deno.serve(async (req) => {
         );
       }
 
-      // Get all employee IDs
-      const allIds = allEmployees.map(e => e.id);
+      // Create a set of all employee IDs for quick lookup
+      const allIdSet = new Set(allEmployees.map(e => e.id));
 
       // Get evaluations for all employees
       const { data: evaluations } = await supabase
         .from("pep_evaluations")
         .select("employee_id, status, submitted_at, pdf_url")
-        .in("employee_id", allIds)
+        .in("employee_id", Array.from(allIdSet))
         .eq("period_year", year);
 
       const evalMap = new Map(
@@ -285,8 +288,18 @@ Deno.serve(async (req) => {
       );
 
       // Build flat list with evaluation data
+      // Normalize reports_to: treat self-reporting as null (root)
       const flatList = allEmployees.map(emp => {
         const eval_ = evalMap.get(emp.id);
+        // Determine effective reports_to:
+        // - null if reports_to is null
+        // - null if self-reporting (reports_to === id)
+        // - null if reports_to references an ID not in our employee set (broken link)
+        let effectiveReportsTo: string | null = emp.reports_to;
+        if (!effectiveReportsTo || effectiveReportsTo === emp.id || !allIdSet.has(effectiveReportsTo)) {
+          effectiveReportsTo = null;
+        }
+        
         return {
           id: emp.id,
           name: `${emp.name_first} ${emp.name_last}`,
@@ -296,33 +309,44 @@ Deno.serve(async (req) => {
           submitted_at: eval_?.submitted_at || null,
           pdf_url: eval_?.pdf_url || null,
           email: emp.user_email || null,
-          reports_to: emp.reports_to === emp.id ? null : emp.reports_to,
+          reports_to: effectiveReportsTo,
         };
       });
 
-      // Build tree starting from null (root level)
-      const buildHierarchyTree = (employees: any[], parentId: string | null): any[] => {
-        return employees
-          .filter(emp => emp.reports_to === parentId)
-          .map(emp => ({
-            ...emp,
-            children: buildHierarchyTree(employees, emp.id),
-          }));
-      };
+      // Build hierarchy tree using a map-based approach
+      const nodeMap = new Map<string, any>();
+      flatList.forEach(item => {
+        nodeMap.set(item.id, { ...item, children: [] });
+      });
 
-      const hierarchy = buildHierarchyTree(flatList, null);
+      const rootNodes: any[] = [];
+      flatList.forEach(item => {
+        const node = nodeMap.get(item.id);
+        if (item.reports_to === null) {
+          // This is a root node
+          rootNodes.push(node);
+        } else if (nodeMap.has(item.reports_to)) {
+          // Attach to parent
+          nodeMap.get(item.reports_to)?.children.push(node);
+        } else {
+          // Orphan (shouldn't happen due to normalization above, but fallback to root)
+          rootNodes.push(node);
+        }
+      });
+
+      console.log(`[team-hierarchy] Company hierarchy: ${rootNodes.length} root nodes, ${flatList.length} total employees`);
 
       // Calculate stats
       let submitted = 0, draft = 0, not_started = 0;
       flatList.forEach(emp => {
-        if (emp.evaluation_status === "submitted") submitted++;
+        if (emp.evaluation_status === "submitted" || emp.evaluation_status === "reviewed" || emp.evaluation_status === "signed") submitted++;
         else if (emp.evaluation_status === "draft" || emp.evaluation_status === "reopened") draft++;
         else not_started++;
       });
 
       return new Response(
         JSON.stringify({
-          hierarchy,
+          hierarchy: rootNodes,
           stats: { total: flatList.length, submitted, draft, not_started }
         }),
         { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
