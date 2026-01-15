@@ -14,6 +14,23 @@ const MAX_LOGIN_ATTEMPTS = 5;
 const LOCKOUT_DURATION_MINUTES = 15;
 const TOKEN_EXPIRY_HOURS = 8;
 
+// Helper to lookup supervisor name by ID
+// deno-lint-ignore no-explicit-any
+async function getSupervisorName(supabase: any, supervisorId: string | null): Promise<string | null> {
+  if (!supervisorId) return null;
+  
+  const { data: supervisor } = await supabase
+    .from("employees")
+    .select("name_first, name_last")
+    .eq("id", supervisorId)
+    .single();
+  
+  if (supervisor?.name_first) {
+    return `${supervisor.name_first} ${supervisor.name_last}`;
+  }
+  return null;
+}
+
 // Password hashing using Web Crypto API (PBKDF2)
 async function hashPassword(password: string): Promise<string> {
   const encoder = new TextEncoder();
@@ -184,6 +201,9 @@ serve(async (req) => {
           purpose: "set_password"
         });
 
+        // Lookup supervisor name
+        const supervisorName = await getSupervisorName(supabase, employee.reports_to);
+
         return new Response(
           JSON.stringify({
             requires_password_setup: true,
@@ -202,7 +222,8 @@ serve(async (req) => {
               hire_date: employee.hire_date,
               employee_number: employee.employee_number,
               badge_number: employee.badge_number,
-              reports_to: employee.reports_to
+              reports_to: employee.reports_to,
+              supervisor_name: supervisorName
             }
           }),
           { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
@@ -262,6 +283,9 @@ serve(async (req) => {
         name: `${employee.name_first} ${employee.name_last}`
       });
 
+      // Lookup supervisor name
+      const supervisorName = await getSupervisorName(supabase, employee.reports_to);
+
       return new Response(
         JSON.stringify({
           token,
@@ -280,7 +304,8 @@ serve(async (req) => {
             hire_date: employee.hire_date,
             employee_number: employee.employee_number,
             badge_number: employee.badge_number,
-            reports_to: employee.reports_to
+            reports_to: employee.reports_to,
+            supervisor_name: supervisorName
           }
         }),
         { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
@@ -422,6 +447,9 @@ serve(async (req) => {
         );
       }
 
+      // Lookup supervisor name
+      const supervisorName = await getSupervisorName(supabase, employee.reports_to);
+
       return new Response(
         JSON.stringify({
           valid: true,
@@ -440,7 +468,8 @@ serve(async (req) => {
             hire_date: employee.hire_date,
             employee_number: employee.employee_number,
             badge_number: employee.badge_number,
-            reports_to: employee.reports_to
+            reports_to: employee.reports_to,
+            supervisor_name: supervisorName
           }
         }),
         { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }

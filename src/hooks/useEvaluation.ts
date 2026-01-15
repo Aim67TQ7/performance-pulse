@@ -120,25 +120,8 @@ export const useEvaluation = () => {
 
         setCurrentEmployee(employeeData);
 
-        // Get manager info - this still needs a DB query, but managers are fewer
-        // and RLS should allow reading public employee names
-        let managerName = '';
-        if (employeeData.reports_to) {
-          try {
-            const { data: managerData } = await supabase
-              .from('employees')
-              .select('id, name_first, name_last')
-              .eq('id', employeeData.reports_to)
-              .single();
-            
-            if (managerData) {
-              managerName = `${managerData.name_first} ${managerData.name_last}`;
-            }
-          } catch {
-            // If we can't get manager name, continue without it
-            console.log('[PEP] Could not fetch manager name, continuing');
-          }
-        }
+        // Get supervisor name directly from auth context (populated by edge function)
+        const managerName = authEmployee.supervisor_name || '';
 
         // Check for existing evaluation in DB
         const { data: evalData, error: evalError } = await supabase
