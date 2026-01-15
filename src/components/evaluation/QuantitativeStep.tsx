@@ -8,6 +8,7 @@ import { Target, Trophy, Plus, Trash2 } from 'lucide-react';
 interface QuantitativeStepProps {
   data: EvaluationData['quantitative'];
   onUpdate: (updates: Partial<EvaluationData['quantitative']>) => void;
+  showErrors?: boolean;
 }
 
 const generateId = () => Math.random().toString(36).substring(2, 9);
@@ -25,11 +26,20 @@ const calculateScore = (actual: string, target: string): string => {
   return `${Math.round(score)}%`;
 };
 
-export const QuantitativeStep = ({ data, onUpdate }: QuantitativeStepProps) => {
+export const QuantitativeStep = ({ data, onUpdate, showErrors = false }: QuantitativeStepProps) => {
   // Ensure performanceObjectives is an array
   const objectives: PerformanceObjective[] = Array.isArray(data.performanceObjectives) 
     ? data.performanceObjectives 
     : [];
+
+  // Validation helpers
+  const hasCompleteObjective = objectives.some(
+    obj => obj.objective.trim() && obj.measurableTarget.trim() && obj.actual.trim()
+  );
+  const hasAccomplishments = !!data.workAccomplishments?.trim();
+  
+  const objectivesError = showErrors && !hasCompleteObjective;
+  const accomplishmentsError = showErrors && !hasAccomplishments;
 
   const addObjective = () => {
     const newObjective: PerformanceObjective = {
@@ -65,11 +75,12 @@ export const QuantitativeStep = ({ data, onUpdate }: QuantitativeStepProps) => {
 
       <div className="space-y-8">
         {/* Performance Objectives Table */}
-        <div className="space-y-4">
+        <div className={`space-y-4 ${objectivesError ? 'ring-2 ring-destructive/50 rounded-lg p-4 -m-4' : ''}`}>
           <div className="flex items-center justify-between">
-            <Label className="flex items-center gap-2 text-base font-medium">
-              <Target className="w-5 h-5 text-primary" />
+            <Label className={`flex items-center gap-2 text-base font-medium ${objectivesError ? 'text-destructive' : ''}`}>
+              <Target className={`w-5 h-5 ${objectivesError ? 'text-destructive' : 'text-primary'}`} />
               Performance Objectives
+              <span className="text-destructive">*</span>
             </Label>
             <Button
               type="button"
@@ -175,10 +186,11 @@ export const QuantitativeStep = ({ data, onUpdate }: QuantitativeStepProps) => {
         </div>
 
         {/* Work Accomplishments */}
-        <div className="space-y-3">
-          <Label htmlFor="accomplishments" className="flex items-center gap-2 text-base font-medium">
-            <Trophy className="w-5 h-5 text-warning" />
+        <div className={`space-y-3 ${accomplishmentsError ? 'ring-2 ring-destructive/50 rounded-lg p-4 -m-4' : ''}`}>
+          <Label htmlFor="accomplishments" className={`flex items-center gap-2 text-base font-medium ${accomplishmentsError ? 'text-destructive' : ''}`}>
+            <Trophy className={`w-5 h-5 ${accomplishmentsError ? 'text-destructive' : 'text-warning'}`} />
             Work Accomplishments
+            <span className="text-destructive">*</span>
           </Label>
           <p className="text-sm text-muted-foreground">
             Describe your major work accomplishments and contributions during this period.
@@ -188,7 +200,7 @@ export const QuantitativeStep = ({ data, onUpdate }: QuantitativeStepProps) => {
             value={data.workAccomplishments || ''}
             onChange={(e) => onUpdate({ workAccomplishments: e.target.value })}
             placeholder="• Successfully completed [project/initiative]&#10;• Improved [process/outcome] by [metric]&#10;• Led team to achieve [goal]"
-            className="min-h-[180px] resize-y"
+            className={`min-h-[180px] resize-y ${accomplishmentsError ? 'border-destructive' : ''}`}
           />
           <p className="text-xs text-muted-foreground text-right">
             Aim for 3-5 bullet points

@@ -10,11 +10,15 @@ import { Loader2, Award } from 'lucide-react';
 interface CompetenciesStepProps {
   data: EvaluationData['quantitative'];
   onUpdate: (updates: Partial<EvaluationData['quantitative']>) => void;
+  showErrors?: boolean;
 }
 
-export const CompetenciesStep = ({ data, onUpdate }: CompetenciesStepProps) => {
+export const CompetenciesStep = ({ data, onUpdate, showErrors = false }: CompetenciesStepProps) => {
   const [competencies, setCompetencies] = useState<Competency[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  
+  // Validation helper
+  const overallRatingError = showErrors && !data.overallQuantitativeRating;
 
   // Fetch competencies from database
   useEffect(() => {
@@ -123,11 +127,14 @@ export const CompetenciesStep = ({ data, onUpdate }: CompetenciesStepProps) => {
       <div className="space-y-6">
         {competencies.map((competency) => {
           const rating = getCompetencyRating(competency.id);
+          const scoreError = showErrors && (rating?.score === null || rating?.score === undefined);
+          const commentsError = showErrors && !rating?.comments?.trim();
+          const hasError = scoreError || commentsError;
           
           return (
             <div 
               key={competency.id} 
-              className="border border-border rounded-lg overflow-hidden bg-card"
+              className={`border rounded-lg overflow-hidden bg-card ${hasError ? 'border-destructive ring-2 ring-destructive/30' : 'border-border'}`}
             >
               {/* Competency Header */}
               <div className="bg-muted/50 px-4 py-3 border-b border-border">
@@ -147,7 +154,9 @@ export const CompetenciesStep = ({ data, onUpdate }: CompetenciesStepProps) => {
               <div className="p-4 space-y-4">
                 {/* Score Selection */}
                 <div>
-                  <Label className="text-sm font-medium mb-2 block">Self-Rating</Label>
+                  <Label className={`text-sm font-medium mb-2 block ${scoreError ? 'text-destructive' : ''}`}>
+                    Self-Rating <span className="text-destructive">*</span>
+                  </Label>
                   <RadioGroup
                     value={rating?.score?.toString() || ''}
                     onValueChange={(value) => 
@@ -164,7 +173,7 @@ export const CompetenciesStep = ({ data, onUpdate }: CompetenciesStepProps) => {
                         />
                         <Label
                           htmlFor={`${competency.id}-score-${score}`}
-                          className="flex h-10 w-10 cursor-pointer items-center justify-center rounded-full border-2 border-border bg-background text-sm font-medium transition-all peer-data-[state=checked]:border-primary peer-data-[state=checked]:bg-primary peer-data-[state=checked]:text-primary-foreground hover:border-primary/50"
+                          className={`flex h-10 w-10 cursor-pointer items-center justify-center rounded-full border-2 bg-background text-sm font-medium transition-all peer-data-[state=checked]:border-primary peer-data-[state=checked]:bg-primary peer-data-[state=checked]:text-primary-foreground hover:border-primary/50 ${scoreError ? 'border-destructive' : 'border-border'}`}
                         >
                           {score}
                         </Label>
@@ -175,8 +184,8 @@ export const CompetenciesStep = ({ data, onUpdate }: CompetenciesStepProps) => {
 
                 {/* Comments */}
                 <div>
-                  <Label htmlFor={`${competency.id}-comments`} className="text-sm font-medium mb-2 block">
-                    Comments / Examples
+                  <Label htmlFor={`${competency.id}-comments`} className={`text-sm font-medium mb-2 block ${commentsError ? 'text-destructive' : ''}`}>
+                    Comments / Examples <span className="text-destructive">*</span>
                   </Label>
                   <Textarea
                     id={`${competency.id}-comments`}
@@ -185,7 +194,7 @@ export const CompetenciesStep = ({ data, onUpdate }: CompetenciesStepProps) => {
                       updateCompetencyComments(competency.id, competency.name, e.target.value)
                     }
                     placeholder="Provide specific examples that demonstrate this competency..."
-                    className="min-h-[80px] resize-y"
+                    className={`min-h-[80px] resize-y ${commentsError ? 'border-destructive' : ''}`}
                   />
                 </div>
               </div>
@@ -195,9 +204,9 @@ export const CompetenciesStep = ({ data, onUpdate }: CompetenciesStepProps) => {
       </div>
 
       {/* Overall Quantitative Rating */}
-      <div className="mt-8 pt-6 border-t border-border">
-        <Label className="text-base font-medium mb-4 block">
-          Overall Performance Competencies Rating
+      <div className={`mt-8 pt-6 border-t border-border ${overallRatingError ? 'ring-2 ring-destructive/50 rounded-lg p-4' : ''}`}>
+        <Label className={`text-base font-medium mb-4 block ${overallRatingError ? 'text-destructive' : ''}`}>
+          Overall Performance Competencies Rating <span className="text-destructive">*</span>
         </Label>
         <RatingSelector
           value={data.overallQuantitativeRating}

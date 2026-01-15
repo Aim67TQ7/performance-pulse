@@ -1,5 +1,5 @@
 import { useState, useCallback, useEffect, useRef } from 'react';
-import { EvaluationData } from '@/types/evaluation';
+import { EvaluationData, ValidationError, ValidationResult } from '@/types/evaluation';
 import { useErrorLogger } from './useErrorLogger';
 import { supabase } from '@/integrations/supabase/client';
 import { generateEvaluationPdf } from '@/lib/pdfGenerator';
@@ -633,6 +633,95 @@ export const useEvaluation = () => {
     return { sections, total: Math.round(total * 100) };
   }, [data]);
 
+  // Validate all required fields before submission
+  const validateForSubmission = useCallback((): ValidationResult => {
+    const errors: ValidationError[] = [];
+
+    // Section II: Quantitative
+    // Check for at least one complete objective
+    const objectives = data.quantitative.performanceObjectives || [];
+    const hasCompleteObjective = objectives.some(
+      obj => obj.objective.trim() && obj.measurableTarget.trim() && obj.actual.trim()
+    );
+    if (!hasCompleteObjective) {
+      errors.push({
+        step: 2,
+        stepName: 'Quantitative',
+        field: 'performanceObjectives',
+        message: 'Add at least one complete Performance Objective (all 3 fields required)',
+      });
+    }
+
+    // Work accomplishments required
+    if (!data.quantitative.workAccomplishments?.trim()) {
+      errors.push({
+        step: 2,
+        stepName: 'Quantitative',
+        field: 'workAccomplishments',
+        message: 'Work Accomplishments is required',
+      });
+    }
+
+    // Section III: Competencies
+    const competencies = data.quantitative.competencies || [];
+    for (const comp of competencies) {
+      if (comp.score === null || comp.score === undefined) {
+        errors.push({
+          step: 3,
+          stepName: 'Competencies',
+          field: `competency_${comp.competencyId}_score`,
+          message: `Please select a rating for "${comp.competencyName}"`,
+        });
+      }
+      if (!comp.comments?.trim()) {
+        errors.push({
+          step: 3,
+          stepName: 'Competencies',
+          field: `competency_${comp.competencyId}_comments`,
+          message: `Please add comments for "${comp.competencyName}"`,
+        });
+      }
+    }
+
+    // Overall competencies rating required
+    if (!data.quantitative.overallQuantitativeRating) {
+      errors.push({
+        step: 3,
+        stepName: 'Competencies',
+        field: 'overallQuantitativeRating',
+        message: 'Overall Performance Competencies Rating is required',
+      });
+    }
+
+    // Section IV: Summary
+    if (!data.summary.employeeSummary?.trim()) {
+      errors.push({
+        step: 4,
+        stepName: 'Summary',
+        field: 'employeeSummary',
+        message: 'Employee Summary is required',
+      });
+    }
+
+    if (!data.summary.overallRating) {
+      errors.push({
+        step: 4,
+        stepName: 'Summary',
+        field: 'overallRating',
+        message: 'Overall Self-Evaluation Rating is required',
+      });
+    }
+
+    // Determine first incomplete step
+    const firstIncompleteStep = errors.length > 0 ? errors[0].step : null;
+
+    return {
+      isValid: errors.length === 0,
+      errors,
+      firstIncompleteStep,
+    };
+  }, [data]);
+
   return {
     data,
     isSaving,
@@ -649,5 +738,6 @@ export const useEvaluation = () => {
     reopenEvaluation,
     resetEvaluation,
     calculateProgress,
+    validateForSubmission,
   };
 };
