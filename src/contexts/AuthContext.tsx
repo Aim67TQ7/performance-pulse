@@ -1,198 +1,219 @@
 import React, { createContext, useContext, useEffect, useState, useCallback } from 'react';
-import { User, Session } from '@supabase/supabase-js';
-import { supabase } from '@/integrations/supabase/client';
 
-const PARENT_ORIGIN = 'https://buntinggpt.com';
-const LOGIN_HUB_URL = 'https://login.buntinggpt.com';
+const AUTH_TOKEN_KEY = 'pep_auth_token';
+const TEMP_TOKEN_KEY = 'pep_temp_token';
+const EMPLOYEE_KEY = 'pep_employee';
 
-// Build auth redirect URL with return_url pointing back to this app
-function getAuthRedirectUrl(): string {
-  const returnUrl = encodeURIComponent(window.location.origin);
-  return `${LOGIN_HUB_URL}?return_url=${returnUrl}`;
+// Use relative URL for edge functions (works with Supabase client)
+const SUPABASE_URL = "https://qzwxisdfwswsrbzvpzlo.supabase.co";
+const AUTH_API_URL = `${SUPABASE_URL}/functions/v1/employee-auth`;
+
+export interface Employee {
+  id: string;
+  name_first: string;
+  name_last: string;
+  user_email: string;
+  job_title: string | null;
+  department: string | null;
+  job_level: string | null;
+  reports_to?: string;
+}
+
+export interface LoginResult {
+  success: boolean;
+  error?: string;
+  requiresPasswordSetup?: boolean;
+  mustSetPassword?: boolean;
+}
+
+export interface SetPasswordResult {
+  success: boolean;
+  error?: string;
 }
 
 interface AuthContextType {
-  user: User | null;
-  session: Session | null;
+  employee: Employee | null;
   employeeId: string | null;
   isLoading: boolean;
-  isEmbedded: boolean;
-  signOut: () => Promise<void>;
+  isAuthenticated: boolean;
+  tempToken: string | null;
+  login: (email: string, password: string) => Promise<LoginResult>;
+  setPassword: (newPassword: string, currentPassword?: string) => Promise<SetPasswordResult>;
+  signOut: () => void;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-function checkIsEmbedded(): boolean {
-  try {
-    return window.self !== window.top;
-  } catch {
-    return true;
-  }
-}
-
-function isValidOrigin(origin: string): boolean {
-  return (
-    origin === PARENT_ORIGIN ||
-    origin.endsWith('.buntinggpt.com') ||
-    origin === 'http://localhost:3000' ||
-    origin === 'http://localhost:5173' ||
-    origin === 'http://localhost:8080'
-  );
-}
-
-interface TokenPayload {
-  accessToken: string;
-  refreshToken: string;
-  expiresAt?: number;
-}
-
-interface PostMessageData {
-  type: string;
-  payload?: TokenPayload;
-}
-
 export function AuthProvider({ children }: { children: React.ReactNode }) {
-  const [user, setUser] = useState<User | null>(null);
-  const [session, setSession] = useState<Session | null>(null);
-  const [employeeId, setEmployeeId] = useState<string | null>(null);
+  const [employee, setEmployee] = useState<Employee | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-  const [isEmbedded] = useState(() => checkIsEmbedded());
+  const [tempToken, setTempToken] = useState<string | null>(null);
 
-  const signOut = useCallback(async () => {
-    await supabase.auth.signOut();
-    setUser(null);
-    setSession(null);
-    setEmployeeId(null);
-  }, []);
+  const isAuthenticated = !!employee && !tempToken;
+  const employeeId = employee?.id || null;
 
-  // Lookup employeeId from the employees table based on user_id
-  const lookupEmployeeId = useCallback(async (userId: string): Promise<string | null> => {
-    try {
-      const { data: employee } = await supabase
-        .from('employees')
-        .select('id')
-        .eq('user_id', userId)
-        .eq('is_active', true)
-        .maybeSingle();
-
-      return employee?.id || null;
-    } catch (error) {
-      console.error('[AuthContext] Failed to lookup employeeId:', error);
-      return null;
-    }
-  }, []);
-
-  const handleTokenMessage = useCallback(async (event: MessageEvent<PostMessageData>) => {
-    if (!isValidOrigin(event.origin)) return;
-    const { type, payload } = event.data;
-
-    if (type === 'PROVIDE_TOKEN' && payload) {
+  // Initialize from localStorage
+  useEffect(() => {
+    const initAuth = async () => {
       try {
-        const { data, error } = await supabase.auth.setSession({
-          access_token: payload.accessToken,
-          refresh_token: payload.refreshToken,
-        });
+        const storedToken = localStorage.getItem(AUTH_TOKEN_KEY);
+        const storedTempToken = localStorage.getItem(TEMP_TOKEN_KEY);
+        const storedEmployee = localStorage.getItem(EMPLOYEE_KEY);
 
-        if (error) {
-          window.parent.postMessage({ type: 'AUTH_ERROR', payload: { error: error.message } }, event.origin);
+        if (storedTempToken && storedEmployee) {
+          // User has temp token - needs to set password
+          setTempToken(storedTempToken);
+          setEmployee(JSON.parse(storedEmployee));
+          setIsLoading(false);
           return;
         }
 
-        if (data.session) {
-          setSession(data.session);
-          setUser(data.session.user);
-          
-          // Lookup employeeId
-          const empId = await lookupEmployeeId(data.session.user.id);
-          setEmployeeId(empId);
-          
-          window.parent.postMessage({ type: 'AUTH_READY', payload: { userId: data.session.user.id } }, event.origin);
-        }
-      } catch (err) {
-        window.parent.postMessage({ type: 'AUTH_ERROR', payload: { error: 'Failed to set session' } }, event.origin);
-      } finally {
-        setIsLoading(false);
-      }
-    }
-  }, [lookupEmployeeId]);
-
-  useEffect(() => {
-    if (isEmbedded) {
-      window.addEventListener('message', handleTokenMessage);
-      if (window.parent) window.parent.postMessage({ type: 'REQUEST_TOKEN' }, '*');
-
-      const timeout = setTimeout(() => {
-        if (isLoading) setIsLoading(false);
-      }, 5000);
-
-      return () => {
-        window.removeEventListener('message', handleTokenMessage);
-        clearTimeout(timeout);
-      };
-    } else {
-      const initStandaloneAuth = async () => {
-        try {
-          const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, newSession) => {
-            setSession(newSession);
-            setUser(newSession?.user ?? null);
-            
-            if (newSession?.user) {
-              const empId = await lookupEmployeeId(newSession.user.id);
-              setEmployeeId(empId);
-            } else {
-              setEmployeeId(null);
+        if (storedToken) {
+          // Verify token is still valid
+          const response = await fetch(`${AUTH_API_URL}/verify-token`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${storedToken}`
             }
           });
 
-          const { data: { session: existingSession } } = await supabase.auth.getSession();
+          const data = await response.json();
 
-          if (existingSession) {
-            setSession(existingSession);
-            setUser(existingSession.user);
+          if (data.valid && data.employee) {
+            setEmployee(data.employee);
+            localStorage.setItem(EMPLOYEE_KEY, JSON.stringify(data.employee));
             
-            // Lookup employeeId
-            const empId = await lookupEmployeeId(existingSession.user.id);
-            setEmployeeId(empId);
-            setIsLoading(false);
+            // Check if password reset is required
+            if (data.must_set_password) {
+              setTempToken(storedToken);
+              localStorage.setItem(TEMP_TOKEN_KEY, storedToken);
+              localStorage.removeItem(AUTH_TOKEN_KEY);
+            }
           } else {
-            // No session - redirect to auth
-            window.location.href = getAuthRedirectUrl();
-            return;
+            // Token invalid - clear storage
+            localStorage.removeItem(AUTH_TOKEN_KEY);
+            localStorage.removeItem(EMPLOYEE_KEY);
           }
-
-          return () => subscription.unsubscribe();
-        } catch (err) {
-          console.error('[AuthContext] Auth initialization error:', err);
-          window.location.href = getAuthRedirectUrl();
         }
-      };
+      } catch (error) {
+        console.error('[AuthContext] Init error:', error);
+        localStorage.removeItem(AUTH_TOKEN_KEY);
+        localStorage.removeItem(EMPLOYEE_KEY);
+      } finally {
+        setIsLoading(false);
+      }
+    };
 
-      initStandaloneAuth();
+    initAuth();
+  }, []);
+
+  const login = useCallback(async (email: string, password: string): Promise<LoginResult> => {
+    try {
+      const response = await fetch(`${AUTH_API_URL}/login`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, password })
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        return { 
+          success: false, 
+          error: data.error || 'Login failed' 
+        };
+      }
+
+      // First-time login - no password set
+      if (data.requires_password_setup) {
+        setTempToken(data.temp_token);
+        setEmployee(data.employee);
+        localStorage.setItem(TEMP_TOKEN_KEY, data.temp_token);
+        localStorage.setItem(EMPLOYEE_KEY, JSON.stringify(data.employee));
+        return { success: true, requiresPasswordSetup: true };
+      }
+
+      // Successful login
+      localStorage.setItem(AUTH_TOKEN_KEY, data.token);
+      localStorage.setItem(EMPLOYEE_KEY, JSON.stringify(data.employee));
+      localStorage.removeItem(TEMP_TOKEN_KEY);
+      setEmployee(data.employee);
+      setTempToken(null);
+
+      if (data.must_set_password) {
+        setTempToken(data.token);
+        localStorage.setItem(TEMP_TOKEN_KEY, data.token);
+        localStorage.removeItem(AUTH_TOKEN_KEY);
+        return { success: true, mustSetPassword: true };
+      }
+
+      return { success: true };
+    } catch (error) {
+      console.error('[AuthContext] Login error:', error);
+      return { success: false, error: 'Network error. Please try again.' };
     }
-  }, [isEmbedded, handleTokenMessage, isLoading, lookupEmployeeId]);
+  }, []);
 
-  useEffect(() => {
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, newSession) => {
-      setSession(newSession);
-      setUser(newSession?.user ?? null);
-      
-      if (newSession?.user) {
-        const empId = await lookupEmployeeId(newSession.user.id);
-        setEmployeeId(empId);
-      } else {
-        setEmployeeId(null);
-      }
-      
-      if (event === 'SIGNED_OUT' && isEmbedded && window.parent) {
-        window.parent.postMessage({ type: 'REQUEST_TOKEN' }, '*');
-      }
-    });
+  const setPasswordFn = useCallback(async (newPassword: string, currentPassword?: string): Promise<SetPasswordResult> => {
+    const token = tempToken || localStorage.getItem(AUTH_TOKEN_KEY);
+    
+    if (!token) {
+      return { success: false, error: 'Not authenticated' };
+    }
 
-    return () => subscription.unsubscribe();
-  }, [isEmbedded, lookupEmployeeId]);
+    try {
+      const response = await fetch(`${AUTH_API_URL}/set-password`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({ 
+          new_password: newPassword,
+          current_password: currentPassword 
+        })
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        return { success: false, error: data.error || 'Failed to set password' };
+      }
+
+      // Update with new token
+      localStorage.setItem(AUTH_TOKEN_KEY, data.token);
+      localStorage.setItem(EMPLOYEE_KEY, JSON.stringify(data.employee));
+      localStorage.removeItem(TEMP_TOKEN_KEY);
+      setEmployee(data.employee);
+      setTempToken(null);
+
+      return { success: true };
+    } catch (error) {
+      console.error('[AuthContext] Set password error:', error);
+      return { success: false, error: 'Network error. Please try again.' };
+    }
+  }, [tempToken]);
+
+  const signOut = useCallback(() => {
+    localStorage.removeItem(AUTH_TOKEN_KEY);
+    localStorage.removeItem(TEMP_TOKEN_KEY);
+    localStorage.removeItem(EMPLOYEE_KEY);
+    setEmployee(null);
+    setTempToken(null);
+  }, []);
 
   return (
-    <AuthContext.Provider value={{ user, session, employeeId, isLoading, isEmbedded, signOut }}>
+    <AuthContext.Provider value={{ 
+      employee, 
+      employeeId, 
+      isLoading, 
+      isAuthenticated,
+      tempToken,
+      login, 
+      setPassword: setPasswordFn,
+      signOut 
+    }}>
       {children}
     </AuthContext.Provider>
   );
