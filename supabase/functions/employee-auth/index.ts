@@ -163,7 +163,7 @@ serve(async (req) => {
       // Find employee by email
       const { data: employee, error: findError } = await supabase
         .from("employees")
-        .select("id, name_first, name_last, user_email, job_title, department, job_level, location, business_unit, benefit_class, hire_date, employee_number, badge_number, badge_pin_hash, badge_pin_attempts, badge_pin_locked_until, badge_pin_is_default, is_active, reports_to")
+        .select("id, name_first, name_last, user_email, job_title, department, job_level, location, business_unit, benefit_class, hire_date, employee_number, badge_number, badge_pin_hash, badge_pin_attempts, badge_pin_locked_until, badge_pin_is_default, is_active, reports_to, is_hr_admin")
         .eq("user_email", email.toLowerCase().trim())
         .eq("is_active", true)
         .maybeSingle();
@@ -223,7 +223,8 @@ serve(async (req) => {
               employee_number: employee.employee_number,
               badge_number: employee.badge_number,
               reports_to: employee.reports_to,
-              supervisor_name: supervisorName
+              supervisor_name: supervisorName,
+              is_hr_admin: employee.is_hr_admin || false
             }
           }),
           { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
@@ -305,7 +306,8 @@ serve(async (req) => {
             employee_number: employee.employee_number,
             badge_number: employee.badge_number,
             reports_to: employee.reports_to,
-            supervisor_name: supervisorName
+            supervisor_name: supervisorName,
+            is_hr_admin: employee.is_hr_admin || false
           }
         }),
         { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
@@ -392,7 +394,7 @@ serve(async (req) => {
       // Get full employee data for new token
       const { data: updatedEmployee } = await supabase
         .from("employees")
-        .select("id, name_first, name_last, user_email, job_title, department, job_level, location, business_unit, benefit_class, hire_date, employee_number, badge_number, reports_to")
+        .select("id, name_first, name_last, user_email, job_title, department, job_level, location, business_unit, benefit_class, hire_date, employee_number, badge_number, reports_to, is_hr_admin")
         .eq("id", employeeId)
         .single();
 
@@ -442,7 +444,7 @@ serve(async (req) => {
       // Fetch current employee data
       const { data: employee } = await supabase
         .from("employees")
-        .select("id, name_first, name_last, user_email, job_title, department, job_level, location, business_unit, benefit_class, hire_date, employee_number, badge_number, reports_to, badge_pin_is_default, is_active")
+        .select("id, name_first, name_last, user_email, job_title, department, job_level, location, business_unit, benefit_class, hire_date, employee_number, badge_number, reports_to, badge_pin_is_default, is_active, is_hr_admin")
         .eq("id", payload.employee_id as string)
         .single();
 
@@ -475,7 +477,8 @@ serve(async (req) => {
             employee_number: employee.employee_number,
             badge_number: employee.badge_number,
             reports_to: employee.reports_to,
-            supervisor_name: supervisorName
+            supervisor_name: supervisorName,
+            is_hr_admin: employee.is_hr_admin || false
           }
         }),
         { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }

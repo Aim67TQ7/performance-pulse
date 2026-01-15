@@ -125,7 +125,7 @@ export const useEvaluation = () => {
 
         // Check for existing evaluation via edge function (bypasses RLS)
         const token = localStorage.getItem('pep_auth_token');
-        const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+        const supabaseUrl = "https://qzwxisdfwswsrbzvpzlo.supabase.co";
         
         let evalData = null;
         let evalError = null;
@@ -283,7 +283,7 @@ export const useEvaluation = () => {
           };
           
           // Use sendBeacon for reliable saves on page close
-          const url = `${import.meta.env.VITE_SUPABASE_URL || 'https://your-project.supabase.co'}/rest/v1/pep_evaluations?id=eq.${currentData.id}`;
+          const url = `https://qzwxisdfwswsrbzvpzlo.supabase.co/rest/v1/pep_evaluations?id=eq.${currentData.id}`;
           navigator.sendBeacon?.(url, JSON.stringify(payload));
         }
       }
@@ -340,7 +340,7 @@ export const useEvaluation = () => {
       };
 
       const response = await fetch(
-        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/submit-evaluation/save`,
+        `https://qzwxisdfwswsrbzvpzlo.supabase.co/functions/v1/submit-evaluation/save`,
         {
           method: 'POST',
           headers: {
