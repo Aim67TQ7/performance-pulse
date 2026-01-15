@@ -14,8 +14,11 @@ import { Loader2, Plus, Pencil, Search, UserPlus, Users, ChevronLeft, ChevronRig
 import { EmployeeImport } from './EmployeeImport';
 import { AuthUserSync } from './AuthUserSync';
 import { toast } from '@/hooks/use-toast';
+import { useAuth } from '@/hooks/useAuth';
 
 type JobLevel = Database['public']['Enums']['job_level'];
+
+const SUPABASE_URL = "https://qzwxisdfwswsrbzvpzlo.supabase.co";
 
 interface Employee {
   id: string;
@@ -72,6 +75,7 @@ const JOB_LEVELS: JobLevel[] = ['Employee', 'Lead', 'Supervisor', 'Manager', 'Ex
 const PAGE_SIZE = 15;
 
 export const EmployeeManager = () => {
+  const { token } = useAuth();
   const [employees, setEmployees] = useState<Employee[]>([]);
   const [allEmployees, setAllEmployees] = useState<Employee[]>([]); // For reports_to dropdown
   const [departments, setDepartments] = useState<string[]>([]);
@@ -201,9 +205,19 @@ export const EmployeeManager = () => {
       return;
     }
 
+    if (!token) {
+      toast({
+        title: 'Authentication Error',
+        description: 'Please log in again.',
+        variant: 'destructive',
+      });
+      return;
+    }
+
     setIsSaving(true);
     try {
       const payload = {
+        id: editingEmployee?.id,
         name_first: formData.name_first.trim(),
         name_last: formData.name_last.trim(),
         job_title: formData.job_title.trim() || null,
@@ -217,51 +231,38 @@ export const EmployeeManager = () => {
         hire_date: formData.hire_date || null,
         benefit_class: formData.benefit_class || null,
         job_level: formData.job_level || 'Employee',
-        updated_at: new Date().toISOString(),
       };
 
-      if (editingEmployee) {
-        // Update existing
-        const { error } = await supabase
-          .from('employees')
-          .update(payload)
-          .eq('id', editingEmployee.id);
+      const action = editingEmployee ? 'update' : 'create';
+      const method = editingEmployee ? 'PUT' : 'POST';
 
-        if (error) throw error;
-        toast({ title: 'Employee updated', description: `${formData.name_first} ${formData.name_last} has been updated.` });
-      } else {
-        // Create new - need to handle reports_to requirement
-        const createPayload = {
-          ...payload,
-          reports_to: formData.reports_to || undefined, // Will be set after creation if needed
-        };
-        
-        const { data, error } = await supabase
-          .from('employees')
-          .insert(createPayload)
-          .select('id')
-          .single();
+      const response = await fetch(`${SUPABASE_URL}/functions/v1/manage-employees/${action}`, {
+        method,
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
+        body: JSON.stringify(payload),
+      });
 
-        if (error) throw error;
-        
-        // If no reports_to was set, make them report to themselves (root node)
-        if (!formData.reports_to && data) {
-          await supabase
-            .from('employees')
-            .update({ reports_to: data.id })
-            .eq('id', data.id);
-        }
-        
-        toast({ title: 'Employee created', description: `${formData.name_first} ${formData.name_last} has been added.` });
+      const result = await response.json();
+      
+      if (!response.ok) {
+        throw new Error(result.error || 'Failed to save employee');
       }
+
+      toast({ 
+        title: editingEmployee ? 'Employee updated' : 'Employee created', 
+        description: `${formData.name_first} ${formData.name_last} has been ${editingEmployee ? 'updated' : 'added'}.` 
+      });
 
       setDialogOpen(false);
       fetchEmployees();
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Error saving employee:', error);
       toast({
         title: 'Error',
-        description: error.message || 'Failed to save employee.',
+        description: error instanceof Error ? error.message : 'Failed to save employee.',
         variant: 'destructive',
       });
     } finally {
