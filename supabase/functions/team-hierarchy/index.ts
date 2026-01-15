@@ -7,7 +7,7 @@ const corsHeaders = {
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SUPABASE_SERVICE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-const JWT_SECRET = Deno.env.get("PEP_JWT_SECRET") || "bunting-pep-jwt-secret-2025";
+const JWT_SECRET = Deno.env.get("JWT_SECRET") || Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 
 // Verify custom JWT token
 async function verifyJWT(token: string): Promise<{ valid: boolean; payload?: any }> {
