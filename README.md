@@ -1,73 +1,101 @@
-# Welcome to your Lovable project
+# Performance Evaluation Portal (PEP)
 
-## Project info
+A modern, streamlined employee self-assessment platform designed for annual performance reviews. Built with React, TypeScript, and Supabase.
 
-**URL**: https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID
+## 🎯 Value Proposition
 
-## How can I edit this code?
+**For Employees:**
+- Guided 4-section wizard makes self-assessment intuitive and stress-free
+- Auto-save functionality ensures no work is lost
+- Professional PDF generation for records and signatures
+- Clear progress tracking throughout the evaluation process
 
-There are several ways of editing your application.
+**For Managers:**
+- Real-time visibility into team completion status via hierarchical dashboard
+- One-click "Poke Team" reminders to drive completion rates
+- Direct PDF viewing of submitted assessments
+- Collapsible org chart view for easy navigation
 
-**Use Lovable**
+**For HR Administrators:**
+- Centralized management of competencies, employees, and settings
+- CSV bulk import for employee data
+- Customizable performance competencies with definitions
+- Complete audit trail and submission tracking
 
-Simply visit the [Lovable Project](https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID) and start prompting.
+## 📋 Self-Assessment Structure
 
-Changes made via Lovable will be committed automatically to this repo.
+| Section | Content |
+|---------|---------|
+| **I. Employee Information** | Auto-populated employee details and reporting hierarchy |
+| **II. Quantitative Self-Assessment** | Performance objectives table with measurable targets, actuals, and calculated scores |
+| **III. Performance Competencies** | Self-ratings (1-5) and comments on core competencies (Teamwork, Attitude, Quality, Accountability, Innovation, Development) |
+| **IV. Employee Summary** | Work accomplishments narrative and final review |
 
-**Use your preferred IDE**
+## 🔐 Authentication
 
-If you want to work locally using your own IDE, you can clone this repo and push changes. Pushed changes will also be reflected in Lovable.
+Cross-subdomain SSO supporting:
+- **Standalone mode**: Cookie-based authentication with redirect to login hub
+- **Embedded mode**: PostMessage token exchange for iframe integration
+- Shared sessions across `*.buntinggpt.com` subdomains
 
-The only requirement is having Node.js & npm installed - [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating)
+## 🏗️ Tech Stack
 
-Follow these steps:
+- **Frontend**: React 18, TypeScript, Vite
+- **Styling**: Tailwind CSS, shadcn/ui components
+- **Backend**: Supabase (PostgreSQL, Auth, Edge Functions)
+- **PDF Generation**: pdf-lib with branded templates
+- **State Management**: TanStack Query, React Context
 
-```sh
-# Step 1: Clone the repository using the project's Git URL.
-git clone <YOUR_GIT_URL>
+## 📁 Project Structure
 
-# Step 2: Navigate to the project directory.
-cd <YOUR_PROJECT_NAME>
-
-# Step 3: Install the necessary dependencies.
-npm i
-
-# Step 4: Start the development server with auto-reloading and an instant preview.
-npm run dev
+```
+src/
+├── components/
+│   ├── admin/           # HR admin components (CompetencyManager, EmployeeManager, etc.)
+│   ├── evaluation/      # Wizard steps and evaluation UI
+│   ├── ui/              # shadcn/ui component library
+│   └── version/         # Version tracking components
+├── contexts/            # Auth and app-wide state
+├── hooks/               # Custom React hooks
+├── lib/                 # Utilities (PDF generator, CSV parser, cookie storage)
+├── pages/               # Route components
+└── types/               # TypeScript definitions
 ```
 
-**Edit a file directly in GitHub**
+## 🚀 Getting Started
 
-- Navigate to the desired file(s).
-- Click the "Edit" button (pencil icon) at the top right of the file view.
-- Make your changes and commit the changes.
+```bash
+# Install dependencies
+npm install
 
-**Use GitHub Codespaces**
+# Start development server
+npm run dev
 
-- Navigate to the main page of your repository.
-- Click on the "Code" button (green button) near the top right.
-- Select the "Codespaces" tab.
-- Click on "New codespace" to launch a new Codespace environment.
-- Edit files directly within the Codespace and commit and push your changes once you're done.
+# Build for production
+npm run build
+```
 
-## What technologies are used for this project?
+## 🔧 Environment Variables
 
-This project is built with:
+The app connects to Supabase project `qzwxisdfwswsrbzvpzlo`. Authentication cookies are scoped to `.buntinggpt.com` for cross-subdomain sharing.
 
-- Vite
-- TypeScript
-- React
-- shadcn-ui
-- Tailwind CSS
+## 📄 Key Features
 
-## How can I deploy this project?
+- **Auto-save**: Evaluation progress is automatically saved as users complete each section
+- **PDF Export**: Professional branded documents with cover page, section formatting, and signature lines
+- **Reopen Workflow**: Managers can reopen submitted evaluations for revisions
+- **Competency Management**: HR can add, edit, and reorder performance competencies
+- **Hierarchy Visualization**: Interactive org chart showing reporting relationships
+- **Error Logging**: Built-in error capture for debugging evaluation issues
 
-Simply open [Lovable](https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID) and click on Share -> Publish.
+## 📖 Documentation
 
-## Can I connect a custom domain to my Lovable project?
+Additional documentation available in `/docs`:
+- `AUTH.md` - Authentication architecture
+- `subdomain-auth.md` - Cross-subdomain SSO implementation
+- `VERSION_SYSTEM.md` - App versioning strategy
+- `REVISIONINGRULES.md` - Evaluation revision workflows
 
-Yes, you can!
+---
 
-To connect a domain, navigate to Project > Settings > Domains and click Connect Domain.
-
-Read more here: [Setting up a custom domain](https://docs.lovable.dev/features/custom-domain#custom-domain)
+Built with [Lovable](https://lovable.dev)
