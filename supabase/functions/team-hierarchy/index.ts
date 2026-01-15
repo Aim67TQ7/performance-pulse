@@ -112,6 +112,8 @@ Deno.serve(async (req) => {
 
     if (path === "hierarchy") {
       const year = parseInt(url.searchParams.get("year") || "2025");
+      
+      console.log(`[team-hierarchy] Processing hierarchy request for employee: ${employeeId}, year: ${year}`);
 
       // Fetch all active salaried employees
       const { data: allEmployees, error: empError } = await supabase
@@ -128,12 +130,19 @@ Deno.serve(async (req) => {
         );
       }
 
+      console.log(`[team-hierarchy] Fetched ${allEmployees?.length || 0} active salaried employees`);
+
       if (!allEmployees || allEmployees.length === 0) {
         return new Response(
           JSON.stringify({ hierarchy: [], stats: { total: 0, submitted: 0, inProgress: 0, notStarted: 0 } }),
           { headers: { ...corsHeaders, "Content-Type": "application/json" } }
         );
       }
+
+      // Log direct reports for this manager
+      const directReports = allEmployees.filter(emp => emp.reports_to === employeeId);
+      console.log(`[team-hierarchy] Direct reports for ${employeeId}: ${directReports.length}`, 
+        directReports.map(e => `${e.name_first} ${e.name_last} (${e.id})`));
 
       // Build a set of all subordinate IDs (recursive)
       const subordinateIds = new Set<string>();
@@ -147,7 +156,10 @@ Deno.serve(async (req) => {
       };
       findSubordinates(employeeId);
 
+      console.log(`[team-hierarchy] Total subordinates found: ${subordinateIds.size}`);
+
       if (subordinateIds.size === 0) {
+        console.log(`[team-hierarchy] No subordinates found for employee ${employeeId}`);
         return new Response(
           JSON.stringify({ hierarchy: [], stats: { total: 0, submitted: 0, inProgress: 0, notStarted: 0 } }),
           { headers: { ...corsHeaders, "Content-Type": "application/json" } }
