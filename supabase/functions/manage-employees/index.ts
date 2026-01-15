@@ -192,6 +192,9 @@ Deno.serve(async (req) => {
         );
       }
 
+      // If reports_to is empty/null, set to self (root node) to satisfy FK constraint
+      const reportsTo = employee.reports_to || employee.id;
+
       const updatePayload = {
         name_first: employee.name_first?.trim(),
         name_last: employee.name_last?.trim(),
@@ -201,7 +204,7 @@ Deno.serve(async (req) => {
         badge_number: employee.badge_number?.trim() || null,
         user_email: employee.user_email?.trim() || null,
         employee_number: employee.employee_number?.trim() || null,
-        reports_to: employee.reports_to || null,
+        reports_to: reportsTo,
         is_active: employee.is_active,
         hire_date: employee.hire_date || null,
         benefit_class: employee.benefit_class || null,
