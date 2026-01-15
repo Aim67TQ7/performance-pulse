@@ -23,6 +23,7 @@ export interface Employee {
   employee_number: string | null;
   badge_number: string | null;
   reports_to: string | null;
+  supervisor_name: string | null;
 }
 
 export interface LoginResult {
