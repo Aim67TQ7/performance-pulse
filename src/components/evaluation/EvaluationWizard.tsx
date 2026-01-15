@@ -34,6 +34,8 @@ export const EvaluationWizard = () => {
   const [canReopen, setCanReopen] = useState(false);
   const [hasSubordinates, setHasSubordinates] = useState(false);
 
+  const [validationErrors, setValidationErrors] = useState<string[]>([]);
+
   const {
     data,
     isSaving,
@@ -48,6 +50,7 @@ export const EvaluationWizard = () => {
     reopenEvaluation,
     resetEvaluation,
     calculateProgress,
+    validateForSubmission,
   } = useEvaluation();
 
   const { sections, total: progress } = useMemo(() => calculateProgress(), [calculateProgress]);
@@ -117,6 +120,26 @@ export const EvaluationWizard = () => {
   };
 
   const handleSubmitClick = () => {
+    const validation = validateForSubmission();
+    
+    if (!validation.isValid) {
+      // Collect unique error messages
+      const errorMessages = validation.errors.map(e => e.message);
+      setValidationErrors(errorMessages);
+      
+      // Show toast with first error
+      toast.error(`Please complete required fields: ${validation.errors[0].message}`);
+      
+      // Navigate to first incomplete step
+      if (validation.firstIncompleteStep) {
+        setCurrentStep(validation.firstIncompleteStep);
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+      }
+      return;
+    }
+    
+    // Clear any previous validation errors
+    setValidationErrors([]);
     setShowConfirmation(true);
   };
 
@@ -266,19 +289,22 @@ export const EvaluationWizard = () => {
         {currentStep === 2 && (
           <QuantitativeStep 
             data={data.quantitative} 
-            onUpdate={updateQuantitative} 
+            onUpdate={updateQuantitative}
+            showErrors={validationErrors.length > 0}
           />
         )}
         {currentStep === 3 && (
           <CompetenciesStep 
             data={data.quantitative} 
-            onUpdate={updateQuantitative} 
+            onUpdate={updateQuantitative}
+            showErrors={validationErrors.length > 0}
           />
         )}
         {currentStep === 4 && (
           <SummaryStep 
             data={data.summary} 
-            onUpdate={updateSummary} 
+            onUpdate={updateSummary}
+            showErrors={validationErrors.length > 0}
           />
         )}
 

@@ -7,9 +7,13 @@ import { FileText, Award } from 'lucide-react';
 interface SummaryStepProps {
   data: EvaluationData['summary'];
   onUpdate: (updates: Partial<EvaluationData['summary']>) => void;
+  showErrors?: boolean;
 }
 
-export const SummaryStep = ({ data, onUpdate }: SummaryStepProps) => {
+export const SummaryStep = ({ data, onUpdate, showErrors = false }: SummaryStepProps) => {
+  const summaryError = showErrors && !data.employeeSummary?.trim();
+  const ratingError = showErrors && !data.overallRating;
+  
   return (
     <div className="form-section animate-slide-up">
       <div className="mb-6">
@@ -23,10 +27,11 @@ export const SummaryStep = ({ data, onUpdate }: SummaryStepProps) => {
 
       <div className="space-y-8">
         {/* Employee Summary */}
-        <div className="space-y-3">
-          <Label htmlFor="summary" className="flex items-center gap-2 text-base font-medium">
-            <FileText className="w-5 h-5 text-primary" />
+        <div className={`space-y-3 ${summaryError ? 'ring-2 ring-destructive/50 rounded-lg p-4 -m-4' : ''}`}>
+          <Label htmlFor="summary" className={`flex items-center gap-2 text-base font-medium ${summaryError ? 'text-destructive' : ''}`}>
+            <FileText className={`w-5 h-5 ${summaryError ? 'text-destructive' : 'text-primary'}`} />
             Employee Summary
+            <span className="text-destructive">*</span>
           </Label>
           <p className="text-sm text-muted-foreground">
             Provide a comprehensive self-assessment narrative summarizing your performance during this period.
@@ -36,15 +41,16 @@ export const SummaryStep = ({ data, onUpdate }: SummaryStepProps) => {
             value={data.employeeSummary}
             onChange={(e) => onUpdate({ employeeSummary: e.target.value })}
             placeholder="Summarize your overall performance, key contributions, challenges faced, and lessons learned during this evaluation period..."
-            className="min-h-[200px] resize-y"
+            className={`min-h-[200px] resize-y ${summaryError ? 'border-destructive' : ''}`}
           />
         </div>
 
         {/* Overall Rating */}
-        <div className="pt-6 border-t border-border">
-          <Label className="flex items-center gap-2 text-base font-medium mb-4">
-            <Award className="w-5 h-5 text-success" />
+        <div className={`pt-6 border-t border-border ${ratingError ? 'ring-2 ring-destructive/50 rounded-lg p-4' : ''}`}>
+          <Label className={`flex items-center gap-2 text-base font-medium mb-4 ${ratingError ? 'text-destructive' : ''}`}>
+            <Award className={`w-5 h-5 ${ratingError ? 'text-destructive' : 'text-success'}`} />
             Overall Self-Evaluation Rating
+            <span className="text-destructive">*</span>
           </Label>
           <RatingSelector
             value={data.overallRating}

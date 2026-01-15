@@ -147,3 +147,17 @@ export const LIKERT_SCALE = [
   { value: 2, label: '2', description: 'Marginal' },
   { value: 1, label: '1', description: 'Unacceptable' },
 ];
+
+// Validation types
+export interface ValidationError {
+  step: number;
+  stepName: string;
+  field: string;
+  message: string;
+}
+
+export interface ValidationResult {
+  isValid: boolean;
+  errors: ValidationError[];
+  firstIncompleteStep: number | null;
+}
