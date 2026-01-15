@@ -45,6 +45,7 @@ interface AuthContextType {
   isLoading: boolean;
   isAuthenticated: boolean;
   tempToken: string | null;
+  token: string | null;
   login: (email: string, password: string) => Promise<LoginResult>;
   setPassword: (newPassword: string, currentPassword?: string) => Promise<SetPasswordResult>;
   signOut: () => void;
@@ -56,6 +57,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [employee, setEmployee] = useState<Employee | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [tempToken, setTempToken] = useState<string | null>(null);
+  const [token, setToken] = useState<string | null>(null);
 
   const isAuthenticated = !!employee && !tempToken;
   const employeeId = employee?.id || null;
@@ -90,6 +92,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
           if (data.valid && data.employee) {
             setEmployee(data.employee);
+            setToken(storedToken);
             localStorage.setItem(EMPLOYEE_KEY, JSON.stringify(data.employee));
             
             // Check if password reset is required
@@ -147,6 +150,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       localStorage.setItem(EMPLOYEE_KEY, JSON.stringify(data.employee));
       localStorage.removeItem(TEMP_TOKEN_KEY);
       setEmployee(data.employee);
+      setToken(data.token);
       setTempToken(null);
 
       if (data.must_set_password) {
@@ -194,6 +198,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       localStorage.setItem(EMPLOYEE_KEY, JSON.stringify(data.employee));
       localStorage.removeItem(TEMP_TOKEN_KEY);
       setEmployee(data.employee);
+      setToken(data.token);
       setTempToken(null);
 
       return { success: true };
@@ -208,6 +213,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     localStorage.removeItem(TEMP_TOKEN_KEY);
     localStorage.removeItem(EMPLOYEE_KEY);
     setEmployee(null);
+    setToken(null);
     setTempToken(null);
   }, []);
 
@@ -218,6 +224,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       isLoading, 
       isAuthenticated,
       tempToken,
+      token,
       login, 
       setPassword: setPasswordFn,
       signOut 

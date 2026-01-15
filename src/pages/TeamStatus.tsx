@@ -1,14 +1,16 @@
 import { useState, useEffect, useMemo } from 'react';
 import { Helmet } from 'react-helmet-async';
 import { supabase } from '@/integrations/supabase/client';
-import { useAuth } from '@/hooks/useAuth';
+import { useAuthContext } from '@/contexts/AuthContext';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Loader2, Users, CheckCircle2, Clock, FileEdit, ArrowLeft, Mail } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { VersionBadge } from '@/components/version/VersionBadge';
 import { UserMenu } from '@/components/UserMenu';
-import { HierarchyTree, HierarchyMember, buildHierarchyTree, collectIncompleteEmails, countHierarchyStats } from '@/components/evaluation/HierarchyTree';
+import { HierarchyTree, HierarchyMember, collectIncompleteEmails } from '@/components/evaluation/HierarchyTree';
+
+const SUPABASE_URL = "https://qzwxisdfwswsrbzvpzlo.supabase.co";
 
 interface AssessmentDates {
   open_date: string;
@@ -21,14 +23,15 @@ interface AssessmentDates {
 const ASSESSMENT_YEAR = 2025;
 
 const TeamStatus = () => {
-  const { employeeId } = useAuth();
+  const { employeeId, token } = useAuthContext();
   const [hierarchy, setHierarchy] = useState<HierarchyMember[]>([]);
+  const [stats, setStats] = useState({ total: 0, submitted: 0, inProgress: 0, notStarted: 0 });
   const [isLoading, setIsLoading] = useState(true);
   const [assessmentDates, setAssessmentDates] = useState<AssessmentDates | null>(null);
 
   useEffect(() => {
     const loadData = async () => {
-      if (!employeeId) {
+      if (!employeeId || !token) {
         setIsLoading(false);
         return;
       }
@@ -49,73 +52,28 @@ const TeamStatus = () => {
         console.error('Error fetching settings:', error);
       }
 
-      // Load hierarchical subordinates
+      // Load hierarchical subordinates via edge function
       try {
-        // Fetch all subordinates recursively
-        const { data: allEmployees, error } = await supabase
-          .from('employees')
-          .select('id, name_first, name_last, job_title, department, user_email, reports_to')
-          .eq('is_active', true)
-          .eq('benefit_class', 'salary');
-
-        if (error) throw error;
-
-        if (!allEmployees || allEmployees.length === 0) {
-          setHierarchy([]);
-          setIsLoading(false);
-          return;
-        }
-
-        // Build a set of all subordinate IDs (recursive)
-        const subordinateIds = new Set<string>();
-        const findSubordinates = (managerId: string) => {
-          allEmployees.forEach(emp => {
-            if (emp.reports_to === managerId && !subordinateIds.has(emp.id)) {
-              subordinateIds.add(emp.id);
-              findSubordinates(emp.id);
+        const response = await fetch(
+          `${SUPABASE_URL}/functions/v1/team-hierarchy/hierarchy?year=${ASSESSMENT_YEAR}`,
+          {
+            headers: {
+              'Authorization': `Bearer ${token}`,
+              'Content-Type': 'application/json'
             }
-          });
-        };
-        findSubordinates(employeeId);
-
-        if (subordinateIds.size === 0) {
-          setHierarchy([]);
-          setIsLoading(false);
-          return;
-        }
-
-        // Get evaluations for all subordinates using hardcoded year
-        const { data: evaluations } = await supabase
-          .from('pep_evaluations')
-          .select('employee_id, status, submitted_at, pdf_url')
-          .in('employee_id', Array.from(subordinateIds))
-          .eq('period_year', ASSESSMENT_YEAR);
-
-        const evalMap = new Map(
-          evaluations?.map(e => [e.employee_id, e]) || []
+          }
         );
 
-        // Build flat list with evaluation data
-        const flatList = allEmployees
-          .filter(emp => subordinateIds.has(emp.id))
-          .map(emp => {
-            const eval_ = evalMap.get(emp.id);
-            return {
-              id: emp.id,
-              name: `${emp.name_first} ${emp.name_last}`,
-              job_title: emp.job_title,
-              department: emp.department,
-              evaluation_status: eval_?.status || 'not_started',
-              submitted_at: eval_?.submitted_at || null,
-              pdf_url: eval_?.pdf_url || null,
-              email: emp.user_email || null,
-              reports_to: emp.reports_to,
-            };
-          });
+        if (!response.ok) {
+          console.error('Error loading hierarchy:', response.status);
+          setHierarchy([]);
+          setIsLoading(false);
+          return;
+        }
 
-        // Build tree starting from current employee's direct reports
-        const tree = buildHierarchyTree(flatList, employeeId);
-        setHierarchy(tree);
+        const data = await response.json();
+        setHierarchy(data.hierarchy || []);
+        setStats(data.stats || { total: 0, submitted: 0, inProgress: 0, notStarted: 0 });
       } catch (error) {
         console.error('Error loading subordinates:', error);
       } finally {
@@ -124,9 +82,9 @@ const TeamStatus = () => {
     };
 
     loadData();
-  }, [employeeId]);
+  }, [employeeId, token]);
 
-  const stats = useMemo(() => countHierarchyStats(hierarchy), [hierarchy]);
+  const incompleteEmails = useMemo(() => collectIncompleteEmails(hierarchy), [hierarchy]);
 
   // Calculate days until due date from settings
   const dueDate = useMemo(() => {
@@ -153,8 +111,7 @@ const TeamStatus = () => {
   // Determine if we're in the urgent period (7 days or less until due)
   const isUrgent = daysUntilDue !== null && daysUntilDue <= 7 && daysUntilDue > 0;
 
-  // Get incomplete emails from hierarchy
-  const incompleteEmails = useMemo(() => collectIncompleteEmails(hierarchy), [hierarchy]);
+  // Show POKE button throughout entire assessment period when there are incomplete members
 
   // Show POKE button throughout entire assessment period when there are incomplete members
   const showPokeButton = isWithinAssessmentPeriod && incompleteEmails.length > 0;

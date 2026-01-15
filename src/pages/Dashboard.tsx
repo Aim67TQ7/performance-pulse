@@ -12,10 +12,12 @@ import { UserMenu } from '@/components/UserMenu';
 import { SuccessScreen } from '@/components/evaluation/SuccessScreen';
 import { EvaluationData, EmployeeInfo, QuantitativeData, QualitativeFactors, SummaryData } from '@/types/evaluation';
 
+const SUPABASE_URL = "https://qzwxisdfwswsrbzvpzlo.supabase.co";
+
 export const Dashboard = () => {
   const navigate = useNavigate();
   const { employeeId } = useAuth();
-  const { employee: authEmployee } = useAuthContext();
+  const { employee: authEmployee, token } = useAuthContext();
   const [isLoading, setIsLoading] = useState(true);
   const [hasSubordinates, setHasSubordinates] = useState(false);
   const [evaluationStatus, setEvaluationStatus] = useState<'none' | 'draft' | 'submitted' | 'reopened'>('none');
@@ -26,21 +28,27 @@ export const Dashboard = () => {
 
   useEffect(() => {
     const fetchUserData = async () => {
-      if (!employeeId) {
+      if (!employeeId || !token) {
         setIsLoading(false);
         return;
       }
 
       try {
-        // Check if user has any direct reports
-        const { count } = await supabase
-          .from('employees')
-          .select('id', { count: 'exact', head: true })
-          .eq('reports_to', employeeId)
-          .eq('benefit_class', 'salary')
-          .eq('is_active', true);
+        // Check if user has any direct reports via edge function
+        const subordinatesResponse = await fetch(
+          `${SUPABASE_URL}/functions/v1/team-hierarchy/check-subordinates`,
+          {
+            headers: {
+              'Authorization': `Bearer ${token}`,
+              'Content-Type': 'application/json'
+            }
+          }
+        );
 
-        setHasSubordinates((count || 0) > 0);
+        if (subordinatesResponse.ok) {
+          const { hasSubordinates: hasSubs } = await subordinatesResponse.json();
+          setHasSubordinates(hasSubs);
+        }
 
         // HR Admin status is already set from authEmployee.is_hr_admin (from JWT)
         // No need to query hr_admin_users table which has RLS blocking access
@@ -118,7 +126,7 @@ export const Dashboard = () => {
     };
 
     fetchUserData();
-  }, [employeeId]);
+  }, [employeeId, token]);
 
   // Loading state
   if (isLoading) {
