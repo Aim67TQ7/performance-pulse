@@ -1,4 +1,3 @@
-import { Navigate, useLocation } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import { Loader2 } from 'lucide-react';
 
@@ -7,8 +6,7 @@ interface ProtectedRouteProps {
 }
 
 export function ProtectedRoute({ children }: ProtectedRouteProps) {
-  const { isLoading, isAuthenticated, signIn } = useAuth();
-  const location = useLocation();
+  const { isLoading, isAuthenticated } = useAuth();
 
   if (isLoading) {
     return (
@@ -21,15 +19,20 @@ export function ProtectedRoute({ children }: ProtectedRouteProps) {
     );
   }
 
-  // If not authenticated, redirect to gate for SSO
+  // If not authenticated, show login link
   if (!isAuthenticated) {
-    // Use signIn which redirects to gate.buntinggpt.com
-    signIn();
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
         <div className="flex flex-col items-center gap-4">
-          <Loader2 className="w-8 h-8 animate-spin text-primary" />
-          <p className="text-muted-foreground">Redirecting to sign in...</p>
+          <p className="text-muted-foreground">
+            Please{' '}
+            <a 
+              href="https://gate.buntinggpt.com" 
+              className="text-primary underline hover:text-primary/80"
+            >
+              log in here
+            </a>
+          </p>
         </div>
       </div>
     );
