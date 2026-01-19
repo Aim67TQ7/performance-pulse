@@ -127,6 +127,27 @@ Deno.serve(async (req) => {
     const action = pathParts[pathParts.length - 1];
 
     // Route based on action
+    if (action === 'list' && req.method === 'GET') {
+      // List all employees (for HR admin view)
+      const { data: employees, error: listError } = await supabase
+        .from('employees')
+        .select('id, name_first, name_last, job_title, department, location, badge_number, user_email, employee_number, reports_to, is_active, hire_date, benefit_class, job_level')
+        .order('name_last', { ascending: true });
+
+      if (listError) {
+        console.error('List error:', listError);
+        return new Response(
+          JSON.stringify({ error: listError.message }),
+          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+
+      return new Response(
+        JSON.stringify({ employees: employees || [] }),
+        { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
     if (action === 'create' && req.method === 'POST') {
       const employee: EmployeePayload = await req.json();
       
