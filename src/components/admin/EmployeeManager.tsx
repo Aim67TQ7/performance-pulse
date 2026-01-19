@@ -1,5 +1,4 @@
 import { useState, useEffect, useMemo } from 'react';
-import { supabase } from '@/integrations/supabase/client';
 import { Database } from '@/integrations/supabase/types';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -88,45 +87,51 @@ export const EmployeeManager = () => {
   // State removed: importDialogOpen, syncDialogOpen (CSV/Sync features removed)
 
   useEffect(() => {
-    fetchEmployees();
-    fetchDepartments();
-  }, []);
+    if (token) {
+      fetchEmployees();
+    }
+  }, [token]);
 
   const fetchEmployees = async () => {
+    if (!token) {
+      setIsLoading(false);
+      return;
+    }
+    
     setIsLoading(true);
     try {
-      const { data, error } = await supabase
-        .from('employees')
-        .select('id, name_first, name_last, job_title, department, location, badge_number, user_email, employee_number, reports_to, is_active, hire_date, benefit_class, job_level')
-        .order('name_last', { ascending: true });
+      const response = await fetch(`${SUPABASE_URL}/functions/v1/manage-employees/list`, {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+        },
+      });
 
-      if (error) throw error;
-      setAllEmployees(data || []);
-      setEmployees(data || []);
+      const result = await response.json();
+      
+      if (!response.ok) {
+        throw new Error(result.error || 'Failed to fetch employees');
+      }
+
+      setAllEmployees(result.employees || []);
+      setEmployees(result.employees || []);
+      
+      // Extract unique departments from employees
+      const uniqueDepts = [...new Set(
+        (result.employees || [])
+          .map((e: Employee) => e.department)
+          .filter(Boolean) as string[]
+      )].sort();
+      setDepartments(uniqueDepts);
     } catch (error) {
       console.error('Error fetching employees:', error);
       toast({
         title: 'Error',
-        description: 'Failed to load employees.',
+        description: error instanceof Error ? error.message : 'Failed to load employees.',
         variant: 'destructive',
       });
     } finally {
       setIsLoading(false);
-    }
-  };
-
-  const fetchDepartments = async () => {
-    try {
-      const { data, error } = await supabase
-        .from('employees')
-        .select('department')
-        .not('department', 'is', null);
-
-      if (error) throw error;
-      const uniqueDepts = [...new Set(data?.map(d => d.department).filter(Boolean) as string[])].sort();
-      setDepartments(uniqueDepts);
-    } catch (error) {
-      console.error('Error fetching departments:', error);
     }
   };
 
@@ -603,7 +608,6 @@ export const EmployeeManager = () => {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-
     </>
   );
 };
