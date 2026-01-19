@@ -63,73 +63,44 @@ const SUPABASE_URL = "https://qzwxisdfwswsrbzvpzlo.supabase.co";
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [employee, setEmployee] = useState<Employee | null>(null);
   const [session, setSession] = useState<GateSession | null>(null);
+  const [internalToken, setInternalToken] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
   const isAuthenticated = !!employee && !!session;
   const employeeId = employee?.id || null;
-  const token = session?.access_token || null;
+  // Use internal JWT for edge functions, not the OAuth token
+  const token = internalToken;
 
-  // Fetch employee data from Supabase using email
-  const fetchEmployee = useCallback(async (email: string, accessToken: string): Promise<Employee | null> => {
+  // Verify SSO email and get internal JWT + employee data from edge function
+  const verifySsoAndGetToken = useCallback(async (email: string): Promise<{ token: string; employee: Employee } | null> => {
     try {
-      // Query the team-hierarchy endpoint to get employee data
-      // This uses our existing edge function that can look up by email
-      const response = await fetch(`${SUPABASE_URL}/functions/v1/team-hierarchy/verify-employee`, {
+      console.log('[AuthContext] Verifying SSO email via employee-auth/sso-verify:', email);
+      
+      const response = await fetch(`${SUPABASE_URL}/functions/v1/employee-auth/sso-verify`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${accessToken}`,
         },
         body: JSON.stringify({ email }),
       });
 
       if (response.ok) {
         const data = await response.json();
-        if (data.employee) {
-          return data.employee;
-        }
-      }
-
-      // Fallback: Query employees table directly via REST API
-      const restResponse = await fetch(
-        `${SUPABASE_URL}/rest/v1/employees?user_email=eq.${encodeURIComponent(email)}&is_active=eq.true&select=*`,
-        {
-          headers: {
-            'apikey': 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InF6d3hpc2Rmd3N3c3JienZwemxvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MzE1OTE3MDUsImV4cCI6MjA0NzE2NzcwNX0.EML4gM9VOFB6OofnuCnypxBldOVXj9z6oPX4J_LPFJI',
-            'Authorization': `Bearer ${accessToken}`,
-          },
-        }
-      );
-
-      if (restResponse.ok) {
-        const employees = await restResponse.json();
-        if (employees && employees.length > 0) {
-          const emp = employees[0];
+        if (data.token && data.employee) {
+          console.log('[AuthContext] SSO verification successful for:', email);
           return {
-            id: emp.id,
-            name_first: emp.name_first,
-            name_last: emp.name_last,
-            user_email: emp.user_email,
-            job_title: emp.job_title,
-            department: emp.department,
-            job_level: emp.job_level,
-            location: emp.location,
-            business_unit: emp.business_unit,
-            benefit_class: emp.benefit_class,
-            hire_date: emp.hire_date,
-            employee_number: emp.employee_number,
-            badge_number: emp.badge_number,
-            reports_to: emp.reports_to,
-            supervisor_name: null, // Would need another query
-            is_hr_admin: emp.is_hr_admin || false,
+            token: data.token,
+            employee: data.employee as Employee,
           };
         }
+      } else {
+        const errorData = await response.json().catch(() => ({}));
+        console.warn('[AuthContext] SSO verification failed:', response.status, errorData);
       }
 
-      console.warn('[AuthContext] No employee found for email:', email);
       return null;
     } catch (error) {
-      console.error('[AuthContext] Error fetching employee:', error);
+      console.error('[AuthContext] Error verifying SSO:', error);
       return null;
     }
   }, []);
@@ -156,33 +127,20 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           
           setSession(storedSession);
           
-          // Fetch employee data
-          const emp = await fetchEmployee(storedSession.user.email, storedSession.access_token);
-          if (emp) {
-            setEmployee(emp);
-            console.log('[AuthContext] Employee loaded:', emp.name_first, emp.name_last);
+          // Call SSO verify endpoint to get internal JWT and employee data
+          const ssoResult = await verifySsoAndGetToken(storedSession.user.email);
+          
+          if (ssoResult) {
+            setEmployee(ssoResult.employee);
+            setInternalToken(ssoResult.token);
+            console.log('[AuthContext] Employee loaded via SSO bridge:', ssoResult.employee.name_first, ssoResult.employee.name_last);
+            console.log('[AuthContext] Internal token set for edge function calls');
           } else {
-            console.warn('[AuthContext] No employee record found, but session is valid');
-            // Create a minimal employee from session data
-            const nameParts = (storedSession.user.user_metadata?.full_name || storedSession.user.user_metadata?.name || storedSession.user.email).split(' ');
-            setEmployee({
-              id: storedSession.user.id,
-              name_first: nameParts[0] || '',
-              name_last: nameParts.slice(1).join(' ') || '',
-              user_email: storedSession.user.email,
-              job_title: null,
-              department: null,
-              job_level: null,
-              location: null,
-              business_unit: null,
-              benefit_class: null,
-              hire_date: null,
-              employee_number: null,
-              badge_number: null,
-              reports_to: null,
-              supervisor_name: null,
-              is_hr_admin: false,
-            });
+            console.warn('[AuthContext] No employee record found for SSO email:', storedSession.user.email);
+            // Do NOT create minimal employee - this would cause benefit_class to be null
+            // and block access to evaluation. User must have an employee record.
+            setEmployee(null);
+            setInternalToken(null);
           }
         } else {
           console.log('[AuthContext] No valid session found');
@@ -196,7 +154,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     };
 
     initAuth();
-  }, [fetchEmployee]);
+  }, [verifySsoAndGetToken]);
 
   // Redirect to gate for sign-in
   const signIn = useCallback(() => {

@@ -64,7 +64,7 @@ const getInitialData = (): EvaluationData => ({
 });
 
 export const useEvaluation = () => {
-  const { employeeId: tokenEmployeeId, employee: authEmployee } = useAuth();
+  const { employeeId: tokenEmployeeId, employee: authEmployee, token: authToken } = useAuth();
   const [data, setData] = useState<EvaluationData>(getInitialData);
   const [isSaving, setIsSaving] = useState(false);
   const [lastSaved, setLastSaved] = useState<Date | null>(null);
@@ -124,7 +124,7 @@ export const useEvaluation = () => {
         const managerName = authEmployee.supervisor_name || '';
 
         // Check for existing evaluation via edge function (bypasses RLS)
-        const token = localStorage.getItem('pep_auth_token');
+        // Use the authToken from useAuth (SSO bridge token) instead of localStorage
         const supabaseUrl = "https://qzwxisdfwswsrbzvpzlo.supabase.co";
         
         let evalData = null;
@@ -136,7 +136,7 @@ export const useEvaluation = () => {
             {
               method: 'GET',
               headers: {
-                'Authorization': `Bearer ${token}`,
+                'Authorization': `Bearer ${authToken}`,
                 'Content-Type': 'application/json',
               },
             }
@@ -244,7 +244,7 @@ export const useEvaluation = () => {
     };
 
     loadData();
-  }, [tokenEmployeeId, authEmployee, logError]);
+  }, [tokenEmployeeId, authEmployee, authToken, logError]);
 
   // Save to localStorage helper (always available, no async)
   const saveToLocalStorage = useCallback((newData: EvaluationData) => {
@@ -293,20 +293,12 @@ export const useEvaluation = () => {
     return () => window.removeEventListener('beforeunload', handleBeforeUnload);
   }, [saveToLocalStorage]);
 
-  // Get auth token from localStorage (custom auth)
+  // Get auth token - now uses SSO bridge token from AuthContext
   const getAuthToken = useCallback(() => {
-    try {
-      // Matches AuthContext storage keys
-      return (
-        localStorage.getItem('pep_auth_token') ||
-        localStorage.getItem('pep_temp_token') ||
-        null
-      );
-    } catch {
-      console.error('[PEP] Could not get auth token');
-      return null;
-    }
-  }, []);
+    // Return the token from AuthContext (SSO bridge token)
+    // This is the internal JWT that works with edge functions
+    return authToken;
+  }, [authToken]);
 
   // Save to Supabase via edge function (bypasses RLS)
   const saveToDatabase = useCallback(async (newData: EvaluationData) => {
