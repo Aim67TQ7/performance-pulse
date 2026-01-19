@@ -17,3 +17,6 @@ verify_jwt = false
 
 [functions.team-hierarchy]
 verify_jwt = false
+
+[functions.manage-employees]
+verify_jwt = false
