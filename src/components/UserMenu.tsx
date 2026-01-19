@@ -23,16 +23,16 @@ export const UserMenu = () => {
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <Button variant="ghost" className="gap-2 px-2">
+        <Button variant="ghost" className="gap-2 px-2 hover:bg-white/10">
           <Avatar className="h-8 w-8">
             <AvatarFallback className="bg-primary text-primary-foreground text-sm font-medium">
               {initials || <User className="h-4 w-4" />}
             </AvatarFallback>
           </Avatar>
-          <span className="hidden sm:inline text-sm font-medium max-w-[120px] truncate">
+          <span className="hidden sm:inline text-sm font-medium max-w-[120px] truncate text-white">
             {fullName}
           </span>
-          <ChevronDown className="h-4 w-4 text-muted-foreground" />
+          <ChevronDown className="h-4 w-4 text-white/60" />
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="w-64 bg-popover border shadow-lg z-50">
