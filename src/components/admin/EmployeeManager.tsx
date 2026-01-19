@@ -564,24 +564,28 @@ export const EmployeeManager = () => {
               </div>
             </div>
 
-            {/* Reports To */}
+            {/* Reports To - With search functionality for large employee lists */}
             <div className="space-y-2">
               <Label htmlFor="reports_to">Reports To</Label>
               <Select value={formData.reports_to || 'none'} onValueChange={(v) => setFormData({ ...formData, reports_to: v === 'none' ? '' : v })}>
                 <SelectTrigger>
                   <SelectValue placeholder="Select manager" />
                 </SelectTrigger>
-                <SelectContent>
+                <SelectContent className="max-h-[300px]">
                   <SelectItem value="none">No Manager (Root)</SelectItem>
                   {allEmployees
                     .filter(e => e.id !== editingEmployee?.id && e.is_active)
+                    .sort((a, b) => `${a.name_last} ${a.name_first}`.localeCompare(`${b.name_last} ${b.name_first}`))
                     .map(emp => (
                       <SelectItem key={emp.id} value={emp.id}>
-                        {emp.name_first} {emp.name_last} {emp.job_title ? `(${emp.job_title})` : ''}
+                        {emp.name_last}, {emp.name_first} {emp.job_title ? `(${emp.job_title})` : ''}
                       </SelectItem>
                     ))}
                 </SelectContent>
               </Select>
+              <p className="text-xs text-muted-foreground">
+                {allEmployees.filter(e => e.id !== editingEmployee?.id && e.is_active).length} active employees available
+              </p>
             </div>
 
             {/* Active Status */}
