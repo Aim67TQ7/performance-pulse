@@ -134,81 +134,102 @@ The Performance Evaluation Portal (PEP) is a web-based employee self-assessment 
 
 ### Overview
 
-PEP uses a **custom email-based authentication system** that:
-- Bypasses Supabase's `auth.users` table
+PEP uses **cross-subdomain SSO authentication** via gate.buntinggpt.com with:
+- Microsoft Azure OAuth via Supabase Auth at the gate
+- Chunked cookie session storage for cross-subdomain sharing
+- Session data stored in `bunting-auth-token` cookies on `.buntinggpt.com`
+- Employee lookup from the `employees` table based on email
+
+### Legacy Authentication (Backup)
+
+The legacy custom email-based authentication system is preserved in `AuthContext.legacy.tsx`:
 - Uses the `employees` table directly as the user database
 - Issues custom JWTs signed with HMAC-SHA256
 - Stores passwords using PBKDF2 (100,000 iterations, SHA-256)
 
-### Authentication Flow
+### SSO Authentication Flow
 
 ```
-┌──────────┐         ┌──────────────────┐         ┌──────────────┐
-│  Client  │         │  employee-auth   │         │  employees   │
-│          │         │  Edge Function   │         │    table     │
-└────┬─────┘         └────────┬─────────┘         └──────┬───────┘
-     │                        │                          │
-     │  POST /login           │                          │
-     │  {email, password}     │                          │
-     │───────────────────────►│                          │
-     │                        │  SELECT by email         │
-     │                        │─────────────────────────►│
-     │                        │◄─────────────────────────│
-     │                        │                          │
-     │                        │  Verify PBKDF2 hash      │
-     │                        │                          │
-     │  {token, employee}     │                          │
-     │◄───────────────────────│                          │
-     │                        │                          │
-     │  Store in localStorage │                          │
-     │                        │                          │
+┌─────────────────┐         ┌─────────────────────┐         ┌──────────────┐
+│   self.app      │         │  gate.buntinggpt.com │         │  Supabase    │
+│ (PEP client)    │         │  (SSO Gateway)       │         │  Auth        │
+└────────┬────────┘         └──────────┬──────────┘         └──────┬───────┘
+         │                             │                           │
+         │  Not authenticated?         │                           │
+         │  Redirect to gate           │                           │
+         │────────────────────────────►│                           │
+         │                             │  OAuth redirect           │
+         │                             │──────────────────────────►│
+         │                             │                           │
+         │                             │  Microsoft Azure OAuth    │
+         │                             │◄──────────────────────────│
+         │                             │                           │
+         │                             │  Set chunked cookies      │
+         │                             │  on .buntinggpt.com       │
+         │                             │                           │
+         │  Redirect back + cookies    │                           │
+         │◄────────────────────────────│                           │
+         │                             │                           │
+         │  Read cookies, lookup       │                           │
+         │  employee by email          │                           │
+         │                             │                           │
 ```
 
-### JWT Token Structure
+### Cookie Chunking System
+
+Large session data is automatically split across multiple cookies:
+
+| Scenario | Behavior |
+|----------|----------|
+| Small session (< 3800 bytes) | Single `bunting-auth-token` cookie |
+| Large session (> 3800 bytes) | Split into `bunting-auth-token.0`, `.1`, etc. + `.count` |
+| Reading session | Check for `.count` first, reassemble if chunked, else read single |
+| Sign out | Delete single cookie + all chunks + count |
+
+### Cookie Attributes
+
+| Attribute | Value | Purpose |
+|-----------|-------|---------|
+| `path` | `/` | Available across all paths |
+| `domain` | `.buntinggpt.com` | Cross-subdomain sharing (production only) |
+| `max-age` | `31536000` | 1 year expiry |
+| `SameSite` | `Lax` | Security protection |
+| `Secure` | `true` | HTTPS only (production) |
+
+### Session Data Structure
 
 ```typescript
-interface JwtPayload {
-  employee_id: string;       // UUID of employee
-  email: string;             // Employee email
-  name: string;              // Full name
-  is_hr_admin: boolean;      // Admin privilege flag
-  iat: number;               // Issued at (Unix timestamp)
-  exp: number;               // Expiry (8 hours from issue)
+interface GateSession {
+  access_token: string;           // Supabase JWT
+  refresh_token?: string;         // For token refresh
+  expires_at?: number;            // Expiry timestamp
+  user: {
+    id: string;                   // Supabase user UUID
+    email: string;                // User email
+    user_metadata?: {
+      full_name?: string;         // From OAuth provider
+      name?: string;
+      avatar_url?: string;
+    };
+  };
 }
 ```
 
-### Password Storage
+### Cookie Session Utilities (`src/lib/cookieSession.ts`)
 
 ```typescript
-// PBKDF2 hashing (employee-auth edge function)
-async function hashPassword(password: string): Promise<string> {
-  const salt = crypto.getRandomValues(new Uint8Array(16));
-  const keyMaterial = await crypto.subtle.importKey("raw", encoder.encode(password), "PBKDF2", false, ["deriveBits"]);
-  const derivedBits = await crypto.subtle.deriveBits({
-    name: "PBKDF2",
-    salt: salt,
-    iterations: 100000,
-    hash: "SHA-256",
-  }, keyMaterial, 256);
-  // Combine salt + hash, encode as base64
-  return btoa(String.fromCharCode(...combined));
-}
+// Read session from cookies (handles chunked and single)
+readSession<T>(): T | null
+
+// Write session to cookies (auto-chunks if needed)
+writeSession<T>(data: T): void
+
+// Clear all session cookies
+clearSession(): void
+
+// Check if a session exists
+hasSession(): boolean
 ```
-
-### Token Storage Keys
-
-| Key | Purpose |
-|-----|---------|
-| `pep_auth_token` | Active session JWT |
-| `pep_temp_token` | Temporary token for password setup |
-| `pep_employee` | Cached employee data (JSON) |
-
-### Security Features
-
-- **Account lockout**: 5 failed attempts = 15-minute lockout
-- **Constant-time comparison**: Prevents timing attacks
-- **Token expiry**: 8-hour session lifetime
-- **Forced password change**: First login requires password setup
 
 ---
 
@@ -396,7 +417,6 @@ All edge functions are located in `supabase/functions/`.
 <Routes>
   {/* Public */}
   <Route path="/login" element={<Login />} />
-  <Route path="/set-password" element={<SetPassword />} />
   
   {/* Protected */}
   <Route path="/" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
@@ -414,10 +434,11 @@ All edge functions are located in `supabase/functions/`.
 
 | Component | Purpose |
 |-----------|---------|
-| `AuthContext` | Global auth state provider |
-| `ProtectedRoute` | Route guard for authenticated pages |
-| `Login` | Email/password login form |
-| `SetPassword` | First-time/reset password form |
+| `AuthContext` | Global auth state provider (SSO via gate.buntinggpt.com) |
+| `AuthContext.legacy` | Backup custom email/password auth |
+| `ProtectedRoute` | Route guard, redirects to gate for SSO |
+| `Login` | SSO redirect handler |
+| `cookieSession` | Chunked cookie read/write utilities |
 
 #### Evaluation Wizard
 
@@ -445,15 +466,18 @@ All edge functions are located in `supabase/functions/`.
 
 ```typescript
 interface AuthContextType {
-  employee: Employee | null;      // Current user data
+  employee: Employee | null;      // Current user data (from employees table)
   employeeId: string | null;      // UUID shortcut
   isLoading: boolean;             // Initial auth check
   isAuthenticated: boolean;       // Valid session
-  tempToken: string | null;       // Password setup flow
-  token: string | null;           // Active JWT
-  login: (email: string, password: string) => Promise<LoginResult>;
-  setPassword: (newPassword: string, currentPassword?: string) => Promise<SetPasswordResult>;
-  signOut: () => void;
+  tempToken: string | null;       // Not used with SSO (always null)
+  token: string | null;           // Supabase access token from gate
+  session: GateSession | null;    // Full session from gate cookies
+  signIn: () => void;             // Redirect to gate for SSO
+  signOut: () => void;            // Clear cookies + redirect to gate signout
+  // Legacy methods (redirect to gate)
+  login: (email: string, password: string) => Promise<{ success: boolean; error?: string }>;
+  setPassword: (newPassword: string, currentPassword?: string) => Promise<{ success: boolean; error?: string }>;
 }
 ```
 

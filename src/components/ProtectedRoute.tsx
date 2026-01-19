@@ -7,7 +7,7 @@ interface ProtectedRouteProps {
 }
 
 export function ProtectedRoute({ children }: ProtectedRouteProps) {
-  const { isLoading, isAuthenticated, tempToken } = useAuth();
+  const { isLoading, isAuthenticated, signIn } = useAuth();
   const location = useLocation();
 
   if (isLoading) {
@@ -21,14 +21,18 @@ export function ProtectedRoute({ children }: ProtectedRouteProps) {
     );
   }
 
-  // If has temp token, redirect to set-password
-  if (tempToken) {
-    return <Navigate to="/set-password" state={{ from: location }} replace />;
-  }
-
-  // If not authenticated, redirect to login
+  // If not authenticated, redirect to gate for SSO
   if (!isAuthenticated) {
-    return <Navigate to="/login" state={{ from: location }} replace />;
+    // Use signIn which redirects to gate.buntinggpt.com
+    signIn();
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="flex flex-col items-center gap-4">
+          <Loader2 className="w-8 h-8 animate-spin text-primary" />
+          <p className="text-muted-foreground">Redirecting to sign in...</p>
+        </div>
+      </div>
+    );
   }
 
   return <>{children}</>;
