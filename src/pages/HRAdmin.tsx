@@ -12,7 +12,7 @@ import { Loader2, Lock, Settings, Calendar, ArrowLeft, Save, Mail, Users, CheckC
 import { Link } from 'react-router-dom';
 import { toast } from '@/hooks/use-toast';
 import { VersionBadge } from '@/components/version/VersionBadge';
-import { UserMenu } from '@/components/UserMenu';
+import { FloatingNav } from '@/components/FloatingNav';
 import { HierarchyTree, HierarchyMember, buildHierarchyTree, countHierarchyStats } from '@/components/evaluation/HierarchyTree';
 import { CompetencyManager } from '@/components/admin/CompetencyManager';
 import { SurveyPreview } from '@/components/admin/SurveyPreview';
@@ -369,7 +369,8 @@ Thank you!`
       <Helmet>
         <title>HR Admin - Self Evaluation</title>
       </Helmet>
-      <div className="min-h-screen bg-background">
+      <FloatingNav />
+      <div className="min-h-screen bg-background pt-16">
         <div className="container mx-auto px-4 py-6 max-w-4xl">
           {/* Header */}
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
@@ -393,7 +394,6 @@ Thank you!`
                   Dashboard
                 </Link>
               </Button>
-              <UserMenu />
             </div>
           </div>
 

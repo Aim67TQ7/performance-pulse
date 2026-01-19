@@ -9,7 +9,7 @@ import { SubmitConfirmation } from './SubmitConfirmation';
 import { SuccessScreen } from './SuccessScreen';
 import { ReopenDialog } from './ReopenDialog';
 import { VersionBadge } from '@/components/version/VersionBadge';
-import { UserMenu } from '@/components/UserMenu';
+import { FloatingNav } from '@/components/FloatingNav';
 import { useEvaluation } from '@/hooks/useEvaluation';
 import { useAuth } from '@/hooks/useAuth';
 import { toast } from 'sonner';
@@ -193,30 +193,31 @@ export const EvaluationWizard = () => {
   }
 
   return (
-    <div className="min-h-screen bg-background py-8 px-4">
-      <div className="max-w-3xl mx-auto">
-        {/* Header */}
-        <div className="flex items-center justify-between mb-6">
-          <div className="flex items-center gap-4">
-            <img 
-              src="/bunting-logo.png" 
-              alt="Bunting Magnetics" 
-              className="h-14 w-auto"
-            />
-            <div>
-              <h1 className="text-2xl md:text-3xl font-display font-semibold text-foreground">
-                Performance Self-Evaluation
-              </h1>
-              <div className="flex items-center gap-2">
-                <p className="text-muted-foreground text-sm">
-                  Bunting Magnetics – Salaried Employees
-                </p>
-                <span className="text-muted-foreground">•</span>
-                <VersionBadge />
+    <>
+      <FloatingNav />
+      <div className="min-h-screen bg-background py-8 px-4 pt-20">
+        <div className="max-w-3xl mx-auto">
+          {/* Header */}
+          <div className="flex items-center justify-between mb-6">
+            <div className="flex items-center gap-4">
+              <img 
+                src="/bunting-logo.png" 
+                alt="Bunting Magnetics" 
+                className="h-14 w-auto"
+              />
+              <div>
+                <h1 className="text-2xl md:text-3xl font-display font-semibold text-foreground">
+                  Performance Self-Evaluation
+                </h1>
+                <div className="flex items-center gap-2">
+                  <p className="text-muted-foreground text-sm">
+                    Bunting Magnetics – Salaried Employees
+                  </p>
+                  <span className="text-muted-foreground">•</span>
+                  <VersionBadge />
+                </div>
               </div>
             </div>
-          </div>
-          <div className="flex items-center gap-2">
             {hasSubordinates && (
               <Button variant="outline" asChild>
                 <Link to="/team-status" className="gap-2">
@@ -225,9 +226,7 @@ export const EvaluationWizard = () => {
                 </Link>
               </Button>
             )}
-            <UserMenu />
           </div>
-        </div>
 
         {/* Read-only banner */}
         {isReadOnly && (
@@ -340,5 +339,6 @@ export const EvaluationWizard = () => {
         />
       </div>
     </div>
+    </>
   );
 };

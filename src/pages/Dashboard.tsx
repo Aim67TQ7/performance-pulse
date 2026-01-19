@@ -8,7 +8,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Loader2, FileText, Users, CheckCircle, ArrowRight, Settings } from 'lucide-react';
 import { VersionBadge } from '@/components/version/VersionBadge';
-import { UserMenu } from '@/components/UserMenu';
+import { FloatingNav } from '@/components/FloatingNav';
 import { SuccessScreen } from '@/components/evaluation/SuccessScreen';
 import { EvaluationData, EmployeeInfo, QuantitativeData, QualitativeFactors, SummaryData } from '@/types/evaluation';
 
@@ -170,30 +170,28 @@ export const Dashboard = () => {
         <title>Dashboard | Bunting PEP</title>
         <meta name="description" content="Performance Evaluation Process dashboard for managers" />
       </Helmet>
-      <div className="min-h-screen bg-background py-8 px-4">
+      <FloatingNav />
+      <div className="min-h-screen bg-background py-8 px-4 pt-20">
         <div className="max-w-4xl mx-auto">
           {/* Header */}
-          <div className="flex items-center justify-between mb-8">
-            <div className="flex items-center gap-4">
-              <img 
-                src="/bunting-logo.png" 
-                alt="Bunting Magnetics" 
-                className="h-14 w-auto"
-              />
-              <div>
-                <h1 className="text-2xl md:text-3xl font-display font-semibold text-foreground">
-                  Performance Evaluation Process
-                </h1>
-                <div className="flex items-center gap-2">
-                  <p className="text-muted-foreground text-sm">
-                    Bunting Magnetics – Manager Dashboard
-                  </p>
-                  <span className="text-muted-foreground">•</span>
-                  <VersionBadge />
-                </div>
+          <div className="flex items-center gap-4 mb-8">
+            <img 
+              src="/bunting-logo.png" 
+              alt="Bunting Magnetics" 
+              className="h-14 w-auto"
+            />
+            <div>
+              <h1 className="text-2xl md:text-3xl font-display font-semibold text-foreground">
+                Performance Evaluation Process
+              </h1>
+              <div className="flex items-center gap-2">
+                <p className="text-muted-foreground text-sm">
+                  Bunting Magnetics – Manager Dashboard
+                </p>
+                <span className="text-muted-foreground">•</span>
+                <VersionBadge />
               </div>
             </div>
-            <UserMenu />
           </div>
 
           {/* Dashboard Cards */}
