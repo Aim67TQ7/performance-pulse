@@ -1474,10 +1474,9 @@ export type Database = {
           location: string | null
           name_first: string
           name_last: string
-          reports_to: string | null
+          reports_to: string
           updated_at: string
           user_email: string | null
-          user_email_ci: string | null
           user_id: string | null
           work_category: string | null
         }
@@ -1503,10 +1502,9 @@ export type Database = {
           location?: string | null
           name_first: string
           name_last: string
-          reports_to?: string | null
+          reports_to?: string
           updated_at?: string
           user_email?: string | null
-          user_email_ci?: string | null
           user_id?: string | null
           work_category?: string | null
         }
@@ -1532,10 +1530,9 @@ export type Database = {
           location?: string | null
           name_first?: string
           name_last?: string
-          reports_to?: string | null
+          reports_to?: string
           updated_at?: string
           user_email?: string | null
-          user_email_ci?: string | null
           user_id?: string | null
           work_category?: string | null
         }
@@ -1682,100 +1679,6 @@ export type Database = {
           UUID?: string
         }
         Relationships: []
-      }
-      equipment_maintenance: {
-        Row: {
-          actual_cost: number | null
-          completed_at: string | null
-          created_at: string
-          downtime_hours: number | null
-          equipment_id: string
-          estimated_cost: number | null
-          id: string
-          is_from_checklist: boolean
-          issue_description: string
-          notes: string | null
-          parts_used: string | null
-          priority: string
-          reported_at: string
-          reported_by: string | null
-          response_id: string | null
-          started_at: string | null
-          status: string
-          submission_id: string | null
-          technician_name: string | null
-          updated_at: string
-          work_performed: string | null
-        }
-        Insert: {
-          actual_cost?: number | null
-          completed_at?: string | null
-          created_at?: string
-          downtime_hours?: number | null
-          equipment_id: string
-          estimated_cost?: number | null
-          id?: string
-          is_from_checklist?: boolean
-          issue_description: string
-          notes?: string | null
-          parts_used?: string | null
-          priority?: string
-          reported_at?: string
-          reported_by?: string | null
-          response_id?: string | null
-          started_at?: string | null
-          status?: string
-          submission_id?: string | null
-          technician_name?: string | null
-          updated_at?: string
-          work_performed?: string | null
-        }
-        Update: {
-          actual_cost?: number | null
-          completed_at?: string | null
-          created_at?: string
-          downtime_hours?: number | null
-          equipment_id?: string
-          estimated_cost?: number | null
-          id?: string
-          is_from_checklist?: boolean
-          issue_description?: string
-          notes?: string | null
-          parts_used?: string | null
-          priority?: string
-          reported_at?: string
-          reported_by?: string | null
-          response_id?: string | null
-          started_at?: string | null
-          status?: string
-          submission_id?: string | null
-          technician_name?: string | null
-          updated_at?: string
-          work_performed?: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "equipment_maintenance_equipment_id_fkey"
-            columns: ["equipment_id"]
-            isOneToOne: false
-            referencedRelation: "forklift_units"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "equipment_maintenance_response_id_fkey"
-            columns: ["response_id"]
-            isOneToOne: false
-            referencedRelation: "forklift_checklist_responses"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "equipment_maintenance_submission_id_fkey"
-            columns: ["submission_id"]
-            isOneToOne: false
-            referencedRelation: "forklift_checklist_submissions"
-            referencedColumns: ["id"]
-          },
-        ]
       }
       escalations: {
         Row: {
@@ -1971,33 +1874,24 @@ export type Database = {
       forklift_qualified_drivers: {
         Row: {
           badge_number: string
-          certified_date: string | null
           created_at: string | null
           driver_name: string
           id: string
           is_active: boolean | null
-          recertify_date: string | null
-          trainer: string | null
         }
         Insert: {
           badge_number: string
-          certified_date?: string | null
           created_at?: string | null
           driver_name: string
           id?: string
           is_active?: boolean | null
-          recertify_date?: string | null
-          trainer?: string | null
         }
         Update: {
           badge_number?: string
-          certified_date?: string | null
           created_at?: string | null
           driver_name?: string
           id?: string
           is_active?: boolean | null
-          recertify_date?: string | null
-          trainer?: string | null
         }
         Relationships: []
       }
