@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Loader2, Users, CheckCircle2, Clock, FileEdit, ArrowLeft, Mail, AlertTriangle } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { VersionBadge } from '@/components/version/VersionBadge';
-import { UserMenu } from '@/components/UserMenu';
+import { FloatingNav } from '@/components/FloatingNav';
 import { HierarchyTree, HierarchyMember, collectIncompleteEmails } from '@/components/evaluation/HierarchyTree';
 
 const SUPABASE_URL = "https://qzwxisdfwswsrbzvpzlo.supabase.co";
@@ -184,7 +184,8 @@ const TeamStatus = () => {
         <meta name="description" content="View your team's self-evaluation submission status." />
       </Helmet>
       
-      <div className="min-h-screen bg-background py-8 px-4">
+      <FloatingNav />
+      <div className="min-h-screen bg-background py-8 px-4 pt-20">
         <div className="max-w-4xl mx-auto">
           {/* Header */}
           <div className="flex items-center justify-between mb-6">
@@ -232,7 +233,6 @@ const TeamStatus = () => {
                   Dashboard
                 </Link>
               </Button>
-              <UserMenu />
             </div>
           </div>
 

@@ -163,15 +163,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     window.location.href = `${GATE_URL}/auth?redirect=${returnUrl}`;
   }, []);
 
-  // Sign out and clear cookies
+  // Sign out and redirect to gate
   const signOut = useCallback(() => {
     clearSession();
     setEmployee(null);
     setSession(null);
+    setInternalToken(null);
     
-    // Redirect to gate to sign out there too
-    const returnUrl = encodeURIComponent(SELF_URL);
-    window.location.href = `${GATE_URL}/auth/signout?redirect=${returnUrl}`;
+    // Redirect directly to gate
+    window.location.href = GATE_URL;
   }, []);
 
   // Legacy login method - redirects to gate

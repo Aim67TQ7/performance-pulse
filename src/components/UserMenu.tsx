@@ -1,20 +1,17 @@
-import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import { Button } from '@/components/ui/button';
 import {
   DropdownMenu,
   DropdownMenuContent,
-  DropdownMenuItem,
   DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
-import { LogOut, User, ChevronDown } from 'lucide-react';
+import { User, ChevronDown } from 'lucide-react';
 
 export const UserMenu = () => {
-  const navigate = useNavigate();
-  const { employee, signOut } = useAuth();
+  const { employee } = useAuth();
 
   if (!employee) {
     return null;
@@ -22,11 +19,6 @@ export const UserMenu = () => {
 
   const initials = `${employee.name_first?.[0] || ''}${employee.name_last?.[0] || ''}`.toUpperCase();
   const fullName = `${employee.name_first || ''} ${employee.name_last || ''}`.trim();
-
-  const handleLogout = () => {
-    // signOut redirects to gate.buntinggpt.com for SSO logout
-    signOut();
-  };
 
   return (
     <DropdownMenu>
@@ -63,11 +55,6 @@ export const UserMenu = () => {
             </div>
           </>
         )}
-        <DropdownMenuSeparator />
-        <DropdownMenuItem onClick={handleLogout} className="text-destructive focus:text-destructive cursor-pointer">
-          <LogOut className="mr-2 h-4 w-4" />
-          Log out
-        </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>
   );
