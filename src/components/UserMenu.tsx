@@ -24,8 +24,8 @@ export const UserMenu = () => {
   const fullName = `${employee.name_first || ''} ${employee.name_last || ''}`.trim();
 
   const handleLogout = () => {
+    // signOut redirects to gate.buntinggpt.com for SSO logout
     signOut();
-    navigate('/login');
   };
 
   return (

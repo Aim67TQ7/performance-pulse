@@ -1,12 +1,9 @@
 import React, { createContext, useContext, useEffect, useState, useCallback } from 'react';
+import { readSession, writeSession, clearSession, hasSession } from '@/lib/cookieSession';
 
-const AUTH_TOKEN_KEY = 'pep_auth_token';
-const TEMP_TOKEN_KEY = 'pep_temp_token';
-const EMPLOYEE_KEY = 'pep_employee';
-
-// Use relative URL for edge functions (works with Supabase client)
-const SUPABASE_URL = "https://qzwxisdfwswsrbzvpzlo.supabase.co";
-const AUTH_API_URL = `${SUPABASE_URL}/functions/v1/employee-auth`;
+// Gate URL for OAuth
+const GATE_URL = 'https://gate.buntinggpt.com';
+const SELF_URL = 'https://self.buntinggpt.com';
 
 export interface Employee {
   id: string;
@@ -27,16 +24,20 @@ export interface Employee {
   is_hr_admin: boolean;
 }
 
-export interface LoginResult {
-  success: boolean;
-  error?: string;
-  requiresPasswordSetup?: boolean;
-  mustSetPassword?: boolean;
-}
-
-export interface SetPasswordResult {
-  success: boolean;
-  error?: string;
+// Session data from gate.buntinggpt.com
+interface GateSession {
+  access_token: string;
+  refresh_token?: string;
+  expires_at?: number;
+  user: {
+    id: string;
+    email: string;
+    user_metadata?: {
+      full_name?: string;
+      name?: string;
+      avatar_url?: string;
+    };
+  };
 }
 
 interface AuthContextType {
@@ -46,175 +47,184 @@ interface AuthContextType {
   isAuthenticated: boolean;
   tempToken: string | null;
   token: string | null;
-  login: (email: string, password: string) => Promise<LoginResult>;
-  setPassword: (newPassword: string, currentPassword?: string) => Promise<SetPasswordResult>;
+  session: GateSession | null;
+  signIn: () => void;
   signOut: () => void;
+  // Legacy methods (for compatibility, but will redirect to gate)
+  login: (email: string, password: string) => Promise<{ success: boolean; error?: string }>;
+  setPassword: (newPassword: string, currentPassword?: string) => Promise<{ success: boolean; error?: string }>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
+// Supabase URL for employee lookup
+const SUPABASE_URL = "https://qzwxisdfwswsrbzvpzlo.supabase.co";
+
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [employee, setEmployee] = useState<Employee | null>(null);
+  const [session, setSession] = useState<GateSession | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-  const [tempToken, setTempToken] = useState<string | null>(null);
-  const [token, setToken] = useState<string | null>(null);
 
-  const isAuthenticated = !!employee && !tempToken;
+  const isAuthenticated = !!employee && !!session;
   const employeeId = employee?.id || null;
+  const token = session?.access_token || null;
 
-  // Initialize from localStorage
+  // Fetch employee data from Supabase using email
+  const fetchEmployee = useCallback(async (email: string, accessToken: string): Promise<Employee | null> => {
+    try {
+      // Query the team-hierarchy endpoint to get employee data
+      // This uses our existing edge function that can look up by email
+      const response = await fetch(`${SUPABASE_URL}/functions/v1/team-hierarchy/verify-employee`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${accessToken}`,
+        },
+        body: JSON.stringify({ email }),
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        if (data.employee) {
+          return data.employee;
+        }
+      }
+
+      // Fallback: Query employees table directly via REST API
+      const restResponse = await fetch(
+        `${SUPABASE_URL}/rest/v1/employees?user_email=eq.${encodeURIComponent(email)}&is_active=eq.true&select=*`,
+        {
+          headers: {
+            'apikey': 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InF6d3hpc2Rmd3N3c3JienZwemxvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MzE1OTE3MDUsImV4cCI6MjA0NzE2NzcwNX0.EML4gM9VOFB6OofnuCnypxBldOVXj9z6oPX4J_LPFJI',
+            'Authorization': `Bearer ${accessToken}`,
+          },
+        }
+      );
+
+      if (restResponse.ok) {
+        const employees = await restResponse.json();
+        if (employees && employees.length > 0) {
+          const emp = employees[0];
+          return {
+            id: emp.id,
+            name_first: emp.name_first,
+            name_last: emp.name_last,
+            user_email: emp.user_email,
+            job_title: emp.job_title,
+            department: emp.department,
+            job_level: emp.job_level,
+            location: emp.location,
+            business_unit: emp.business_unit,
+            benefit_class: emp.benefit_class,
+            hire_date: emp.hire_date,
+            employee_number: emp.employee_number,
+            badge_number: emp.badge_number,
+            reports_to: emp.reports_to,
+            supervisor_name: null, // Would need another query
+            is_hr_admin: emp.is_hr_admin || false,
+          };
+        }
+      }
+
+      console.warn('[AuthContext] No employee found for email:', email);
+      return null;
+    } catch (error) {
+      console.error('[AuthContext] Error fetching employee:', error);
+      return null;
+    }
+  }, []);
+
+  // Initialize from cookies
   useEffect(() => {
     const initAuth = async () => {
       try {
-        const storedToken = localStorage.getItem(AUTH_TOKEN_KEY);
-        const storedTempToken = localStorage.getItem(TEMP_TOKEN_KEY);
-        const storedEmployee = localStorage.getItem(EMPLOYEE_KEY);
-
-        if (storedTempToken && storedEmployee) {
-          // User has temp token - needs to set password
-          setTempToken(storedTempToken);
-          setEmployee(JSON.parse(storedEmployee));
-          setIsLoading(false);
-          return;
-        }
-
-        if (storedToken) {
-          // Verify token is still valid
-          const response = await fetch(`${AUTH_API_URL}/verify-token`, {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              'Authorization': `Bearer ${storedToken}`
-            }
-          });
-
-          const data = await response.json();
-
-          if (data.valid && data.employee) {
-            setEmployee(data.employee);
-            setToken(storedToken);
-            localStorage.setItem(EMPLOYEE_KEY, JSON.stringify(data.employee));
-            
-            // Check if password reset is required
-            if (data.must_set_password) {
-              setTempToken(storedToken);
-              localStorage.setItem(TEMP_TOKEN_KEY, storedToken);
-              localStorage.removeItem(AUTH_TOKEN_KEY);
-            }
-          } else {
-            // Token invalid - clear storage
-            localStorage.removeItem(AUTH_TOKEN_KEY);
-            localStorage.removeItem(EMPLOYEE_KEY);
+        console.log('[AuthContext] Initializing auth...');
+        
+        // Read session from chunked cookies
+        const storedSession = readSession<GateSession>();
+        
+        if (storedSession && storedSession.access_token && storedSession.user) {
+          console.log('[AuthContext] Found session for:', storedSession.user.email);
+          
+          // Check if session is expired
+          if (storedSession.expires_at && Date.now() / 1000 > storedSession.expires_at) {
+            console.log('[AuthContext] Session expired, clearing...');
+            clearSession();
+            setIsLoading(false);
+            return;
           }
+          
+          setSession(storedSession);
+          
+          // Fetch employee data
+          const emp = await fetchEmployee(storedSession.user.email, storedSession.access_token);
+          if (emp) {
+            setEmployee(emp);
+            console.log('[AuthContext] Employee loaded:', emp.name_first, emp.name_last);
+          } else {
+            console.warn('[AuthContext] No employee record found, but session is valid');
+            // Create a minimal employee from session data
+            const nameParts = (storedSession.user.user_metadata?.full_name || storedSession.user.user_metadata?.name || storedSession.user.email).split(' ');
+            setEmployee({
+              id: storedSession.user.id,
+              name_first: nameParts[0] || '',
+              name_last: nameParts.slice(1).join(' ') || '',
+              user_email: storedSession.user.email,
+              job_title: null,
+              department: null,
+              job_level: null,
+              location: null,
+              business_unit: null,
+              benefit_class: null,
+              hire_date: null,
+              employee_number: null,
+              badge_number: null,
+              reports_to: null,
+              supervisor_name: null,
+              is_hr_admin: false,
+            });
+          }
+        } else {
+          console.log('[AuthContext] No valid session found');
         }
       } catch (error) {
         console.error('[AuthContext] Init error:', error);
-        localStorage.removeItem(AUTH_TOKEN_KEY);
-        localStorage.removeItem(EMPLOYEE_KEY);
+        clearSession();
       } finally {
         setIsLoading(false);
       }
     };
 
     initAuth();
+  }, [fetchEmployee]);
+
+  // Redirect to gate for sign-in
+  const signIn = useCallback(() => {
+    const currentUrl = typeof window !== 'undefined' ? window.location.href : SELF_URL;
+    const returnUrl = encodeURIComponent(currentUrl);
+    window.location.href = `${GATE_URL}/auth?redirect=${returnUrl}`;
   }, []);
 
-  const login = useCallback(async (email: string, password: string): Promise<LoginResult> => {
-    try {
-      const response = await fetch(`${AUTH_API_URL}/login`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, password })
-      });
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        return { 
-          success: false, 
-          error: data.error || 'Login failed' 
-        };
-      }
-
-      // First-time login - no password set
-      if (data.requires_password_setup) {
-        setTempToken(data.temp_token);
-        setEmployee(data.employee);
-        localStorage.setItem(TEMP_TOKEN_KEY, data.temp_token);
-        localStorage.setItem(EMPLOYEE_KEY, JSON.stringify(data.employee));
-        return { success: true, requiresPasswordSetup: true };
-      }
-
-      // Successful login
-      localStorage.setItem(AUTH_TOKEN_KEY, data.token);
-      localStorage.setItem(EMPLOYEE_KEY, JSON.stringify(data.employee));
-      localStorage.removeItem(TEMP_TOKEN_KEY);
-      setEmployee(data.employee);
-      setToken(data.token);
-      setTempToken(null);
-
-      if (data.must_set_password) {
-        setTempToken(data.token);
-        localStorage.setItem(TEMP_TOKEN_KEY, data.token);
-        localStorage.removeItem(AUTH_TOKEN_KEY);
-        return { success: true, mustSetPassword: true };
-      }
-
-      return { success: true };
-    } catch (error) {
-      console.error('[AuthContext] Login error:', error);
-      return { success: false, error: 'Network error. Please try again.' };
-    }
-  }, []);
-
-  const setPasswordFn = useCallback(async (newPassword: string, currentPassword?: string): Promise<SetPasswordResult> => {
-    const token = tempToken || localStorage.getItem(AUTH_TOKEN_KEY);
-    
-    if (!token) {
-      return { success: false, error: 'Not authenticated' };
-    }
-
-    try {
-      const response = await fetch(`${AUTH_API_URL}/set-password`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
-        body: JSON.stringify({ 
-          new_password: newPassword,
-          current_password: currentPassword 
-        })
-      });
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        return { success: false, error: data.error || 'Failed to set password' };
-      }
-
-      // Update with new token
-      localStorage.setItem(AUTH_TOKEN_KEY, data.token);
-      localStorage.setItem(EMPLOYEE_KEY, JSON.stringify(data.employee));
-      localStorage.removeItem(TEMP_TOKEN_KEY);
-      setEmployee(data.employee);
-      setToken(data.token);
-      setTempToken(null);
-
-      return { success: true };
-    } catch (error) {
-      console.error('[AuthContext] Set password error:', error);
-      return { success: false, error: 'Network error. Please try again.' };
-    }
-  }, [tempToken]);
-
+  // Sign out and clear cookies
   const signOut = useCallback(() => {
-    localStorage.removeItem(AUTH_TOKEN_KEY);
-    localStorage.removeItem(TEMP_TOKEN_KEY);
-    localStorage.removeItem(EMPLOYEE_KEY);
+    clearSession();
     setEmployee(null);
-    setToken(null);
-    setTempToken(null);
+    setSession(null);
+    
+    // Redirect to gate to sign out there too
+    const returnUrl = encodeURIComponent(SELF_URL);
+    window.location.href = `${GATE_URL}/auth/signout?redirect=${returnUrl}`;
+  }, []);
+
+  // Legacy login method - redirects to gate
+  const login = useCallback(async (_email: string, _password: string) => {
+    signIn();
+    return { success: false, error: 'Redirecting to sign-in...' };
+  }, [signIn]);
+
+  // Legacy setPassword method - not supported with SSO
+  const setPassword = useCallback(async (_newPassword: string, _currentPassword?: string) => {
+    return { success: false, error: 'Password management is handled by your organization' };
   }, []);
 
   return (
@@ -223,11 +233,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       employeeId, 
       isLoading, 
       isAuthenticated,
-      tempToken,
+      tempToken: null, // Not used with SSO
       token,
-      login, 
-      setPassword: setPasswordFn,
-      signOut 
+      session,
+      signIn,
+      signOut,
+      login,
+      setPassword,
     }}>
       {children}
     </AuthContext.Provider>
