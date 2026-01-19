@@ -555,6 +555,80 @@ serve(async (req) => {
       );
     }
 
+    // POST /sso-verify - Verify SSO email and issue internal JWT for edge functions
+    if (req.method === "POST" && path === "/sso-verify") {
+      const { email } = await req.json();
+
+      if (!email) {
+        return new Response(
+          JSON.stringify({ error: "Email is required" }),
+          { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
+      // Find employee by email
+      const { data: employee, error: findError } = await supabase
+        .from("employees")
+        .select("id, name_first, name_last, user_email, job_title, department, job_level, location, business_unit, benefit_class, hire_date, employee_number, badge_number, is_active, reports_to, is_hr_admin")
+        .eq("user_email", email.toLowerCase().trim())
+        .eq("is_active", true)
+        .maybeSingle();
+
+      if (findError) {
+        console.error("[employee-auth/sso-verify] Database error:", findError);
+        return new Response(
+          JSON.stringify({ error: "Database error" }),
+          { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
+      if (!employee) {
+        console.log("[employee-auth/sso-verify] No active employee found for email:", email);
+        return new Response(
+          JSON.stringify({ error: "No employee record found for this email", code: "EMPLOYEE_NOT_FOUND" }),
+          { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
+      // Create internal JWT compatible with other edge functions
+      const token = await createJWT({
+        employee_id: employee.id,
+        email: employee.user_email,
+        name: `${employee.name_first} ${employee.name_last}`,
+        is_hr_admin: employee.is_hr_admin || false
+      });
+
+      // Lookup supervisor name
+      const supervisorName = await getSupervisorName(supabase, employee.reports_to);
+
+      console.log("[employee-auth/sso-verify] Successfully verified SSO for:", email);
+
+      return new Response(
+        JSON.stringify({
+          token,
+          employee: {
+            id: employee.id,
+            name_first: employee.name_first,
+            name_last: employee.name_last,
+            user_email: employee.user_email,
+            job_title: employee.job_title,
+            department: employee.department,
+            job_level: employee.job_level,
+            location: employee.location,
+            business_unit: employee.business_unit,
+            benefit_class: employee.benefit_class,
+            hire_date: employee.hire_date,
+            employee_number: employee.employee_number,
+            badge_number: employee.badge_number,
+            reports_to: employee.reports_to,
+            supervisor_name: supervisorName,
+            is_hr_admin: employee.is_hr_admin || false
+          }
+        }),
+        { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
     // POST /admin/set-default-passwords - Set default password for all employees
     if (req.method === "POST" && path === "/admin/set-default-passwords") {
       const { admin_key, default_password } = await req.json();
