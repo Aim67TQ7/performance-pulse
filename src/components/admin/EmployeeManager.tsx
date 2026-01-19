@@ -10,9 +10,7 @@ import { Switch } from '@/components/ui/switch';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Loader2, Plus, Pencil, Search, UserPlus, Users, ChevronLeft, ChevronRight, Upload, RefreshCw } from 'lucide-react';
-import { EmployeeImport } from './EmployeeImport';
-import { AuthUserSync } from './AuthUserSync';
+import { Loader2, Pencil, Search, UserPlus, Users, ChevronLeft, ChevronRight } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/useAuth';
 
@@ -87,8 +85,7 @@ export const EmployeeManager = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<'all' | 'active' | 'inactive'>('active');
   const [currentPage, setCurrentPage] = useState(1);
-  const [importDialogOpen, setImportDialogOpen] = useState(false);
-  const [syncDialogOpen, setSyncDialogOpen] = useState(false);
+  // State removed: importDialogOpen, syncDialogOpen (CSV/Sync features removed)
 
   useEffect(() => {
     fetchEmployees();
@@ -303,20 +300,10 @@ export const EmployeeManager = () => {
                 Add, edit, and manage employee records ({filteredEmployees.length} employees)
               </CardDescription>
             </div>
-            <div className="flex gap-2">
-              <Button variant="outline" onClick={() => setSyncDialogOpen(true)} className="gap-2">
-                <RefreshCw className="w-4 h-4" />
-                Sync from Auth
-              </Button>
-              <Button variant="outline" onClick={() => setImportDialogOpen(true)} className="gap-2">
-                <Upload className="w-4 h-4" />
-                Import CSV
-              </Button>
-              <Button onClick={handleOpenCreate} className="gap-2">
-                <UserPlus className="w-4 h-4" />
-                Add Employee
-              </Button>
-            </div>
+            <Button onClick={handleOpenCreate} className="gap-2">
+              <UserPlus className="w-4 h-4" />
+              Add Employee
+            </Button>
           </div>
         </CardHeader>
         <CardContent className="space-y-4">
@@ -617,17 +604,6 @@ export const EmployeeManager = () => {
         </DialogContent>
       </Dialog>
 
-      <EmployeeImport
-        open={importDialogOpen}
-        onOpenChange={setImportDialogOpen}
-        onImportComplete={fetchEmployees}
-      />
-
-      <AuthUserSync
-        open={syncDialogOpen}
-        onOpenChange={setSyncDialogOpen}
-        onSyncComplete={fetchEmployees}
-      />
     </>
   );
 };
