@@ -6677,6 +6677,16 @@ export type Database = {
         Args: { _review_id: string; _user_id: string }
         Returns: boolean
       }
+      search_customers_fuzzy: {
+        Args: { match_limit?: number; search_query: string }
+        Returns: {
+          Address: string
+          "Cust ID": string
+          Customer: string
+          Latitude: number
+          Longitude: number
+        }[]
+      }
       search_magsep_by_keywords: {
         Args: { search_keywords: string[] }
         Returns: {
@@ -6716,6 +6726,8 @@ export type Database = {
           source_doc: string
         }[]
       }
+      show_limit: { Args: never; Returns: number }
+      show_trgm: { Args: { "": string }; Returns: string[] }
       update_employee_data: {
         Args: {
           city_param: string
