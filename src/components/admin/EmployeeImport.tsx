@@ -1,6 +1,6 @@
 import { useState, useCallback } from 'react';
-import { supabase } from '@/integrations/supabase/client';
-import { parseCSV, ParsedEmployee, ParseResult } from '@/lib/csvParser';
+import { useAuth } from '@/hooks/useAuth';
+import { parseCSV, ParseResult } from '@/lib/csvParser';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -11,7 +11,6 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Upload, FileSpreadsheet, AlertCircle, CheckCircle2, Loader2, X, Users } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
-
 interface EmployeeImportProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -29,6 +28,7 @@ interface ImportResult {
 type ImportState = 'idle' | 'parsed' | 'importing' | 'complete';
 
 export const EmployeeImport = ({ open, onOpenChange, onImportComplete }: EmployeeImportProps) => {
+  const { token } = useAuth();
   const [state, setState] = useState<ImportState>('idle');
   const [parseResult, setParseResult] = useState<ParseResult | null>(null);
   const [importResult, setImportResult] = useState<ImportResult | null>(null);
@@ -81,23 +81,27 @@ export const EmployeeImport = ({ open, onOpenChange, onImportComplete }: Employe
   const handleImport = async () => {
     if (!parseResult?.employees.length) return;
 
+    if (!token) {
+      toast({
+        title: 'Not authenticated',
+        description: 'Please log in and try again.',
+        variant: 'destructive',
+      });
+      return;
+    }
+
     setState('importing');
     setProgress(0);
 
     try {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session) {
-        throw new Error('Not authenticated');
-      }
-
-      // Call edge function
+      // Call edge function with internal JWT
       const response = await fetch(
         `https://qzwxisdfwswsrbzvpzlo.supabase.co/functions/v1/import-employees`,
         {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
-            'Authorization': `Bearer ${session.access_token}`,
+            'Authorization': `Bearer ${token}`,
           },
           body: JSON.stringify({ employees: parseResult.employees }),
         }
