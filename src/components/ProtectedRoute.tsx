@@ -1,5 +1,6 @@
 import { useEffect } from 'react';
 import { useAuth } from '@/hooks/useAuth';
+import { purgeAllAuthCookies } from '@/lib/supabase-storage';
 import { Loader2 } from 'lucide-react';
 import { BuntingGPTBrand } from './BuntingGPTBrand';
 
@@ -15,12 +16,10 @@ export function ProtectedRoute({ children }: ProtectedRouteProps) {
   useEffect(() => {
     // Redirect to gate with return URL when not authenticated and not loading
     if (!isLoading && !isAuthenticated) {
+      // Purge stale cookies before redirecting to gate
+      purgeAllAuthCookies();
       const returnUrl = encodeURIComponent(window.location.href);
-      // Small delay to prevent flash of redirect
-      const timer = setTimeout(() => {
-        window.location.href = `${GATE_URL}?returnUrl=${returnUrl}`;
-      }, 100);
-      return () => clearTimeout(timer);
+      window.location.href = `${GATE_URL}?returnUrl=${returnUrl}`;
     }
   }, [isLoading, isAuthenticated]);
 
