@@ -679,7 +679,7 @@ const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
 
 ### Supabase Edge Functions
 
-Deployed via Supabase CLI or Lovable's auto-deploy:
+Deployed via Supabase CLI:
 
 ```bash
 # Manual deployment
