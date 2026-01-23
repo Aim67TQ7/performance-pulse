@@ -9,7 +9,6 @@ import Dashboard from "./pages/Dashboard";
 import Evaluation from "./pages/Evaluation";
 import TeamStatus from "./pages/TeamStatus";
 import HRAdmin from "./pages/HRAdmin";
-import Login from "./pages/Login";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -22,9 +21,6 @@ const App = () => (
         <Sonner position="top-center" />
         <BrowserRouter>
           <Routes>
-            {/* Public routes */}
-            <Route path="/login" element={<Login />} />
-            
             {/* Protected routes */}
             <Route path="/" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
             <Route path="/evaluation" element={<ProtectedRoute><Evaluation /></ProtectedRoute>} />
