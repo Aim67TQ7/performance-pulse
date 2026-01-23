@@ -256,6 +256,7 @@ export type Database = {
           id: string
           iframe_height: string | null
           is_active: boolean | null
+          is_featured: boolean | null
           is_new: boolean | null
           license: string | null
           name: string
@@ -281,6 +282,7 @@ export type Database = {
           id?: string
           iframe_height?: string | null
           is_active?: boolean | null
+          is_featured?: boolean | null
           is_new?: boolean | null
           license?: string | null
           name: string
@@ -306,6 +308,7 @@ export type Database = {
           id?: string
           iframe_height?: string | null
           is_active?: boolean | null
+          is_featured?: boolean | null
           is_new?: boolean | null
           license?: string | null
           name?: string
@@ -624,6 +627,41 @@ export type Database = {
           },
         ]
       }
+      badge_users: {
+        Row: {
+          auth_user_id: string | null
+          badge_number: string
+          created_at: string | null
+          employee_id: string
+          id: string
+          updated_at: string | null
+        }
+        Insert: {
+          auth_user_id?: string | null
+          badge_number: string
+          created_at?: string | null
+          employee_id: string
+          id?: string
+          updated_at?: string | null
+        }
+        Update: {
+          auth_user_id?: string | null
+          badge_number?: string
+          created_at?: string | null
+          employee_id?: string
+          id?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "badge_users_employee_id_fkey"
+            columns: ["employee_id"]
+            isOneToOne: true
+            referencedRelation: "employees"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       baq_stoplight: {
         Row: {
           Asm: number | null
@@ -669,6 +707,48 @@ export type Database = {
           "Prod. Qty"?: number | null
           "Start Date"?: string | null
           uuid?: string
+        }
+        Relationships: []
+      }
+      bot_registry: {
+        Row: {
+          created_at: string
+          description: string
+          display_name: string
+          enabled: boolean
+          id: string
+          knowledge_source: Json
+          name: string
+          priority: number
+          system_prompt: string
+          trigger_patterns: string[] | null
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          description: string
+          display_name: string
+          enabled?: boolean
+          id?: string
+          knowledge_source: Json
+          name: string
+          priority?: number
+          system_prompt: string
+          trigger_patterns?: string[] | null
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          description?: string
+          display_name?: string
+          enabled?: boolean
+          id?: string
+          knowledge_source?: Json
+          name?: string
+          priority?: number
+          system_prompt?: string
+          trigger_patterns?: string[] | null
+          updated_at?: string
         }
         Relationships: []
       }
@@ -898,6 +978,39 @@ export type Database = {
         }
         Relationships: []
       }
+      chat_feedback: {
+        Row: {
+          assistant_message_id: string
+          comment: string | null
+          conversation_history: Json
+          created_at: string | null
+          id: string
+          rating: string
+          session_id: string | null
+          user_agent: string | null
+        }
+        Insert: {
+          assistant_message_id: string
+          comment?: string | null
+          conversation_history: Json
+          created_at?: string | null
+          id?: string
+          rating: string
+          session_id?: string | null
+          user_agent?: string | null
+        }
+        Update: {
+          assistant_message_id?: string
+          comment?: string | null
+          conversation_history?: Json
+          created_at?: string | null
+          id?: string
+          rating?: string
+          session_id?: string | null
+          user_agent?: string | null
+        }
+        Relationships: []
+      }
       conversation_starters: {
         Row: {
           character_id: string
@@ -966,7 +1079,7 @@ export type Database = {
       corrections: {
         Row: {
           applied: boolean | null
-          conversation_id: string
+          conversation_id: string | null
           correction_text: string
           created_at: string
           id: string
@@ -974,11 +1087,11 @@ export type Database = {
           keywords: string[] | null
           message_id: string
           topic: string | null
-          user_id: string
+          user_id: string | null
         }
         Insert: {
           applied?: boolean | null
-          conversation_id: string
+          conversation_id?: string | null
           correction_text: string
           created_at?: string
           id?: string
@@ -986,11 +1099,11 @@ export type Database = {
           keywords?: string[] | null
           message_id: string
           topic?: string | null
-          user_id: string
+          user_id?: string | null
         }
         Update: {
           applied?: boolean | null
-          conversation_id?: string
+          conversation_id?: string | null
           correction_text?: string
           created_at?: string
           id?: string
@@ -998,7 +1111,7 @@ export type Database = {
           keywords?: string[] | null
           message_id?: string
           topic?: string | null
-          user_id?: string
+          user_id?: string | null
         }
         Relationships: []
       }
@@ -1620,6 +1733,84 @@ export type Database = {
           created_at?: string | null
           id?: string
           name?: string
+        }
+        Relationships: []
+      }
+      epicor_open_orders: {
+        Row: {
+          buy_to_order: boolean | null
+          created_at: string | null
+          credit_override: boolean | null
+          customer_name: string | null
+          id: string
+          is_make: boolean | null
+          line_desc: string | null
+          need_by_date: string | null
+          order_date: string | null
+          order_line: number | null
+          order_num: number | null
+          part_num: string | null
+          plant: string | null
+          po_line: number | null
+          po_num: number | null
+          raw_data: Json | null
+          req_date: string | null
+          row_ident: string | null
+          ship_to_address: string | null
+          ship_to_city: string | null
+          ship_to_name: string | null
+          ship_to_state: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          buy_to_order?: boolean | null
+          created_at?: string | null
+          credit_override?: boolean | null
+          customer_name?: string | null
+          id?: string
+          is_make?: boolean | null
+          line_desc?: string | null
+          need_by_date?: string | null
+          order_date?: string | null
+          order_line?: number | null
+          order_num?: number | null
+          part_num?: string | null
+          plant?: string | null
+          po_line?: number | null
+          po_num?: number | null
+          raw_data?: Json | null
+          req_date?: string | null
+          row_ident?: string | null
+          ship_to_address?: string | null
+          ship_to_city?: string | null
+          ship_to_name?: string | null
+          ship_to_state?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          buy_to_order?: boolean | null
+          created_at?: string | null
+          credit_override?: boolean | null
+          customer_name?: string | null
+          id?: string
+          is_make?: boolean | null
+          line_desc?: string | null
+          need_by_date?: string | null
+          order_date?: string | null
+          order_line?: number | null
+          order_num?: number | null
+          part_num?: string | null
+          plant?: string | null
+          po_line?: number | null
+          po_num?: number | null
+          raw_data?: Json | null
+          req_date?: string | null
+          row_ident?: string | null
+          ship_to_address?: string | null
+          ship_to_city?: string | null
+          ship_to_name?: string | null
+          ship_to_state?: string | null
+          updated_at?: string | null
         }
         Relationships: []
       }
@@ -2819,6 +3010,48 @@ export type Database = {
         }
         Relationships: []
       }
+      mto_cell_value_history: {
+        Row: {
+          cell_value_id: string
+          id: string
+          modified_at: string
+          modified_by: string | null
+          new_value: string | null
+          previous_value: string | null
+        }
+        Insert: {
+          cell_value_id: string
+          id?: string
+          modified_at?: string
+          modified_by?: string | null
+          new_value?: string | null
+          previous_value?: string | null
+        }
+        Update: {
+          cell_value_id?: string
+          id?: string
+          modified_at?: string
+          modified_by?: string | null
+          new_value?: string | null
+          previous_value?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "mto_cell_value_history_cell_value_id_fkey"
+            columns: ["cell_value_id"]
+            isOneToOne: false
+            referencedRelation: "mto_project_cell_values"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "mto_cell_value_history_modified_by_fkey"
+            columns: ["modified_by"]
+            isOneToOne: false
+            referencedRelation: "employees"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       mto_daily: {
         Row: {
           book_to_bill: number | null
@@ -2922,6 +3155,7 @@ export type Database = {
           id: string
           incoming: number | null
           month: string | null
+          site_data: Json | null
         }
         Insert: {
           created_at?: string | null
@@ -2929,6 +3163,7 @@ export type Database = {
           id?: string
           incoming?: number | null
           month?: string | null
+          site_data?: Json | null
         }
         Update: {
           created_at?: string | null
@@ -2936,6 +3171,7 @@ export type Database = {
           id?: string
           incoming?: number | null
           month?: string | null
+          site_data?: Json | null
         }
         Relationships: []
       }
@@ -2956,6 +3192,178 @@ export type Database = {
           timestamp?: string
         }
         Relationships: []
+      }
+      mto_project_cell_values: {
+        Row: {
+          column_id: string
+          composite_key: string
+          id: string
+          last_modified_at: string
+          last_modified_by: string | null
+          project_id: string
+          value: string | null
+        }
+        Insert: {
+          column_id: string
+          composite_key: string
+          id?: string
+          last_modified_at?: string
+          last_modified_by?: string | null
+          project_id: string
+          value?: string | null
+        }
+        Update: {
+          column_id?: string
+          composite_key?: string
+          id?: string
+          last_modified_at?: string
+          last_modified_by?: string | null
+          project_id?: string
+          value?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "mto_project_cell_values_last_modified_by_fkey"
+            columns: ["last_modified_by"]
+            isOneToOne: false
+            referencedRelation: "employees"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "mto_project_cell_values_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "mto_projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      mto_project_columns: {
+        Row: {
+          column_name: string
+          column_type: string
+          created_at: string
+          created_by: string | null
+          display_order: number
+          id: string
+          project_id: string
+          status_options: Json | null
+        }
+        Insert: {
+          column_name: string
+          column_type: string
+          created_at?: string
+          created_by?: string | null
+          display_order?: number
+          id?: string
+          project_id: string
+          status_options?: Json | null
+        }
+        Update: {
+          column_name?: string
+          column_type?: string
+          created_at?: string
+          created_by?: string | null
+          display_order?: number
+          id?: string
+          project_id?: string
+          status_options?: Json | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "mto_project_columns_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "employees"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "mto_project_columns_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "mto_projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      mto_project_items: {
+        Row: {
+          composite_key: string | null
+          created_at: string
+          customer_id: string | null
+          id: string
+          item_type: string
+          line_number: number | null
+          order_number: number | null
+          project_id: string
+        }
+        Insert: {
+          composite_key?: string | null
+          created_at?: string
+          customer_id?: string | null
+          id?: string
+          item_type: string
+          line_number?: number | null
+          order_number?: number | null
+          project_id: string
+        }
+        Update: {
+          composite_key?: string | null
+          created_at?: string
+          customer_id?: string | null
+          id?: string
+          item_type?: string
+          line_number?: number | null
+          order_number?: number | null
+          project_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "mto_project_items_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "mto_projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      mto_projects: {
+        Row: {
+          color: string | null
+          created_at: string
+          id: string
+          is_active: boolean
+          name: string
+          owner_id: string | null
+          updated_at: string
+        }
+        Insert: {
+          color?: string | null
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          name: string
+          owner_id?: string | null
+          updated_at?: string
+        }
+        Update: {
+          color?: string | null
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          name?: string
+          owner_id?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "mto_projects_owner_id_fkey"
+            columns: ["owner_id"]
+            isOneToOne: false
+            referencedRelation: "employees"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       mto_shipclerk: {
         Row: {
@@ -3089,6 +3497,99 @@ export type Database = {
           "Ship By"?: string | null
           Site?: number | null
           Terms?: string | null
+        }
+        Relationships: []
+      }
+      "MTO-openorders": {
+        Row: {
+          _company: string | null
+          customer_custid: string | null
+          customer_custnum: number | null
+          customer_name: string | null
+          id: number
+          orderdtl_linedesc: string | null
+          orderdtl_openline: boolean | null
+          orderhed_creditoverride: boolean | null
+          orderhed_entryperson: string | null
+          orderhed_orderdate: string | null
+          orderhed_plant: string | null
+          orderhed_ponum: string | null
+          orderhed_shipviacode: string | null
+          orderrel_buytoorder: boolean | null
+          orderrel_make: boolean | null
+          orderrel_needbydate: string | null
+          orderrel_orderline: number | null
+          orderrel_ordernum: number | null
+          orderrel_partnum: string | null
+          orderrel_poline: number | null
+          orderrel_ponum: number | null
+          orderrel_reqdate: string | null
+          rowident: string | null
+          shipto_address1: string | null
+          shipto_city: string | null
+          shipto_name: string | null
+          shipto_state: string | null
+          synced_at: string | null
+        }
+        Insert: {
+          _company?: string | null
+          customer_custid?: string | null
+          customer_custnum?: number | null
+          customer_name?: string | null
+          id?: number
+          orderdtl_linedesc?: string | null
+          orderdtl_openline?: boolean | null
+          orderhed_creditoverride?: boolean | null
+          orderhed_entryperson?: string | null
+          orderhed_orderdate?: string | null
+          orderhed_plant?: string | null
+          orderhed_ponum?: string | null
+          orderhed_shipviacode?: string | null
+          orderrel_buytoorder?: boolean | null
+          orderrel_make?: boolean | null
+          orderrel_needbydate?: string | null
+          orderrel_orderline?: number | null
+          orderrel_ordernum?: number | null
+          orderrel_partnum?: string | null
+          orderrel_poline?: number | null
+          orderrel_ponum?: number | null
+          orderrel_reqdate?: string | null
+          rowident?: string | null
+          shipto_address1?: string | null
+          shipto_city?: string | null
+          shipto_name?: string | null
+          shipto_state?: string | null
+          synced_at?: string | null
+        }
+        Update: {
+          _company?: string | null
+          customer_custid?: string | null
+          customer_custnum?: number | null
+          customer_name?: string | null
+          id?: number
+          orderdtl_linedesc?: string | null
+          orderdtl_openline?: boolean | null
+          orderhed_creditoverride?: boolean | null
+          orderhed_entryperson?: string | null
+          orderhed_orderdate?: string | null
+          orderhed_plant?: string | null
+          orderhed_ponum?: string | null
+          orderhed_shipviacode?: string | null
+          orderrel_buytoorder?: boolean | null
+          orderrel_make?: boolean | null
+          orderrel_needbydate?: string | null
+          orderrel_orderline?: number | null
+          orderrel_ordernum?: number | null
+          orderrel_partnum?: string | null
+          orderrel_poline?: number | null
+          orderrel_ponum?: number | null
+          orderrel_reqdate?: string | null
+          rowident?: string | null
+          shipto_address1?: string | null
+          shipto_city?: string | null
+          shipto_name?: string | null
+          shipto_state?: string | null
+          synced_at?: string | null
         }
         Relationships: []
       }
