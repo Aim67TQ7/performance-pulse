@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useEffect, useState, useCallback } from 'react';
-import { readSession, writeSession, clearSession, hasSession } from '@/lib/cookieSession';
+import { readSession, clearSession, ensureCleanAuthState, purgeAllAuthCookies } from '@/lib/supabase-storage';
 
 // Gate URL for OAuth
 const GATE_URL = 'https://gate.buntinggpt.com';
@@ -111,6 +111,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       try {
         console.log('[AuthContext] Initializing auth...');
         
+        // Ensure clean auth state - purges stale/invalid cookies
+        const hasValidToken = ensureCleanAuthState();
+        if (!hasValidToken) {
+          console.log('[AuthContext] No valid token found after cleanup');
+          setIsLoading(false);
+          return;
+        }
+        
         // Read session from chunked cookies
         const storedSession = readSession<GateSession>();
         
@@ -165,7 +173,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   // Sign out and redirect to gate
   const signOut = useCallback(() => {
-    clearSession();
+    purgeAllAuthCookies();
     setEmployee(null);
     setSession(null);
     setInternalToken(null);
