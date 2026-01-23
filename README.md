@@ -98,4 +98,4 @@ Additional documentation available in `/docs`:
 
 ---
 
-Built with [Lovable](https://lovable.dev)
+Built by Bunting Magnetics Co.
