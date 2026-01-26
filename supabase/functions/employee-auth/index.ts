@@ -233,7 +233,7 @@ serve(async (req) => {
       const { data: employee, error: findError } = await supabase
         .from("employees")
         .select("id, name_first, name_last, user_email, job_title, department, job_level, location, business_unit, benefit_class, hire_date, employee_number, badge_number, badge_pin_hash, badge_pin_attempts, badge_pin_locked_until, badge_pin_is_default, is_active, reports_to, is_hr_admin")
-        .eq("user_email", email.toLowerCase().trim())
+        .eq("user_email_ci", email.toLowerCase().trim())
         .eq("is_active", true)
         .maybeSingle();
 
