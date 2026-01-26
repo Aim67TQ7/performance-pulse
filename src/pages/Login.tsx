@@ -4,11 +4,8 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { BuntingGPTBrand } from '@/components/BuntingGPTBrand';
-import { Loader2, Mail, ShieldCheck, Eye, EyeOff } from 'lucide-react';
+import { Loader2, Mail, Eye, EyeOff } from 'lucide-react';
 import { useAuthContext } from '@/contexts/AuthContext';
-
-const GATE_URL = 'https://gate.buntinggpt.com';
-const SELF_URL = 'https://self.buntinggpt.com';
 
 export default function Login() {
   const navigate = useNavigate();
@@ -38,11 +35,6 @@ export default function Login() {
     navigate('/', { replace: true });
     return null;
   }
-
-  const handleSsoLogin = () => {
-    const returnUrl = encodeURIComponent(SELF_URL);
-    window.location.href = `${GATE_URL}?returnUrl=${returnUrl}`;
-  };
 
   const handleEmailLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -201,28 +193,6 @@ export default function Login() {
 
         {/* Login Card */}
         <div className="bg-white/5 border border-white/10 rounded-xl p-6 space-y-6">
-          {/* SSO Button */}
-          <Button 
-            onClick={handleSsoLogin}
-            className="w-full h-12 bg-[#0078D4] hover:bg-[#106EBE] text-white font-medium"
-            disabled={isLoading}
-          >
-            <ShieldCheck className="w-5 h-5 mr-2" />
-            Sign in with Microsoft
-          </Button>
-
-          {/* Divider */}
-          <div className="relative">
-            <div className="absolute inset-0 flex items-center">
-              <div className="w-full border-t border-white/20"></div>
-            </div>
-            <div className="relative flex justify-center text-sm">
-              <span className="px-4 bg-[#1A1A2E] text-white/50">
-                or sign in with email
-              </span>
-            </div>
-          </div>
-
           {/* Email Login Form */}
           <form onSubmit={handleEmailLogin} className="space-y-4">
             <div className="space-y-2">
@@ -234,7 +204,7 @@ export default function Login() {
                 <Input
                   id="email"
                   type="email"
-                  placeholder="you@bfrp.com"
+                  placeholder="you@buntingmagnetics.com"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   className="pl-10 bg-white/5 border-white/20 text-white placeholder:text-white/40 focus:border-[#6B9BD2]"
@@ -287,7 +257,7 @@ export default function Login() {
                   Signing in...
                 </>
               ) : (
-                'Sign in with Email'
+                'Sign In'
               )}
             </Button>
           </form>
