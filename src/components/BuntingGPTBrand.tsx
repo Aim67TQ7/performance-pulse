@@ -1,4 +1,5 @@
 import { cn } from '@/lib/utils';
+import buntingLogo from '@/assets/bunting-logo.png';
 
 interface BuntingGPTBrandProps {
   href?: string;
@@ -12,9 +13,9 @@ export const BuntingGPTBrand = ({
   className
 }: BuntingGPTBrandProps) => {
   const sizes = {
-    sm: { circle: 'w-5 h-5', text: 'text-base' },
-    md: { circle: 'w-6 h-6', text: 'text-lg' },
-    lg: { circle: 'w-8 h-8', text: 'text-xl' },
+    sm: { logo: 'w-6 h-6', text: 'text-base' },
+    md: { logo: 'w-8 h-8', text: 'text-lg' },
+    lg: { logo: 'w-10 h-10', text: 'text-xl' },
   };
   
   return (
@@ -25,7 +26,11 @@ export const BuntingGPTBrand = ({
         className
       )}
     >
-      <div className={cn(sizes[size].circle, "rounded-full bg-[#E31B23]")} />
+      <img 
+        src={buntingLogo} 
+        alt="Bunting" 
+        className={cn(sizes[size].logo, "object-contain")} 
+      />
       <span className={cn(sizes[size].text, "font-semibold tracking-tight")}>
         <span className="text-white">Bunting</span>
         <span className="text-[#6B9BD2]">GPT</span>

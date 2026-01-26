@@ -11,7 +11,7 @@ const SUPABASE_URL = "https://qzwxisdfwswsrbzvpzlo.supabase.co";
 const AUTH_API_URL = `${SUPABASE_URL}/functions/v1/employee-auth`;
 
 export function PasswordManagement() {
-  const [defaultPassword, setDefaultPassword] = useState('Welcome2Bunting!');
+  const [defaultPassword, setDefaultPassword] = useState('1Bunting!');
   const [isSettingAll, setIsSettingAll] = useState(false);
   const [lastResult, setLastResult] = useState<{ success: boolean; message: string } | null>(null);
   const [confirmAction, setConfirmAction] = useState(false);
