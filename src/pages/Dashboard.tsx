@@ -170,7 +170,7 @@ export const Dashboard = () => {
         <title>Dashboard | Bunting PEP</title>
         <meta name="description" content="Performance Evaluation Process dashboard for managers" />
       </Helmet>
-      <FloatingNav />
+      <FloatingNav breadcrumbs={[{ label: 'Dashboard' }]} />
       <div className="min-h-screen bg-background py-8 px-4 pt-20">
         <div className="max-w-4xl mx-auto">
           {/* Header */}

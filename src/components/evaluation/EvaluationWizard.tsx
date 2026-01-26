@@ -194,7 +194,7 @@ export const EvaluationWizard = () => {
 
   return (
     <>
-      <FloatingNav />
+      <FloatingNav breadcrumbs={[{ label: 'Self-Evaluation' }]} />
       <div className="min-h-screen bg-background py-8 px-4 pt-20">
         <div className="max-w-3xl mx-auto">
           {/* Header */}
