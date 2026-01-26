@@ -32,9 +32,9 @@ export const QuantitativeStep = ({ data, onUpdate, showErrors = false }: Quantit
     ? data.performanceObjectives 
     : [];
 
-  // Validation helpers
+  // Validation helpers - only Performance Objective field is required
   const hasCompleteObjective = objectives.some(
-    obj => obj.objective.trim() && obj.measurableTarget.trim() && obj.actual.trim()
+    obj => obj.objective.trim()
   );
   const hasAccomplishments = !!data.workAccomplishments?.trim();
   
