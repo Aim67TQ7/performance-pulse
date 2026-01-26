@@ -13,6 +13,7 @@ const JWT_SECRET = Deno.env.get("JWT_SECRET") || Deno.env.get("SUPABASE_SERVICE_
 const MAX_LOGIN_ATTEMPTS = 5;
 const LOCKOUT_DURATION_MINUTES = 15;
 const TOKEN_EXPIRY_HOURS = 8;
+const DEFAULT_PASSWORD = "1Bunting!";
 
 // Helper to lookup supervisor name by ID
 // deno-lint-ignore no-explicit-any
@@ -261,41 +262,61 @@ serve(async (req) => {
 
       // Check if password is set
       if (!employee.badge_pin_hash) {
-      // No password set - this is first login, generate temp token for password setup
-        const tempToken = await createJWT({
-          employee_id: employee.id,
-          email: employee.user_email,
-          temp: true,
-          purpose: "set_password"
-        });
+        // No password hash - check if user is trying to log in with default password
+        if (password === DEFAULT_PASSWORD) {
+          // Auto-set the default password hash for this user
+          const hashedPassword = await hashPassword(DEFAULT_PASSWORD);
+          await supabase
+            .from("employees")
+            .update({
+              badge_pin_hash: hashedPassword,
+              badge_pin_is_default: true,
+              badge_pin_attempts: 0,
+              badge_pin_locked_until: null
+            })
+            .eq("id", employee.id);
 
-        // Lookup supervisor name
-        const supervisorName = await getSupervisorName(supabase, employee.reports_to);
+          // Create token and return with must_set_password flag
+          const token = await createJWT({
+            employee_id: employee.id,
+            email: employee.user_email,
+            name: `${employee.name_first} ${employee.name_last}`,
+            is_hr_admin: employee.is_hr_admin || false
+          });
 
+          const supervisorName = await getSupervisorName(supabase, employee.reports_to);
+
+          return new Response(
+            JSON.stringify({
+              token,
+              must_set_password: true,
+              employee: {
+                id: employee.id,
+                name_first: employee.name_first,
+                name_last: employee.name_last,
+                user_email: employee.user_email,
+                job_title: employee.job_title,
+                department: employee.department,
+                job_level: employee.job_level,
+                location: employee.location,
+                business_unit: employee.business_unit,
+                benefit_class: employee.benefit_class,
+                hire_date: employee.hire_date,
+                employee_number: employee.employee_number,
+                badge_number: employee.badge_number,
+                reports_to: employee.reports_to,
+                supervisor_name: supervisorName,
+                is_hr_admin: employee.is_hr_admin || false
+              }
+            }),
+            { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          );
+        }
+
+        // No password set and wrong password provided
         return new Response(
-          JSON.stringify({
-            requires_password_setup: true,
-            temp_token: tempToken,
-            employee: {
-              id: employee.id,
-              name_first: employee.name_first,
-              name_last: employee.name_last,
-              user_email: employee.user_email,
-              job_title: employee.job_title,
-              department: employee.department,
-              job_level: employee.job_level,
-              location: employee.location,
-              business_unit: employee.business_unit,
-              benefit_class: employee.benefit_class,
-              hire_date: employee.hire_date,
-              employee_number: employee.employee_number,
-              badge_number: employee.badge_number,
-              reports_to: employee.reports_to,
-              supervisor_name: supervisorName,
-              is_hr_admin: employee.is_hr_admin || false
-            }
-          }),
-          { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          JSON.stringify({ error: "Invalid email or password" }),
+          { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
         );
       }
 
