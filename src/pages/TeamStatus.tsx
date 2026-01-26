@@ -184,7 +184,7 @@ const TeamStatus = () => {
         <meta name="description" content="View your team's self-evaluation submission status." />
       </Helmet>
       
-      <FloatingNav />
+      <FloatingNav breadcrumbs={[{ label: 'Team Status' }]} />
       <div className="min-h-screen bg-background py-8 px-4 pt-20">
         <div className="max-w-4xl mx-auto">
           {/* Header */}
