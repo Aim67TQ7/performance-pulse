@@ -5,6 +5,10 @@ import { readSession, clearSession, ensureCleanAuthState, purgeAllAuthCookies } 
 const GATE_URL = 'https://gate.buntinggpt.com';
 const SELF_URL = 'https://self.buntinggpt.com';
 
+// LocalStorage keys for badge auth
+const BADGE_TOKEN_KEY = 'pep_auth_token';
+const BADGE_EMPLOYEE_KEY = 'pep_employee';
+
 export interface Employee {
   id: string;
   name_first: string;
@@ -40,17 +44,21 @@ interface GateSession {
   };
 }
 
+type AuthMethod = 'sso' | 'badge' | null;
+
 interface AuthContextType {
   employee: Employee | null;
   employeeId: string | null;
   isLoading: boolean;
   isAuthenticated: boolean;
+  authMethod: AuthMethod;
   tempToken: string | null;
   token: string | null;
   session: GateSession | null;
   signIn: () => void;
   signOut: () => void;
-  // Legacy methods (for compatibility, but will redirect to gate)
+  loginWithBadge: (badgeNumber: string, pin: string) => Promise<{ success: boolean; error?: string }>;
+  // Legacy methods (for compatibility)
   login: (email: string, password: string) => Promise<{ success: boolean; error?: string }>;
   setPassword: (newPassword: string, currentPassword?: string) => Promise<{ success: boolean; error?: string }>;
 }
@@ -64,11 +72,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [employee, setEmployee] = useState<Employee | null>(null);
   const [session, setSession] = useState<GateSession | null>(null);
   const [internalToken, setInternalToken] = useState<string | null>(null);
+  const [authMethod, setAuthMethod] = useState<AuthMethod>(null);
   const [isLoading, setIsLoading] = useState(true);
 
-  const isAuthenticated = !!employee && !!session;
+  const isAuthenticated = !!employee && !!internalToken;
   const employeeId = employee?.id || null;
-  // Use internal JWT for edge functions, not the OAuth token
   const token = internalToken;
 
   // Verify SSO email and get internal JWT + employee data from edge function
@@ -105,92 +113,180 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   }, []);
 
-  // Initialize from cookies
+  // Verify badge token from localStorage
+  const verifyBadgeToken = useCallback(async (storedToken: string): Promise<{ employee: Employee } | null> => {
+    try {
+      console.log('[AuthContext] Verifying badge token...');
+      
+      const response = await fetch(`${SUPABASE_URL}/functions/v1/employee-auth/verify-token`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${storedToken}`,
+        },
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        if (data.valid && data.employee) {
+          console.log('[AuthContext] Badge token valid for:', data.employee.name_first);
+          return { employee: data.employee as Employee };
+        }
+      }
+
+      return null;
+    } catch (error) {
+      console.error('[AuthContext] Error verifying badge token:', error);
+      return null;
+    }
+  }, []);
+
+  // Initialize from cookies (SSO) or localStorage (badge)
   useEffect(() => {
     const initAuth = async () => {
       try {
         console.log('[AuthContext] Initializing auth...');
         
-        // Ensure clean auth state - purges stale/invalid cookies
-        const hasValidToken = ensureCleanAuthState();
-        if (!hasValidToken) {
-          console.log('[AuthContext] No valid token found after cleanup');
-          setIsLoading(false);
-          return;
+        // First check SSO session from cookies
+        const hasValidSsoToken = ensureCleanAuthState();
+        if (hasValidSsoToken) {
+          const storedSession = readSession<GateSession>();
+          
+          if (storedSession && storedSession.access_token && storedSession.user) {
+            console.log('[AuthContext] Found SSO session for:', storedSession.user.email);
+            
+            // Check if session is expired
+            if (storedSession.expires_at && Date.now() / 1000 > storedSession.expires_at) {
+              console.log('[AuthContext] SSO session expired, clearing...');
+              clearSession();
+            } else {
+              setSession(storedSession);
+              
+              // Call SSO verify endpoint to get internal JWT and employee data
+              const ssoResult = await verifySsoAndGetToken(storedSession.user.email);
+              
+              if (ssoResult) {
+                setEmployee(ssoResult.employee);
+                setInternalToken(ssoResult.token);
+                setAuthMethod('sso');
+                console.log('[AuthContext] SSO auth complete for:', ssoResult.employee.name_first);
+                setIsLoading(false);
+                return;
+              } else {
+                console.warn('[AuthContext] No employee record found for SSO email');
+              }
+            }
+          }
         }
         
-        // Read session from chunked cookies
-        const storedSession = readSession<GateSession>();
-        
-        if (storedSession && storedSession.access_token && storedSession.user) {
-          console.log('[AuthContext] Found session for:', storedSession.user.email);
+        // Then check badge token from localStorage
+        const badgeToken = localStorage.getItem(BADGE_TOKEN_KEY);
+        if (badgeToken) {
+          const badgeResult = await verifyBadgeToken(badgeToken);
           
-          // Check if session is expired
-          if (storedSession.expires_at && Date.now() / 1000 > storedSession.expires_at) {
-            console.log('[AuthContext] Session expired, clearing...');
-            clearSession();
+          if (badgeResult) {
+            setEmployee(badgeResult.employee);
+            setInternalToken(badgeToken);
+            setAuthMethod('badge');
+            console.log('[AuthContext] Badge auth complete for:', badgeResult.employee.name_first);
             setIsLoading(false);
             return;
-          }
-          
-          setSession(storedSession);
-          
-          // Call SSO verify endpoint to get internal JWT and employee data
-          const ssoResult = await verifySsoAndGetToken(storedSession.user.email);
-          
-          if (ssoResult) {
-            setEmployee(ssoResult.employee);
-            setInternalToken(ssoResult.token);
-            console.log('[AuthContext] Employee loaded via SSO bridge:', ssoResult.employee.name_first, ssoResult.employee.name_last);
-            console.log('[AuthContext] Internal token set for edge function calls');
           } else {
-            console.warn('[AuthContext] No employee record found for SSO email:', storedSession.user.email);
-            // Do NOT create minimal employee - this would cause benefit_class to be null
-            // and block access to evaluation. User must have an employee record.
-            setEmployee(null);
-            setInternalToken(null);
+            // Invalid token, clear it
+            localStorage.removeItem(BADGE_TOKEN_KEY);
+            localStorage.removeItem(BADGE_EMPLOYEE_KEY);
           }
-        } else {
-          console.log('[AuthContext] No valid session found');
         }
+
+        console.log('[AuthContext] No valid session found');
       } catch (error) {
         console.error('[AuthContext] Init error:', error);
         clearSession();
+        localStorage.removeItem(BADGE_TOKEN_KEY);
+        localStorage.removeItem(BADGE_EMPLOYEE_KEY);
       } finally {
         setIsLoading(false);
       }
     };
 
     initAuth();
-  }, [verifySsoAndGetToken]);
+  }, [verifySsoAndGetToken, verifyBadgeToken]);
 
-  // Redirect to gate for sign-in
+  // Login with badge number and PIN
+  const loginWithBadge = useCallback(async (badgeNumber: string, pin: string): Promise<{ success: boolean; error?: string }> => {
+    try {
+      console.log('[AuthContext] Attempting badge login for:', badgeNumber);
+      
+      const response = await fetch(`${SUPABASE_URL}/functions/v1/employee-auth/badge-login`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ badge_number: badgeNumber, pin }),
+      });
+
+      const data = await response.json();
+
+      if (response.ok && data.token && data.employee) {
+        // Store token and employee in localStorage
+        localStorage.setItem(BADGE_TOKEN_KEY, data.token);
+        localStorage.setItem(BADGE_EMPLOYEE_KEY, JSON.stringify(data.employee));
+        
+        setEmployee(data.employee as Employee);
+        setInternalToken(data.token);
+        setAuthMethod('badge');
+        
+        console.log('[AuthContext] Badge login successful for:', data.employee.name_first);
+        return { success: true };
+      }
+
+      return { 
+        success: false, 
+        error: data.error || 'Login failed' 
+      };
+    } catch (error) {
+      console.error('[AuthContext] Badge login error:', error);
+      return { success: false, error: 'Network error. Please try again.' };
+    }
+  }, []);
+
+  // Redirect to gate for SSO sign-in
   const signIn = useCallback(() => {
     const currentUrl = typeof window !== 'undefined' ? window.location.href : SELF_URL;
     const returnUrl = encodeURIComponent(currentUrl);
     window.location.href = `${GATE_URL}/auth?redirect=${returnUrl}`;
   }, []);
 
-  // Sign out and redirect to gate
+  // Sign out and clear all session data
   const signOut = useCallback(() => {
+    // Clear SSO session
     purgeAllAuthCookies();
+    
+    // Clear badge session
+    localStorage.removeItem(BADGE_TOKEN_KEY);
+    localStorage.removeItem(BADGE_EMPLOYEE_KEY);
+    
     setEmployee(null);
     setSession(null);
     setInternalToken(null);
+    setAuthMethod(null);
     
-    // Redirect directly to gate
-    window.location.href = GATE_URL;
+    // Redirect to login page
+    window.location.href = '/login';
   }, []);
 
-  // Legacy login method - redirects to gate
-  const login = useCallback(async (_email: string, _password: string) => {
-    signIn();
-    return { success: false, error: 'Redirecting to sign-in...' };
-  }, [signIn]);
+  // Legacy login method - use badge login
+  const login = useCallback(async (email: string, password: string) => {
+    // For legacy compatibility, try badge login if email looks like a badge number
+    if (email && password) {
+      return loginWithBadge(email, password);
+    }
+    return { success: false, error: 'Invalid credentials' };
+  }, [loginWithBadge]);
 
-  // Legacy setPassword method - not supported with SSO
+  // Legacy setPassword method
   const setPassword = useCallback(async (_newPassword: string, _currentPassword?: string) => {
-    return { success: false, error: 'Password management is handled by your organization' };
+    return { success: false, error: 'Password management is handled by your administrator' };
   }, []);
 
   return (
@@ -199,11 +295,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       employeeId, 
       isLoading, 
       isAuthenticated,
-      tempToken: null, // Not used with SSO
+      authMethod,
+      tempToken: null,
       token,
       session,
       signIn,
       signOut,
+      loginWithBadge,
       login,
       setPassword,
     }}>

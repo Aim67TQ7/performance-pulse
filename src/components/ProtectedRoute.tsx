@@ -1,6 +1,6 @@
 import { useEffect } from 'react';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
-import { purgeAllAuthCookies } from '@/lib/supabase-storage';
 import { Loader2 } from 'lucide-react';
 import { BuntingGPTBrand } from './BuntingGPTBrand';
 
@@ -8,20 +8,21 @@ interface ProtectedRouteProps {
   children: React.ReactNode;
 }
 
-const GATE_URL = 'https://gate.buntinggpt.com';
-
 export function ProtectedRoute({ children }: ProtectedRouteProps) {
   const { isLoading, isAuthenticated } = useAuth();
+  const navigate = useNavigate();
+  const location = useLocation();
 
   useEffect(() => {
-    // Redirect to gate with return URL when not authenticated and not loading
+    // Redirect to login when not authenticated and not loading
     if (!isLoading && !isAuthenticated) {
-      // Purge stale cookies before redirecting to gate
-      purgeAllAuthCookies();
-      const returnUrl = encodeURIComponent(window.location.href);
-      window.location.href = `${GATE_URL}?returnUrl=${returnUrl}`;
+      // Preserve the intended destination in state
+      navigate('/login', { 
+        replace: true, 
+        state: { from: location.pathname } 
+      });
     }
-  }, [isLoading, isAuthenticated]);
+  }, [isLoading, isAuthenticated, navigate, location.pathname]);
 
   if (isLoading) {
     return (

@@ -629,6 +629,136 @@ serve(async (req) => {
       );
     }
 
+    // POST /badge-login - Login with badge number and PIN
+    if (req.method === "POST" && path === "/badge-login") {
+      const { badge_number, pin } = await req.json();
+
+      if (!badge_number || !pin) {
+        return new Response(
+          JSON.stringify({ error: "Badge number and PIN are required" }),
+          { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
+      // Find employee by badge number (case-insensitive)
+      const { data: employee, error: findError } = await supabase
+        .from("employees")
+        .select("id, name_first, name_last, user_email, job_title, department, job_level, location, business_unit, benefit_class, hire_date, employee_number, badge_number, badge_pin_hash, badge_pin_attempts, badge_pin_locked_until, badge_pin_is_default, is_active, reports_to, is_hr_admin")
+        .ilike("badge_number", badge_number.trim())
+        .eq("is_active", true)
+        .maybeSingle();
+
+      if (findError || !employee) {
+        return new Response(
+          JSON.stringify({ error: "Invalid badge number or PIN" }),
+          { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
+      // Check if account is locked
+      if (employee.badge_pin_locked_until) {
+        const lockoutEnd = new Date(employee.badge_pin_locked_until);
+        if (lockoutEnd > new Date()) {
+          const minutesRemaining = Math.ceil((lockoutEnd.getTime() - Date.now()) / 60000);
+          return new Response(
+            JSON.stringify({ 
+              error: `Account is locked. Try again in ${minutesRemaining} minute(s).`,
+              locked: true,
+              minutes_remaining: minutesRemaining
+            }),
+            { status: 423, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          );
+        }
+      }
+
+      // Check if PIN is set
+      if (!employee.badge_pin_hash) {
+        return new Response(
+          JSON.stringify({ 
+            error: "PIN not set. Please contact your administrator.",
+            pin_not_set: true 
+          }),
+          { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
+      // Verify PIN
+      const pinValid = await verifyPassword(pin, employee.badge_pin_hash);
+
+      if (!pinValid) {
+        // Increment failed attempts
+        const attempts = (employee.badge_pin_attempts || 0) + 1;
+        const updateData: Record<string, unknown> = { badge_pin_attempts: attempts };
+
+        if (attempts >= MAX_LOGIN_ATTEMPTS) {
+          const lockoutEnd = new Date(Date.now() + LOCKOUT_DURATION_MINUTES * 60 * 1000);
+          updateData.badge_pin_locked_until = lockoutEnd.toISOString();
+        }
+
+        await supabase
+          .from("employees")
+          .update(updateData)
+          .eq("id", employee.id);
+
+        const remainingAttempts = MAX_LOGIN_ATTEMPTS - attempts;
+        return new Response(
+          JSON.stringify({ 
+            error: remainingAttempts > 0 
+              ? `Invalid PIN. ${remainingAttempts} attempt(s) remaining.`
+              : `Account locked for ${LOCKOUT_DURATION_MINUTES} minutes.`,
+            remaining_attempts: Math.max(0, remainingAttempts)
+          }),
+          { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
+      // Success! Reset attempts and create token
+      await supabase
+        .from("employees")
+        .update({ 
+          badge_pin_attempts: 0, 
+          badge_pin_locked_until: null 
+        })
+        .eq("id", employee.id);
+
+      const token = await createJWT({
+        employee_id: employee.id,
+        email: employee.user_email,
+        name: `${employee.name_first} ${employee.name_last}`,
+        is_hr_admin: employee.is_hr_admin || false
+      });
+
+      // Lookup supervisor name
+      const supervisorName = await getSupervisorName(supabase, employee.reports_to);
+
+      console.log("[employee-auth/badge-login] Successful badge login for:", employee.badge_number);
+
+      return new Response(
+        JSON.stringify({
+          token,
+          employee: {
+            id: employee.id,
+            name_first: employee.name_first,
+            name_last: employee.name_last,
+            user_email: employee.user_email,
+            job_title: employee.job_title,
+            department: employee.department,
+            job_level: employee.job_level,
+            location: employee.location,
+            business_unit: employee.business_unit,
+            benefit_class: employee.benefit_class,
+            hire_date: employee.hire_date,
+            employee_number: employee.employee_number,
+            badge_number: employee.badge_number,
+            reports_to: employee.reports_to,
+            supervisor_name: supervisorName,
+            is_hr_admin: employee.is_hr_admin || false
+          }
+        }),
+        { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
     // POST /admin/set-default-passwords - Set default password for all employees
     if (req.method === "POST" && path === "/admin/set-default-passwords") {
       const { admin_key, default_password } = await req.json();

@@ -243,6 +243,171 @@ export type Database = {
         }
         Relationships: []
       }
+      alert_history: {
+        Row: {
+          acknowledged_at: string | null
+          acknowledged_by: string | null
+          alert_id: string
+          data_snapshot: Json | null
+          emails_sent: number | null
+          error_message: string | null
+          id: string
+          matched_records: number | null
+          status: Database["public"]["Enums"]["alert_status"]
+          triggered_at: string
+        }
+        Insert: {
+          acknowledged_at?: string | null
+          acknowledged_by?: string | null
+          alert_id: string
+          data_snapshot?: Json | null
+          emails_sent?: number | null
+          error_message?: string | null
+          id?: string
+          matched_records?: number | null
+          status?: Database["public"]["Enums"]["alert_status"]
+          triggered_at?: string
+        }
+        Update: {
+          acknowledged_at?: string | null
+          acknowledged_by?: string | null
+          alert_id?: string
+          data_snapshot?: Json | null
+          emails_sent?: number | null
+          error_message?: string | null
+          id?: string
+          matched_records?: number | null
+          status?: Database["public"]["Enums"]["alert_status"]
+          triggered_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "alert_history_alert_id_fkey"
+            columns: ["alert_id"]
+            isOneToOne: false
+            referencedRelation: "alerts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      alert_recipients: {
+        Row: {
+          alert_id: string
+          created_at: string
+          email: string
+          id: string
+          notify_email: boolean
+          notify_inapp: boolean
+          user_id: string | null
+        }
+        Insert: {
+          alert_id: string
+          created_at?: string
+          email: string
+          id?: string
+          notify_email?: boolean
+          notify_inapp?: boolean
+          user_id?: string | null
+        }
+        Update: {
+          alert_id?: string
+          created_at?: string
+          email?: string
+          id?: string
+          notify_email?: boolean
+          notify_inapp?: boolean
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "alert_recipients_alert_id_fkey"
+            columns: ["alert_id"]
+            isOneToOne: false
+            referencedRelation: "alerts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      alert_rules: {
+        Row: {
+          alert_id: string
+          check_frequency: string
+          condition_field: string
+          created_at: string
+          id: string
+          last_checked_at: string | null
+          operator: Database["public"]["Enums"]["alert_operator"]
+          source_table: string
+          threshold_value: string | null
+        }
+        Insert: {
+          alert_id: string
+          check_frequency?: string
+          condition_field: string
+          created_at?: string
+          id?: string
+          last_checked_at?: string | null
+          operator: Database["public"]["Enums"]["alert_operator"]
+          source_table: string
+          threshold_value?: string | null
+        }
+        Update: {
+          alert_id?: string
+          check_frequency?: string
+          condition_field?: string
+          created_at?: string
+          id?: string
+          last_checked_at?: string | null
+          operator?: Database["public"]["Enums"]["alert_operator"]
+          source_table?: string
+          threshold_value?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "alert_rules_alert_id_fkey"
+            columns: ["alert_id"]
+            isOneToOne: false
+            referencedRelation: "alerts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      alerts: {
+        Row: {
+          category: Database["public"]["Enums"]["alert_category"]
+          created_at: string
+          created_by: string | null
+          description: string | null
+          id: string
+          is_active: boolean
+          name: string
+          severity: Database["public"]["Enums"]["alert_severity"]
+          updated_at: string
+        }
+        Insert: {
+          category?: Database["public"]["Enums"]["alert_category"]
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          name: string
+          severity?: Database["public"]["Enums"]["alert_severity"]
+          updated_at?: string
+        }
+        Update: {
+          category?: Database["public"]["Enums"]["alert_category"]
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          name?: string
+          severity?: Database["public"]["Enums"]["alert_severity"]
+          updated_at?: string
+        }
+        Relationships: []
+      }
       app_items: {
         Row: {
           access_token: string | null
@@ -473,6 +638,84 @@ export type Database = {
           role?: string
           updated_at?: string | null
           user_id?: string
+        }
+        Relationships: []
+      }
+      ar_aging_daily: {
+        Row: {
+          contact_email: string | null
+          contact_name: string | null
+          current_amt: number | null
+          cust_id: string
+          customer_name: string | null
+          days_beyond_terms: number | null
+          debt_1_30: number | null
+          debt_31_60: number | null
+          debt_61_90: number | null
+          debt_91_120: number | null
+          due_date: string | null
+          high_risk: boolean | null
+          id: string
+          invoice_bal: number | null
+          invoice_date: string | null
+          invoice_num: string
+          order_num: number | null
+          over_120: number | null
+          po_num: string | null
+          posted: boolean | null
+          snapshot_date: string
+          synced_at: string | null
+          terms_code: string | null
+        }
+        Insert: {
+          contact_email?: string | null
+          contact_name?: string | null
+          current_amt?: number | null
+          cust_id: string
+          customer_name?: string | null
+          days_beyond_terms?: number | null
+          debt_1_30?: number | null
+          debt_31_60?: number | null
+          debt_61_90?: number | null
+          debt_91_120?: number | null
+          due_date?: string | null
+          high_risk?: boolean | null
+          id?: string
+          invoice_bal?: number | null
+          invoice_date?: string | null
+          invoice_num: string
+          order_num?: number | null
+          over_120?: number | null
+          po_num?: string | null
+          posted?: boolean | null
+          snapshot_date?: string
+          synced_at?: string | null
+          terms_code?: string | null
+        }
+        Update: {
+          contact_email?: string | null
+          contact_name?: string | null
+          current_amt?: number | null
+          cust_id?: string
+          customer_name?: string | null
+          days_beyond_terms?: number | null
+          debt_1_30?: number | null
+          debt_31_60?: number | null
+          debt_61_90?: number | null
+          debt_91_120?: number | null
+          due_date?: string | null
+          high_risk?: boolean | null
+          id?: string
+          invoice_bal?: number | null
+          invoice_date?: string | null
+          invoice_num?: string
+          order_num?: number | null
+          over_120?: number | null
+          po_num?: string | null
+          posted?: boolean | null
+          snapshot_date?: string
+          synced_at?: string | null
+          terms_code?: string | null
         }
         Relationships: []
       }
@@ -1112,6 +1355,33 @@ export type Database = {
           message_id?: string
           topic?: string | null
           user_id?: string | null
+        }
+        Relationships: []
+      }
+      cron_queue: {
+        Row: {
+          created_at: string | null
+          id: string
+          job_type: string
+          payload: Json | null
+          processed_at: string | null
+          status: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          job_type: string
+          payload?: Json | null
+          processed_at?: string | null
+          status?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          job_type?: string
+          payload?: Json | null
+          processed_at?: string | null
+          status?: string | null
         }
         Relationships: []
       }
@@ -2400,6 +2670,438 @@ export type Database = {
         }
         Relationships: []
       }
+      inventory_snapshot: {
+        Row: {
+          bin_num: string | null
+          burden_cost: number | null
+          class_id: string | null
+          extended_cost: number | null
+          id: string
+          labor_cost: number | null
+          lot_num: string | null
+          material_cost: number | null
+          mtl_burden_cost: number | null
+          on_hand_qty: number | null
+          part_description: string | null
+          part_num: string
+          plant: string | null
+          snapshot_date: string
+          subcontract_cost: number | null
+          synced_at: string | null
+          total_cost: number | null
+          warehouse_code: string
+        }
+        Insert: {
+          bin_num?: string | null
+          burden_cost?: number | null
+          class_id?: string | null
+          extended_cost?: number | null
+          id?: string
+          labor_cost?: number | null
+          lot_num?: string | null
+          material_cost?: number | null
+          mtl_burden_cost?: number | null
+          on_hand_qty?: number | null
+          part_description?: string | null
+          part_num: string
+          plant?: string | null
+          snapshot_date?: string
+          subcontract_cost?: number | null
+          synced_at?: string | null
+          total_cost?: number | null
+          warehouse_code: string
+        }
+        Update: {
+          bin_num?: string | null
+          burden_cost?: number | null
+          class_id?: string | null
+          extended_cost?: number | null
+          id?: string
+          labor_cost?: number | null
+          lot_num?: string | null
+          material_cost?: number | null
+          mtl_burden_cost?: number | null
+          on_hand_qty?: number | null
+          part_description?: string | null
+          part_num?: string
+          plant?: string | null
+          snapshot_date?: string
+          subcontract_cost?: number | null
+          synced_at?: string | null
+          total_cost?: number | null
+          warehouse_code?: string
+        }
+        Relationships: []
+      }
+      job_costs_daily: {
+        Row: {
+          act_burden_cost: number | null
+          act_labor_cost: number | null
+          act_material_cost: number | null
+          act_subcontract_cost: number | null
+          act_total_cost: number | null
+          cost_overrun: boolean | null
+          cost_variance: number | null
+          customer_name: string | null
+          delinquent: boolean | null
+          due_date: string | null
+          est_burden_cost: number | null
+          est_labor_cost: number | null
+          est_material_cost: number | null
+          est_subcontract_cost: number | null
+          est_total_cost: number | null
+          id: string
+          job_closed: boolean | null
+          job_complete: boolean | null
+          job_num: string
+          job_released: boolean | null
+          job_type: string | null
+          order_num: number | null
+          part_description: string | null
+          part_num: string | null
+          perc_of_est: number | null
+          plant: string | null
+          prod_code: string | null
+          prod_group_desc: string | null
+          prod_qty: number | null
+          qty_completed: number | null
+          req_due_date: string | null
+          snapshot_date: string
+          synced_at: string | null
+        }
+        Insert: {
+          act_burden_cost?: number | null
+          act_labor_cost?: number | null
+          act_material_cost?: number | null
+          act_subcontract_cost?: number | null
+          act_total_cost?: number | null
+          cost_overrun?: boolean | null
+          cost_variance?: number | null
+          customer_name?: string | null
+          delinquent?: boolean | null
+          due_date?: string | null
+          est_burden_cost?: number | null
+          est_labor_cost?: number | null
+          est_material_cost?: number | null
+          est_subcontract_cost?: number | null
+          est_total_cost?: number | null
+          id?: string
+          job_closed?: boolean | null
+          job_complete?: boolean | null
+          job_num: string
+          job_released?: boolean | null
+          job_type?: string | null
+          order_num?: number | null
+          part_description?: string | null
+          part_num?: string | null
+          perc_of_est?: number | null
+          plant?: string | null
+          prod_code?: string | null
+          prod_group_desc?: string | null
+          prod_qty?: number | null
+          qty_completed?: number | null
+          req_due_date?: string | null
+          snapshot_date?: string
+          synced_at?: string | null
+        }
+        Update: {
+          act_burden_cost?: number | null
+          act_labor_cost?: number | null
+          act_material_cost?: number | null
+          act_subcontract_cost?: number | null
+          act_total_cost?: number | null
+          cost_overrun?: boolean | null
+          cost_variance?: number | null
+          customer_name?: string | null
+          delinquent?: boolean | null
+          due_date?: string | null
+          est_burden_cost?: number | null
+          est_labor_cost?: number | null
+          est_material_cost?: number | null
+          est_subcontract_cost?: number | null
+          est_total_cost?: number | null
+          id?: string
+          job_closed?: boolean | null
+          job_complete?: boolean | null
+          job_num?: string
+          job_released?: boolean | null
+          job_type?: string | null
+          order_num?: number | null
+          part_description?: string | null
+          part_num?: string | null
+          perc_of_est?: number | null
+          plant?: string | null
+          prod_code?: string | null
+          prod_group_desc?: string | null
+          prod_qty?: number | null
+          qty_completed?: number | null
+          req_due_date?: string | null
+          snapshot_date?: string
+          synced_at?: string | null
+        }
+        Relationships: []
+      }
+      job_history: {
+        Row: {
+          act_prod_hours: number | null
+          act_total_cost: number | null
+          closed_date: string | null
+          cost_variance: number | null
+          cost_variance_pct: number | null
+          create_date: string | null
+          days_early_late: number | null
+          days_to_complete: number | null
+          due_date: string | null
+          est_prod_hours: number | null
+          est_total_cost: number | null
+          hours_variance: number | null
+          id: string
+          job_closed: boolean | null
+          job_complete: boolean | null
+          job_completion_date: string | null
+          job_num: string
+          job_type: string | null
+          part_description: string | null
+          part_num: string | null
+          plant: string | null
+          prod_code: string | null
+          prod_qty: number | null
+          qty_completed: number | null
+          req_due_date: string | null
+          revision_num: string | null
+          ship_date: string | null
+          shipped_qty: number | null
+          start_date: string | null
+          synced_at: string | null
+          was_late: boolean | null
+        }
+        Insert: {
+          act_prod_hours?: number | null
+          act_total_cost?: number | null
+          closed_date?: string | null
+          cost_variance?: number | null
+          cost_variance_pct?: number | null
+          create_date?: string | null
+          days_early_late?: number | null
+          days_to_complete?: number | null
+          due_date?: string | null
+          est_prod_hours?: number | null
+          est_total_cost?: number | null
+          hours_variance?: number | null
+          id?: string
+          job_closed?: boolean | null
+          job_complete?: boolean | null
+          job_completion_date?: string | null
+          job_num: string
+          job_type?: string | null
+          part_description?: string | null
+          part_num?: string | null
+          plant?: string | null
+          prod_code?: string | null
+          prod_qty?: number | null
+          qty_completed?: number | null
+          req_due_date?: string | null
+          revision_num?: string | null
+          ship_date?: string | null
+          shipped_qty?: number | null
+          start_date?: string | null
+          synced_at?: string | null
+          was_late?: boolean | null
+        }
+        Update: {
+          act_prod_hours?: number | null
+          act_total_cost?: number | null
+          closed_date?: string | null
+          cost_variance?: number | null
+          cost_variance_pct?: number | null
+          create_date?: string | null
+          days_early_late?: number | null
+          days_to_complete?: number | null
+          due_date?: string | null
+          est_prod_hours?: number | null
+          est_total_cost?: number | null
+          hours_variance?: number | null
+          id?: string
+          job_closed?: boolean | null
+          job_complete?: boolean | null
+          job_completion_date?: string | null
+          job_num?: string
+          job_type?: string | null
+          part_description?: string | null
+          part_num?: string | null
+          plant?: string | null
+          prod_code?: string | null
+          prod_qty?: number | null
+          qty_completed?: number | null
+          req_due_date?: string | null
+          revision_num?: string | null
+          ship_date?: string | null
+          shipped_qty?: number | null
+          start_date?: string | null
+          synced_at?: string | null
+          was_late?: boolean | null
+        }
+        Relationships: []
+      }
+      job_operations_live: {
+        Row: {
+          act_prod_hours: number | null
+          act_prod_rwk_hours: number | null
+          act_setup_hours: number | null
+          act_setup_rwk_hours: number | null
+          added_oper: boolean | null
+          assembly_seq: number | null
+          due_date: string | null
+          est_prod_hours: number | null
+          est_setup_hours: number | null
+          hours_variance: number | null
+          id: string
+          job_num: string
+          last_labor_date: string | null
+          op_code: string | null
+          op_complete: boolean | null
+          op_desc: string | null
+          opr_seq: number
+          part_num: string | null
+          pct_complete: number | null
+          qty_completed: number | null
+          run_qty: number | null
+          setup_pct_complete: number | null
+          source_baq: string | null
+          start_date: string | null
+          synced_at: string | null
+        }
+        Insert: {
+          act_prod_hours?: number | null
+          act_prod_rwk_hours?: number | null
+          act_setup_hours?: number | null
+          act_setup_rwk_hours?: number | null
+          added_oper?: boolean | null
+          assembly_seq?: number | null
+          due_date?: string | null
+          est_prod_hours?: number | null
+          est_setup_hours?: number | null
+          hours_variance?: number | null
+          id?: string
+          job_num: string
+          last_labor_date?: string | null
+          op_code?: string | null
+          op_complete?: boolean | null
+          op_desc?: string | null
+          opr_seq: number
+          part_num?: string | null
+          pct_complete?: number | null
+          qty_completed?: number | null
+          run_qty?: number | null
+          setup_pct_complete?: number | null
+          source_baq?: string | null
+          start_date?: string | null
+          synced_at?: string | null
+        }
+        Update: {
+          act_prod_hours?: number | null
+          act_prod_rwk_hours?: number | null
+          act_setup_hours?: number | null
+          act_setup_rwk_hours?: number | null
+          added_oper?: boolean | null
+          assembly_seq?: number | null
+          due_date?: string | null
+          est_prod_hours?: number | null
+          est_setup_hours?: number | null
+          hours_variance?: number | null
+          id?: string
+          job_num?: string
+          last_labor_date?: string | null
+          op_code?: string | null
+          op_complete?: boolean | null
+          op_desc?: string | null
+          opr_seq?: number
+          part_num?: string | null
+          pct_complete?: number | null
+          qty_completed?: number | null
+          run_qty?: number | null
+          setup_pct_complete?: number | null
+          source_baq?: string | null
+          start_date?: string | null
+          synced_at?: string | null
+        }
+        Relationships: []
+      }
+      labor_history: {
+        Row: {
+          assembly_seq: number | null
+          clock_in_date: string
+          clock_in_time: number | null
+          clock_out_time: number | null
+          earned_hrs: number | null
+          efficiency_pct: number | null
+          employee_name: string | null
+          employee_num: string
+          id: string
+          jc_dept: string | null
+          job_num: string | null
+          labor_hrs: number | null
+          labor_qty: number | null
+          op_code: string | null
+          op_complete: boolean | null
+          op_desc: string | null
+          opr_seq: number | null
+          payroll_date: string | null
+          resource_grp_id: string | null
+          rework: boolean | null
+          scrap_qty: number | null
+          synced_at: string | null
+        }
+        Insert: {
+          assembly_seq?: number | null
+          clock_in_date: string
+          clock_in_time?: number | null
+          clock_out_time?: number | null
+          earned_hrs?: number | null
+          efficiency_pct?: number | null
+          employee_name?: string | null
+          employee_num: string
+          id?: string
+          jc_dept?: string | null
+          job_num?: string | null
+          labor_hrs?: number | null
+          labor_qty?: number | null
+          op_code?: string | null
+          op_complete?: boolean | null
+          op_desc?: string | null
+          opr_seq?: number | null
+          payroll_date?: string | null
+          resource_grp_id?: string | null
+          rework?: boolean | null
+          scrap_qty?: number | null
+          synced_at?: string | null
+        }
+        Update: {
+          assembly_seq?: number | null
+          clock_in_date?: string
+          clock_in_time?: number | null
+          clock_out_time?: number | null
+          earned_hrs?: number | null
+          efficiency_pct?: number | null
+          employee_name?: string | null
+          employee_num?: string
+          id?: string
+          jc_dept?: string | null
+          job_num?: string | null
+          labor_hrs?: number | null
+          labor_qty?: number | null
+          op_code?: string | null
+          op_complete?: boolean | null
+          op_desc?: string | null
+          opr_seq?: number | null
+          payroll_date?: string | null
+          resource_grp_id?: string | null
+          rework?: boolean | null
+          scrap_qty?: number | null
+          synced_at?: string | null
+        }
+        Relationships: []
+      }
       license_users: {
         Row: {
           created_at: string
@@ -2980,6 +3682,66 @@ export type Database = {
           },
         ]
       }
+      mto_ar_aging: {
+        Row: {
+          bucket_1_30: number | null
+          bucket_31_60: number | null
+          bucket_61_90: number | null
+          bucket_91_plus: number | null
+          bucket_current: number | null
+          company: string | null
+          cust_id: string
+          cust_name: string | null
+          days_beyond_terms: number | null
+          due_date: string | null
+          id: string
+          invoice_balance: number | null
+          invoice_date: string | null
+          invoice_num: string
+          refreshed_at: string | null
+          synced_at: string | null
+          terms_code: string | null
+        }
+        Insert: {
+          bucket_1_30?: number | null
+          bucket_31_60?: number | null
+          bucket_61_90?: number | null
+          bucket_91_plus?: number | null
+          bucket_current?: number | null
+          company?: string | null
+          cust_id: string
+          cust_name?: string | null
+          days_beyond_terms?: number | null
+          due_date?: string | null
+          id?: string
+          invoice_balance?: number | null
+          invoice_date?: string | null
+          invoice_num: string
+          refreshed_at?: string | null
+          synced_at?: string | null
+          terms_code?: string | null
+        }
+        Update: {
+          bucket_1_30?: number | null
+          bucket_31_60?: number | null
+          bucket_61_90?: number | null
+          bucket_91_plus?: number | null
+          bucket_current?: number | null
+          company?: string | null
+          cust_id?: string
+          cust_name?: string | null
+          days_beyond_terms?: number | null
+          due_date?: string | null
+          id?: string
+          invoice_balance?: number | null
+          invoice_date?: string | null
+          invoice_num?: string
+          refreshed_at?: string | null
+          synced_at?: string | null
+          terms_code?: string | null
+        }
+        Relationships: []
+      }
       mto_backlog: {
         Row: {
           backlog_data: string | null
@@ -2987,6 +3749,7 @@ export type Database = {
           id: string
           month: string | null
           order_count: number
+          refreshed_at: string | null
           status: string | null
           total_amount: number
         }
@@ -2996,6 +3759,7 @@ export type Database = {
           id?: string
           month?: string | null
           order_count?: number
+          refreshed_at?: string | null
           status?: string | null
           total_amount?: number
         }
@@ -3005,6 +3769,7 @@ export type Database = {
           id?: string
           month?: string | null
           order_count?: number
+          refreshed_at?: string | null
           status?: string | null
           total_amount?: number
         }
@@ -3018,6 +3783,7 @@ export type Database = {
           modified_by: string | null
           new_value: string | null
           previous_value: string | null
+          refreshed_at: string | null
         }
         Insert: {
           cell_value_id: string
@@ -3026,6 +3792,7 @@ export type Database = {
           modified_by?: string | null
           new_value?: string | null
           previous_value?: string | null
+          refreshed_at?: string | null
         }
         Update: {
           cell_value_id?: string
@@ -3034,6 +3801,7 @@ export type Database = {
           modified_by?: string | null
           new_value?: string | null
           previous_value?: string | null
+          refreshed_at?: string | null
         }
         Relationships: [
           {
@@ -3052,6 +3820,277 @@ export type Database = {
           },
         ]
       }
+      mto_cron_jobs: {
+        Row: {
+          baq_id: string
+          batch_size: number | null
+          calculated_fields: Json | null
+          companies: string[]
+          created_at: string | null
+          created_by: string | null
+          description: string | null
+          enabled: boolean | null
+          field_map: Json
+          id: string
+          incremental_field: string | null
+          incremental_lookback_days: number | null
+          job_name: string
+          last_run_at: string | null
+          last_run_duration_seconds: number | null
+          last_run_records: number | null
+          last_run_status: string | null
+          load_method: string
+          notify_email: string | null
+          notify_on_failure: boolean | null
+          notify_on_success: boolean | null
+          refreshed_at: string | null
+          retry_count: number | null
+          retry_delay_seconds: number | null
+          schedule: string
+          target_table: string
+          timeout_seconds: number | null
+          timezone: string | null
+          unique_keys: string[] | null
+          updated_at: string | null
+        }
+        Insert: {
+          baq_id: string
+          batch_size?: number | null
+          calculated_fields?: Json | null
+          companies?: string[]
+          created_at?: string | null
+          created_by?: string | null
+          description?: string | null
+          enabled?: boolean | null
+          field_map?: Json
+          id?: string
+          incremental_field?: string | null
+          incremental_lookback_days?: number | null
+          job_name: string
+          last_run_at?: string | null
+          last_run_duration_seconds?: number | null
+          last_run_records?: number | null
+          last_run_status?: string | null
+          load_method: string
+          notify_email?: string | null
+          notify_on_failure?: boolean | null
+          notify_on_success?: boolean | null
+          refreshed_at?: string | null
+          retry_count?: number | null
+          retry_delay_seconds?: number | null
+          schedule: string
+          target_table: string
+          timeout_seconds?: number | null
+          timezone?: string | null
+          unique_keys?: string[] | null
+          updated_at?: string | null
+        }
+        Update: {
+          baq_id?: string
+          batch_size?: number | null
+          calculated_fields?: Json | null
+          companies?: string[]
+          created_at?: string | null
+          created_by?: string | null
+          description?: string | null
+          enabled?: boolean | null
+          field_map?: Json
+          id?: string
+          incremental_field?: string | null
+          incremental_lookback_days?: number | null
+          job_name?: string
+          last_run_at?: string | null
+          last_run_duration_seconds?: number | null
+          last_run_records?: number | null
+          last_run_status?: string | null
+          load_method?: string
+          notify_email?: string | null
+          notify_on_failure?: boolean | null
+          notify_on_success?: boolean | null
+          refreshed_at?: string | null
+          retry_count?: number | null
+          retry_delay_seconds?: number | null
+          schedule?: string
+          target_table?: string
+          timeout_seconds?: number | null
+          timezone?: string | null
+          unique_keys?: string[] | null
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
+      mto_cron_logs: {
+        Row: {
+          context: Json | null
+          id: string
+          level: string
+          logged_at: string
+          message: string
+          refreshed_at: string | null
+          run_id: string
+        }
+        Insert: {
+          context?: Json | null
+          id?: string
+          level?: string
+          logged_at?: string
+          message: string
+          refreshed_at?: string | null
+          run_id: string
+        }
+        Update: {
+          context?: Json | null
+          id?: string
+          level?: string
+          logged_at?: string
+          message?: string
+          refreshed_at?: string | null
+          run_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "mto_cron_logs_run_id_fkey"
+            columns: ["run_id"]
+            isOneToOne: false
+            referencedRelation: "mto_cron_runs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      mto_cron_runs: {
+        Row: {
+          abort_requested: boolean | null
+          company: string | null
+          completed_at: string | null
+          duration_seconds: number | null
+          error_message: string | null
+          error_stack: string | null
+          id: string
+          incremental_from: string | null
+          incremental_to: string | null
+          job_id: string
+          job_name: string
+          metadata: Json | null
+          records_extracted: number | null
+          records_failed: number | null
+          records_loaded: number | null
+          records_skipped: number | null
+          refreshed_at: string | null
+          started_at: string
+          status: string
+          triggered_by: string | null
+          triggered_by_user: string | null
+        }
+        Insert: {
+          abort_requested?: boolean | null
+          company?: string | null
+          completed_at?: string | null
+          duration_seconds?: number | null
+          error_message?: string | null
+          error_stack?: string | null
+          id?: string
+          incremental_from?: string | null
+          incremental_to?: string | null
+          job_id: string
+          job_name: string
+          metadata?: Json | null
+          records_extracted?: number | null
+          records_failed?: number | null
+          records_loaded?: number | null
+          records_skipped?: number | null
+          refreshed_at?: string | null
+          started_at?: string
+          status?: string
+          triggered_by?: string | null
+          triggered_by_user?: string | null
+        }
+        Update: {
+          abort_requested?: boolean | null
+          company?: string | null
+          completed_at?: string | null
+          duration_seconds?: number | null
+          error_message?: string | null
+          error_stack?: string | null
+          id?: string
+          incremental_from?: string | null
+          incremental_to?: string | null
+          job_id?: string
+          job_name?: string
+          metadata?: Json | null
+          records_extracted?: number | null
+          records_failed?: number | null
+          records_loaded?: number | null
+          records_skipped?: number | null
+          refreshed_at?: string | null
+          started_at?: string
+          status?: string
+          triggered_by?: string | null
+          triggered_by_user?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "mto_cron_runs_job_id_fkey"
+            columns: ["job_id"]
+            isOneToOne: false
+            referencedRelation: "mto_cron_jobs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      mto_customers: {
+        Row: {
+          address: string | null
+          city: string | null
+          company: string
+          country: string | null
+          cust_id: string
+          cust_name: string | null
+          email: string | null
+          id: string
+          phone: string | null
+          refreshed_at: string | null
+          sales_rep: string | null
+          state: string | null
+          synced_at: string | null
+          territory_id: string | null
+          zip: string | null
+        }
+        Insert: {
+          address?: string | null
+          city?: string | null
+          company: string
+          country?: string | null
+          cust_id: string
+          cust_name?: string | null
+          email?: string | null
+          id?: string
+          phone?: string | null
+          refreshed_at?: string | null
+          sales_rep?: string | null
+          state?: string | null
+          synced_at?: string | null
+          territory_id?: string | null
+          zip?: string | null
+        }
+        Update: {
+          address?: string | null
+          city?: string | null
+          company?: string
+          country?: string | null
+          cust_id?: string
+          cust_name?: string | null
+          email?: string | null
+          id?: string
+          phone?: string | null
+          refreshed_at?: string | null
+          sales_rep?: string | null
+          state?: string | null
+          synced_at?: string | null
+          territory_id?: string | null
+          zip?: string | null
+        }
+        Relationships: []
+      }
       mto_daily: {
         Row: {
           book_to_bill: number | null
@@ -3061,6 +4100,7 @@ export type Database = {
           id: string
           incoming: number | null
           otd: number | null
+          refreshed_at: string | null
           shipped: number | null
           total_orders: number | null
         }
@@ -3072,6 +4112,7 @@ export type Database = {
           id?: string
           incoming?: number | null
           otd?: number | null
+          refreshed_at?: string | null
           shipped?: number | null
           total_orders?: number | null
         }
@@ -3083,6 +4124,7 @@ export type Database = {
           id?: string
           incoming?: number | null
           otd?: number | null
+          refreshed_at?: string | null
           shipped?: number | null
           total_orders?: number | null
         }
@@ -3105,6 +4147,7 @@ export type Database = {
           may_otd: number | null
           november_otd: number | null
           october_otd: number | null
+          refreshed_at: string | null
           september_otd: number | null
           updated_at: string | null
         }
@@ -3124,6 +4167,7 @@ export type Database = {
           may_otd?: number | null
           november_otd?: number | null
           october_otd?: number | null
+          refreshed_at?: string | null
           september_otd?: number | null
           updated_at?: string | null
         }
@@ -3143,6 +4187,7 @@ export type Database = {
           may_otd?: number | null
           november_otd?: number | null
           october_otd?: number | null
+          refreshed_at?: string | null
           september_otd?: number | null
           updated_at?: string | null
         }
@@ -3155,6 +4200,7 @@ export type Database = {
           id: string
           incoming: number | null
           month: string | null
+          refreshed_at: string | null
           site_data: Json | null
         }
         Insert: {
@@ -3163,6 +4209,7 @@ export type Database = {
           id?: string
           incoming?: number | null
           month?: string | null
+          refreshed_at?: string | null
           site_data?: Json | null
         }
         Update: {
@@ -3171,7 +4218,470 @@ export type Database = {
           id?: string
           incoming?: number | null
           month?: string | null
+          refreshed_at?: string | null
           site_data?: Json | null
+        }
+        Relationships: []
+      }
+      mto_inventory: {
+        Row: {
+          bin_num: string | null
+          burden_cost: number | null
+          class_id: string | null
+          company: string
+          id: string
+          labor_cost: number | null
+          lot_num: string | null
+          material_cost: number | null
+          mtl_burden_cost: number | null
+          on_hand_qty: number | null
+          part_description: string | null
+          part_num: string
+          plant: string | null
+          refreshed_at: string | null
+          subcontract_cost: number | null
+          synced_at: string | null
+          total_cost: number | null
+          warehouse_code: string
+        }
+        Insert: {
+          bin_num?: string | null
+          burden_cost?: number | null
+          class_id?: string | null
+          company: string
+          id?: string
+          labor_cost?: number | null
+          lot_num?: string | null
+          material_cost?: number | null
+          mtl_burden_cost?: number | null
+          on_hand_qty?: number | null
+          part_description?: string | null
+          part_num: string
+          plant?: string | null
+          refreshed_at?: string | null
+          subcontract_cost?: number | null
+          synced_at?: string | null
+          total_cost?: number | null
+          warehouse_code: string
+        }
+        Update: {
+          bin_num?: string | null
+          burden_cost?: number | null
+          class_id?: string | null
+          company?: string
+          id?: string
+          labor_cost?: number | null
+          lot_num?: string | null
+          material_cost?: number | null
+          mtl_burden_cost?: number | null
+          on_hand_qty?: number | null
+          part_description?: string | null
+          part_num?: string
+          plant?: string | null
+          refreshed_at?: string | null
+          subcontract_cost?: number | null
+          synced_at?: string | null
+          total_cost?: number | null
+          warehouse_code?: string
+        }
+        Relationships: []
+      }
+      mto_job_costs: {
+        Row: {
+          act_burden_cost: number | null
+          act_labor_cost: number | null
+          act_material_cost: number | null
+          act_subcontract_cost: number | null
+          act_total_cost: number | null
+          calc_customer: string | null
+          company: string
+          delinquent: boolean | null
+          due_date: string | null
+          est_burden_cost: number | null
+          est_labor_cost: number | null
+          est_material_cost: number | null
+          est_subcontract_cost: number | null
+          est_total_cost: number | null
+          id: string
+          job_num: string
+          job_type: string | null
+          part_description: string | null
+          part_num: string | null
+          perc_of_est: number | null
+          prod_group_desc: string | null
+          prod_qty: number | null
+          refreshed_at: string | null
+          req_due_date: string | null
+          synced_at: string | null
+        }
+        Insert: {
+          act_burden_cost?: number | null
+          act_labor_cost?: number | null
+          act_material_cost?: number | null
+          act_subcontract_cost?: number | null
+          act_total_cost?: number | null
+          calc_customer?: string | null
+          company: string
+          delinquent?: boolean | null
+          due_date?: string | null
+          est_burden_cost?: number | null
+          est_labor_cost?: number | null
+          est_material_cost?: number | null
+          est_subcontract_cost?: number | null
+          est_total_cost?: number | null
+          id?: string
+          job_num: string
+          job_type?: string | null
+          part_description?: string | null
+          part_num?: string | null
+          perc_of_est?: number | null
+          prod_group_desc?: string | null
+          prod_qty?: number | null
+          refreshed_at?: string | null
+          req_due_date?: string | null
+          synced_at?: string | null
+        }
+        Update: {
+          act_burden_cost?: number | null
+          act_labor_cost?: number | null
+          act_material_cost?: number | null
+          act_subcontract_cost?: number | null
+          act_total_cost?: number | null
+          calc_customer?: string | null
+          company?: string
+          delinquent?: boolean | null
+          due_date?: string | null
+          est_burden_cost?: number | null
+          est_labor_cost?: number | null
+          est_material_cost?: number | null
+          est_subcontract_cost?: number | null
+          est_total_cost?: number | null
+          id?: string
+          job_num?: string
+          job_type?: string | null
+          part_description?: string | null
+          part_num?: string | null
+          perc_of_est?: number | null
+          prod_group_desc?: string | null
+          prod_qty?: number | null
+          refreshed_at?: string | null
+          req_due_date?: string | null
+          synced_at?: string | null
+        }
+        Relationships: []
+      }
+      mto_job_history: {
+        Row: {
+          act_prod_hours: number | null
+          act_subcontract_cost: number | null
+          closed_date: string | null
+          company: string
+          est_prod_hours: number | null
+          est_subcontract_cost: number | null
+          id: string
+          job_closed: boolean | null
+          job_complete: boolean | null
+          job_completion_date: string | null
+          job_num: string
+          part_description: string | null
+          part_num: string | null
+          prod_qty: number | null
+          qty_completed: number | null
+          refreshed_at: string | null
+          synced_at: string | null
+        }
+        Insert: {
+          act_prod_hours?: number | null
+          act_subcontract_cost?: number | null
+          closed_date?: string | null
+          company: string
+          est_prod_hours?: number | null
+          est_subcontract_cost?: number | null
+          id?: string
+          job_closed?: boolean | null
+          job_complete?: boolean | null
+          job_completion_date?: string | null
+          job_num: string
+          part_description?: string | null
+          part_num?: string | null
+          prod_qty?: number | null
+          qty_completed?: number | null
+          refreshed_at?: string | null
+          synced_at?: string | null
+        }
+        Update: {
+          act_prod_hours?: number | null
+          act_subcontract_cost?: number | null
+          closed_date?: string | null
+          company?: string
+          est_prod_hours?: number | null
+          est_subcontract_cost?: number | null
+          id?: string
+          job_closed?: boolean | null
+          job_complete?: boolean | null
+          job_completion_date?: string | null
+          job_num?: string
+          part_description?: string | null
+          part_num?: string | null
+          prod_qty?: number | null
+          qty_completed?: number | null
+          refreshed_at?: string | null
+          synced_at?: string | null
+        }
+        Relationships: []
+      }
+      mto_job_operations: {
+        Row: {
+          act_burden_cost: number | null
+          act_labor_cost: number | null
+          act_prod_hrs: number | null
+          act_setup_hrs: number | null
+          asm_seq: number
+          burden_rate: number | null
+          comment_text: string | null
+          company: string
+          completion_pct: number | null
+          cost_variance: number | null
+          due_date: string | null
+          est_prod_hrs: number | null
+          est_setup_hrs: number | null
+          id: string
+          job_num: string
+          labor_rate: number | null
+          last_labor_date: string | null
+          op_code: string | null
+          op_complete: boolean | null
+          op_desc: string | null
+          opr_seq: number
+          prod_efficiency_pct: number | null
+          prod_rework_hrs: number | null
+          prod_variance_hrs: number | null
+          qty_completed: number | null
+          qty_per_parent: number | null
+          refreshed_at: string | null
+          run_qty: number | null
+          schedule_status: string | null
+          scrap_qty: number | null
+          scrap_type: string | null
+          setup_crew_size: number | null
+          setup_efficiency_pct: number | null
+          setup_pct_complete: number | null
+          setup_rework_hrs: number | null
+          setup_variance_hrs: number | null
+          start_date: string | null
+          subcontract: boolean | null
+          supplier_id: string | null
+          vendor_num: number | null
+        }
+        Insert: {
+          act_burden_cost?: number | null
+          act_labor_cost?: number | null
+          act_prod_hrs?: number | null
+          act_setup_hrs?: number | null
+          asm_seq?: number
+          burden_rate?: number | null
+          comment_text?: string | null
+          company: string
+          completion_pct?: number | null
+          cost_variance?: number | null
+          due_date?: string | null
+          est_prod_hrs?: number | null
+          est_setup_hrs?: number | null
+          id?: string
+          job_num: string
+          labor_rate?: number | null
+          last_labor_date?: string | null
+          op_code?: string | null
+          op_complete?: boolean | null
+          op_desc?: string | null
+          opr_seq: number
+          prod_efficiency_pct?: number | null
+          prod_rework_hrs?: number | null
+          prod_variance_hrs?: number | null
+          qty_completed?: number | null
+          qty_per_parent?: number | null
+          refreshed_at?: string | null
+          run_qty?: number | null
+          schedule_status?: string | null
+          scrap_qty?: number | null
+          scrap_type?: string | null
+          setup_crew_size?: number | null
+          setup_efficiency_pct?: number | null
+          setup_pct_complete?: number | null
+          setup_rework_hrs?: number | null
+          setup_variance_hrs?: number | null
+          start_date?: string | null
+          subcontract?: boolean | null
+          supplier_id?: string | null
+          vendor_num?: number | null
+        }
+        Update: {
+          act_burden_cost?: number | null
+          act_labor_cost?: number | null
+          act_prod_hrs?: number | null
+          act_setup_hrs?: number | null
+          asm_seq?: number
+          burden_rate?: number | null
+          comment_text?: string | null
+          company?: string
+          completion_pct?: number | null
+          cost_variance?: number | null
+          due_date?: string | null
+          est_prod_hrs?: number | null
+          est_setup_hrs?: number | null
+          id?: string
+          job_num?: string
+          labor_rate?: number | null
+          last_labor_date?: string | null
+          op_code?: string | null
+          op_complete?: boolean | null
+          op_desc?: string | null
+          opr_seq?: number
+          prod_efficiency_pct?: number | null
+          prod_rework_hrs?: number | null
+          prod_variance_hrs?: number | null
+          qty_completed?: number | null
+          qty_per_parent?: number | null
+          refreshed_at?: string | null
+          run_qty?: number | null
+          schedule_status?: string | null
+          scrap_qty?: number | null
+          scrap_type?: string | null
+          setup_crew_size?: number | null
+          setup_efficiency_pct?: number | null
+          setup_pct_complete?: number | null
+          setup_rework_hrs?: number | null
+          setup_variance_hrs?: number | null
+          start_date?: string | null
+          subcontract?: boolean | null
+          supplier_id?: string | null
+          vendor_num?: number | null
+        }
+        Relationships: []
+      }
+      mto_labor_history: {
+        Row: {
+          asm_seq: number | null
+          company: string
+          discrep_qty: number | null
+          employee_name: string
+          id: string
+          job_num: string | null
+          labor_hrs: number | null
+          labor_qty: number | null
+          op_code: string | null
+          op_complete: boolean | null
+          op_desc: string | null
+          opr_seq: number | null
+          payroll_date: string
+          refreshed_at: string | null
+          rework: boolean | null
+          rework_reason_code: string | null
+          scrap_qty: number | null
+          scrap_reason_code: string | null
+          synced_at: string | null
+        }
+        Insert: {
+          asm_seq?: number | null
+          company: string
+          discrep_qty?: number | null
+          employee_name: string
+          id?: string
+          job_num?: string | null
+          labor_hrs?: number | null
+          labor_qty?: number | null
+          op_code?: string | null
+          op_complete?: boolean | null
+          op_desc?: string | null
+          opr_seq?: number | null
+          payroll_date: string
+          refreshed_at?: string | null
+          rework?: boolean | null
+          rework_reason_code?: string | null
+          scrap_qty?: number | null
+          scrap_reason_code?: string | null
+          synced_at?: string | null
+        }
+        Update: {
+          asm_seq?: number | null
+          company?: string
+          discrep_qty?: number | null
+          employee_name?: string
+          id?: string
+          job_num?: string | null
+          labor_hrs?: number | null
+          labor_qty?: number | null
+          op_code?: string | null
+          op_complete?: boolean | null
+          op_desc?: string | null
+          opr_seq?: number | null
+          payroll_date?: string
+          refreshed_at?: string | null
+          rework?: boolean | null
+          rework_reason_code?: string | null
+          scrap_qty?: number | null
+          scrap_reason_code?: string | null
+          synced_at?: string | null
+        }
+        Relationships: []
+      }
+      mto_material_shortages: {
+        Row: {
+          asm_seq: number
+          company: string
+          description: string | null
+          id: string
+          issued_qty: number | null
+          job_num: string
+          mtl_seq: number
+          op_desc: string | null
+          part_num: string | null
+          po_due_date: string | null
+          po_line: number | null
+          po_num: number | null
+          po_rel_num: number | null
+          refreshed_at: string | null
+          related_operation: number | null
+          required_qty: number | null
+          synced_at: string | null
+        }
+        Insert: {
+          asm_seq?: number
+          company: string
+          description?: string | null
+          id?: string
+          issued_qty?: number | null
+          job_num: string
+          mtl_seq: number
+          op_desc?: string | null
+          part_num?: string | null
+          po_due_date?: string | null
+          po_line?: number | null
+          po_num?: number | null
+          po_rel_num?: number | null
+          refreshed_at?: string | null
+          related_operation?: number | null
+          required_qty?: number | null
+          synced_at?: string | null
+        }
+        Update: {
+          asm_seq?: number
+          company?: string
+          description?: string | null
+          id?: string
+          issued_qty?: number | null
+          job_num?: string
+          mtl_seq?: number
+          op_desc?: string | null
+          part_num?: string | null
+          po_due_date?: string | null
+          po_line?: number | null
+          po_num?: number | null
+          po_rel_num?: number | null
+          refreshed_at?: string | null
+          related_operation?: number | null
+          required_qty?: number | null
+          synced_at?: string | null
         }
         Relationships: []
       }
@@ -3179,17 +4689,182 @@ export type Database = {
         Row: {
           created_at: string | null
           id: string
+          refreshed_at: string | null
           timestamp: string
         }
         Insert: {
           created_at?: string | null
           id: string
+          refreshed_at?: string | null
           timestamp: string
         }
         Update: {
           created_at?: string | null
           id?: string
+          refreshed_at?: string | null
           timestamp?: string
+        }
+        Relationships: []
+      }
+      mto_open_orders: {
+        Row: {
+          company: string
+          credit_hold: boolean | null
+          credit_override: boolean | null
+          customer_name: string | null
+          entry_person: string | null
+          id: string
+          line_desc: string | null
+          need_by_date: string | null
+          on_hand_qty: number | null
+          open_qty: number | null
+          open_value: number | null
+          order_date: string | null
+          order_held: boolean | null
+          order_line: number
+          order_num: number
+          order_rel_num: number
+          part_num: string | null
+          po_num: string | null
+          refreshed_at: string | null
+          req_date: string | null
+          revision_num: string | null
+          selling_req_qty: number | null
+          ship_via_code: string | null
+          synced_at: string | null
+          unit_price: number | null
+        }
+        Insert: {
+          company: string
+          credit_hold?: boolean | null
+          credit_override?: boolean | null
+          customer_name?: string | null
+          entry_person?: string | null
+          id?: string
+          line_desc?: string | null
+          need_by_date?: string | null
+          on_hand_qty?: number | null
+          open_qty?: number | null
+          open_value?: number | null
+          order_date?: string | null
+          order_held?: boolean | null
+          order_line: number
+          order_num: number
+          order_rel_num?: number
+          part_num?: string | null
+          po_num?: string | null
+          refreshed_at?: string | null
+          req_date?: string | null
+          revision_num?: string | null
+          selling_req_qty?: number | null
+          ship_via_code?: string | null
+          synced_at?: string | null
+          unit_price?: number | null
+        }
+        Update: {
+          company?: string
+          credit_hold?: boolean | null
+          credit_override?: boolean | null
+          customer_name?: string | null
+          entry_person?: string | null
+          id?: string
+          line_desc?: string | null
+          need_by_date?: string | null
+          on_hand_qty?: number | null
+          open_qty?: number | null
+          open_value?: number | null
+          order_date?: string | null
+          order_held?: boolean | null
+          order_line?: number
+          order_num?: number
+          order_rel_num?: number
+          part_num?: string | null
+          po_num?: string | null
+          refreshed_at?: string | null
+          req_date?: string | null
+          revision_num?: string | null
+          selling_req_qty?: number | null
+          ship_via_code?: string | null
+          synced_at?: string | null
+          unit_price?: number | null
+        }
+        Relationships: []
+      }
+      mto_otd_history: {
+        Row: {
+          company: string
+          cust_id: string | null
+          id: string
+          invoiced: boolean | null
+          job_due_date: string | null
+          job_num: string | null
+          job_type: string | null
+          need_by_date: string | null
+          net_line_price: number | null
+          order_date: string | null
+          order_line: number
+          order_num: number
+          order_rel_num: number
+          pack_num: number
+          part_num: string | null
+          prod_code: string | null
+          qty_shipped: number | null
+          refreshed_at: string | null
+          req_date: string | null
+          revision_num: string | null
+          selling_qty: number | null
+          ship_date: string | null
+          synced_at: string | null
+        }
+        Insert: {
+          company: string
+          cust_id?: string | null
+          id?: string
+          invoiced?: boolean | null
+          job_due_date?: string | null
+          job_num?: string | null
+          job_type?: string | null
+          need_by_date?: string | null
+          net_line_price?: number | null
+          order_date?: string | null
+          order_line: number
+          order_num: number
+          order_rel_num?: number
+          pack_num: number
+          part_num?: string | null
+          prod_code?: string | null
+          qty_shipped?: number | null
+          refreshed_at?: string | null
+          req_date?: string | null
+          revision_num?: string | null
+          selling_qty?: number | null
+          ship_date?: string | null
+          synced_at?: string | null
+        }
+        Update: {
+          company?: string
+          cust_id?: string | null
+          id?: string
+          invoiced?: boolean | null
+          job_due_date?: string | null
+          job_num?: string | null
+          job_type?: string | null
+          need_by_date?: string | null
+          net_line_price?: number | null
+          order_date?: string | null
+          order_line?: number
+          order_num?: number
+          order_rel_num?: number
+          pack_num?: number
+          part_num?: string | null
+          prod_code?: string | null
+          qty_shipped?: number | null
+          refreshed_at?: string | null
+          req_date?: string | null
+          revision_num?: string | null
+          selling_qty?: number | null
+          ship_date?: string | null
+          synced_at?: string | null
         }
         Relationships: []
       }
@@ -3201,6 +4876,7 @@ export type Database = {
           last_modified_at: string
           last_modified_by: string | null
           project_id: string
+          refreshed_at: string | null
           value: string | null
         }
         Insert: {
@@ -3210,6 +4886,7 @@ export type Database = {
           last_modified_at?: string
           last_modified_by?: string | null
           project_id: string
+          refreshed_at?: string | null
           value?: string | null
         }
         Update: {
@@ -3219,6 +4896,7 @@ export type Database = {
           last_modified_at?: string
           last_modified_by?: string | null
           project_id?: string
+          refreshed_at?: string | null
           value?: string | null
         }
         Relationships: [
@@ -3247,6 +4925,7 @@ export type Database = {
           display_order: number
           id: string
           project_id: string
+          refreshed_at: string | null
           status_options: Json | null
         }
         Insert: {
@@ -3257,6 +4936,7 @@ export type Database = {
           display_order?: number
           id?: string
           project_id: string
+          refreshed_at?: string | null
           status_options?: Json | null
         }
         Update: {
@@ -3267,6 +4947,7 @@ export type Database = {
           display_order?: number
           id?: string
           project_id?: string
+          refreshed_at?: string | null
           status_options?: Json | null
         }
         Relationships: [
@@ -3296,6 +4977,7 @@ export type Database = {
           line_number: number | null
           order_number: number | null
           project_id: string
+          refreshed_at: string | null
         }
         Insert: {
           composite_key?: string | null
@@ -3306,6 +4988,7 @@ export type Database = {
           line_number?: number | null
           order_number?: number | null
           project_id: string
+          refreshed_at?: string | null
         }
         Update: {
           composite_key?: string | null
@@ -3316,6 +4999,7 @@ export type Database = {
           line_number?: number | null
           order_number?: number | null
           project_id?: string
+          refreshed_at?: string | null
         }
         Relationships: [
           {
@@ -3335,6 +5019,7 @@ export type Database = {
           is_active: boolean
           name: string
           owner_id: string | null
+          refreshed_at: string | null
           updated_at: string
         }
         Insert: {
@@ -3344,6 +5029,7 @@ export type Database = {
           is_active?: boolean
           name: string
           owner_id?: string | null
+          refreshed_at?: string | null
           updated_at?: string
         }
         Update: {
@@ -3353,6 +5039,7 @@ export type Database = {
           is_active?: boolean
           name?: string
           owner_id?: string | null
+          refreshed_at?: string | null
           updated_at?: string
         }
         Relationships: [
@@ -3365,6 +5052,156 @@ export type Database = {
           },
         ]
       }
+      mto_quote_history: {
+        Row: {
+          company: string
+          cust_id: string | null
+          customer_city: string | null
+          customer_country: string | null
+          customer_name: string | null
+          customer_state: string | null
+          date_quoted: string | null
+          discount: number | null
+          expiration_date: string | null
+          expired: boolean | null
+          ext_price: number | null
+          id: string
+          line_desc: string | null
+          order_qty: number | null
+          ordered: boolean | null
+          part_num: string | null
+          quote_amt: number | null
+          quote_closed: boolean | null
+          quote_line: number
+          quote_num: number
+          quoted: boolean | null
+          refreshed_at: string | null
+          synced_at: string | null
+          unit_price: number | null
+        }
+        Insert: {
+          company: string
+          cust_id?: string | null
+          customer_city?: string | null
+          customer_country?: string | null
+          customer_name?: string | null
+          customer_state?: string | null
+          date_quoted?: string | null
+          discount?: number | null
+          expiration_date?: string | null
+          expired?: boolean | null
+          ext_price?: number | null
+          id?: string
+          line_desc?: string | null
+          order_qty?: number | null
+          ordered?: boolean | null
+          part_num?: string | null
+          quote_amt?: number | null
+          quote_closed?: boolean | null
+          quote_line: number
+          quote_num: number
+          quoted?: boolean | null
+          refreshed_at?: string | null
+          synced_at?: string | null
+          unit_price?: number | null
+        }
+        Update: {
+          company?: string
+          cust_id?: string | null
+          customer_city?: string | null
+          customer_country?: string | null
+          customer_name?: string | null
+          customer_state?: string | null
+          date_quoted?: string | null
+          discount?: number | null
+          expiration_date?: string | null
+          expired?: boolean | null
+          ext_price?: number | null
+          id?: string
+          line_desc?: string | null
+          order_qty?: number | null
+          ordered?: boolean | null
+          part_num?: string | null
+          quote_amt?: number | null
+          quote_closed?: boolean | null
+          quote_line?: number
+          quote_num?: number
+          quoted?: boolean | null
+          refreshed_at?: string | null
+          synced_at?: string | null
+          unit_price?: number | null
+        }
+        Relationships: []
+      }
+      mto_quotes_active: {
+        Row: {
+          company: string
+          confidence_pct: number | null
+          current_stage: string | null
+          customer_name: string | null
+          date_quoted: string | null
+          due_date: string | null
+          expected_close: string | null
+          expired: boolean | null
+          follow_up_date: string | null
+          id: string
+          lead_rating: string | null
+          mktg_campaign_desc: string | null
+          mktg_campaign_id: string | null
+          ordered: boolean | null
+          quote_closed: boolean | null
+          quote_num: number
+          quoted: boolean | null
+          refreshed_at: string | null
+          synced_at: string | null
+          territory_desc: string | null
+        }
+        Insert: {
+          company: string
+          confidence_pct?: number | null
+          current_stage?: string | null
+          customer_name?: string | null
+          date_quoted?: string | null
+          due_date?: string | null
+          expected_close?: string | null
+          expired?: boolean | null
+          follow_up_date?: string | null
+          id?: string
+          lead_rating?: string | null
+          mktg_campaign_desc?: string | null
+          mktg_campaign_id?: string | null
+          ordered?: boolean | null
+          quote_closed?: boolean | null
+          quote_num: number
+          quoted?: boolean | null
+          refreshed_at?: string | null
+          synced_at?: string | null
+          territory_desc?: string | null
+        }
+        Update: {
+          company?: string
+          confidence_pct?: number | null
+          current_stage?: string | null
+          customer_name?: string | null
+          date_quoted?: string | null
+          due_date?: string | null
+          expected_close?: string | null
+          expired?: boolean | null
+          follow_up_date?: string | null
+          id?: string
+          lead_rating?: string | null
+          mktg_campaign_desc?: string | null
+          mktg_campaign_id?: string | null
+          ordered?: boolean | null
+          quote_closed?: boolean | null
+          quote_num?: number
+          quoted?: boolean | null
+          refreshed_at?: string | null
+          synced_at?: string | null
+          territory_desc?: string | null
+        }
+        Relationships: []
+      }
       mto_shipclerk: {
         Row: {
           created_at: string
@@ -3374,6 +5211,7 @@ export type Database = {
           orders_data: string | null
           pending_count: number
           processed_count: number
+          refreshed_at: string | null
           total_amount: number
         }
         Insert: {
@@ -3384,6 +5222,7 @@ export type Database = {
           orders_data?: string | null
           pending_count?: number
           processed_count?: number
+          refreshed_at?: string | null
           total_amount?: number
         }
         Update: {
@@ -3394,7 +5233,128 @@ export type Database = {
           orders_data?: string | null
           pending_count?: number
           processed_count?: number
+          refreshed_at?: string | null
           total_amount?: number
+        }
+        Relationships: []
+      }
+      mto_shipment_history: {
+        Row: {
+          company: string
+          customer_address: string | null
+          customer_city: string | null
+          customer_name: string | null
+          customer_state: string | null
+          customer_zip: string | null
+          entry_person: string | null
+          id: string
+          inventory_ship_qty: number | null
+          job_num: string | null
+          job_ship_qty: number | null
+          line_desc: string | null
+          line_value: number | null
+          need_by_date: string | null
+          on_time: boolean | null
+          order_line: number | null
+          order_num: number | null
+          pack_line: number | null
+          pack_num: number
+          part_num: string | null
+          po_num: string | null
+          prod_code: string | null
+          qty_shipped: number | null
+          refreshed_at: string | null
+          req_date: string | null
+          revision_num: string | null
+          sales_rep: string | null
+          ship_date: string | null
+          ship_to_address: string | null
+          ship_to_city: string | null
+          ship_to_country: string | null
+          ship_to_name: string | null
+          ship_to_state: string | null
+          ship_to_zip: string | null
+          ship_via_desc: string | null
+          synced_at: string | null
+          tracking_number: string | null
+        }
+        Insert: {
+          company: string
+          customer_address?: string | null
+          customer_city?: string | null
+          customer_name?: string | null
+          customer_state?: string | null
+          customer_zip?: string | null
+          entry_person?: string | null
+          id?: string
+          inventory_ship_qty?: number | null
+          job_num?: string | null
+          job_ship_qty?: number | null
+          line_desc?: string | null
+          line_value?: number | null
+          need_by_date?: string | null
+          on_time?: boolean | null
+          order_line?: number | null
+          order_num?: number | null
+          pack_line?: number | null
+          pack_num: number
+          part_num?: string | null
+          po_num?: string | null
+          prod_code?: string | null
+          qty_shipped?: number | null
+          refreshed_at?: string | null
+          req_date?: string | null
+          revision_num?: string | null
+          sales_rep?: string | null
+          ship_date?: string | null
+          ship_to_address?: string | null
+          ship_to_city?: string | null
+          ship_to_country?: string | null
+          ship_to_name?: string | null
+          ship_to_state?: string | null
+          ship_to_zip?: string | null
+          ship_via_desc?: string | null
+          synced_at?: string | null
+          tracking_number?: string | null
+        }
+        Update: {
+          company?: string
+          customer_address?: string | null
+          customer_city?: string | null
+          customer_name?: string | null
+          customer_state?: string | null
+          customer_zip?: string | null
+          entry_person?: string | null
+          id?: string
+          inventory_ship_qty?: number | null
+          job_num?: string | null
+          job_ship_qty?: number | null
+          line_desc?: string | null
+          line_value?: number | null
+          need_by_date?: string | null
+          on_time?: boolean | null
+          order_line?: number | null
+          order_num?: number | null
+          pack_line?: number | null
+          pack_num?: number
+          part_num?: string | null
+          po_num?: string | null
+          prod_code?: string | null
+          qty_shipped?: number | null
+          refreshed_at?: string | null
+          req_date?: string | null
+          revision_num?: string | null
+          sales_rep?: string | null
+          ship_date?: string | null
+          ship_to_address?: string | null
+          ship_to_city?: string | null
+          ship_to_country?: string | null
+          ship_to_name?: string | null
+          ship_to_state?: string | null
+          ship_to_zip?: string | null
+          ship_via_desc?: string | null
+          synced_at?: string | null
+          tracking_number?: string | null
         }
         Relationships: []
       }
@@ -3405,6 +5365,7 @@ export type Database = {
           id: string
           monthtotal: number
           productgroup: string
+          refreshed_at: string | null
           shipamount: number
           shipnotinvoiced: number
         }
@@ -3414,6 +5375,7 @@ export type Database = {
           id?: string
           monthtotal?: number
           productgroup: string
+          refreshed_at?: string | null
           shipamount?: number
           shipnotinvoiced?: number
         }
@@ -3423,8 +5385,75 @@ export type Database = {
           id?: string
           monthtotal?: number
           productgroup?: string
+          refreshed_at?: string | null
           shipamount?: number
           shipnotinvoiced?: number
+        }
+        Relationships: []
+      }
+      mto_shop_load: {
+        Row: {
+          actual_hours: number | null
+          capacity: number | null
+          company: string
+          dept_description: string | null
+          hours_over: number | null
+          id: string
+          jc_dept: string | null
+          load_date: string
+          overloaded: boolean | null
+          perc_over: number | null
+          plant: string | null
+          refreshed_at: string | null
+          resource_description: string | null
+          resource_grp_desc: string | null
+          resource_grp_id: string
+          resource_id: string | null
+          synced_at: string | null
+          wi_hours: number | null
+          wi_overloaded: boolean | null
+        }
+        Insert: {
+          actual_hours?: number | null
+          capacity?: number | null
+          company: string
+          dept_description?: string | null
+          hours_over?: number | null
+          id?: string
+          jc_dept?: string | null
+          load_date: string
+          overloaded?: boolean | null
+          perc_over?: number | null
+          plant?: string | null
+          refreshed_at?: string | null
+          resource_description?: string | null
+          resource_grp_desc?: string | null
+          resource_grp_id: string
+          resource_id?: string | null
+          synced_at?: string | null
+          wi_hours?: number | null
+          wi_overloaded?: boolean | null
+        }
+        Update: {
+          actual_hours?: number | null
+          capacity?: number | null
+          company?: string
+          dept_description?: string | null
+          hours_over?: number | null
+          id?: string
+          jc_dept?: string | null
+          load_date?: string
+          overloaded?: boolean | null
+          perc_over?: number | null
+          plant?: string | null
+          refreshed_at?: string | null
+          resource_description?: string | null
+          resource_grp_desc?: string | null
+          resource_grp_id?: string
+          resource_id?: string | null
+          synced_at?: string | null
+          wi_hours?: number | null
+          wi_overloaded?: boolean | null
         }
         Relationships: []
       }
@@ -3448,6 +5477,7 @@ export type Database = {
           "Order Amount": number | null
           "Order Date": string | null
           PO: string | null
+          refreshed_at: string | null
           "Ship By": string | null
           Site: number | null
           Terms: string | null
@@ -3471,6 +5501,7 @@ export type Database = {
           "Order Amount"?: number | null
           "Order Date"?: string | null
           PO?: string | null
+          refreshed_at?: string | null
           "Ship By"?: string | null
           Site?: number | null
           Terms?: string | null
@@ -3494,6 +5525,7 @@ export type Database = {
           "Order Amount"?: number | null
           "Order Date"?: string | null
           PO?: string | null
+          refreshed_at?: string | null
           "Ship By"?: string | null
           Site?: number | null
           Terms?: string | null
@@ -3995,6 +6027,84 @@ export type Database = {
           winding_dimension?: string | null
           winding_mass?: number | null
           wires_in_parallel?: number | null
+        }
+        Relationships: []
+      }
+      open_orders_live: {
+        Row: {
+          credit_hold: boolean | null
+          credit_override: boolean | null
+          customer_cust_id: string | null
+          customer_name: string | null
+          id: string
+          line_desc: string | null
+          need_by_date: string | null
+          on_hand_qty: number | null
+          open_qty: number | null
+          open_value: number | null
+          order_date: string | null
+          order_held: boolean | null
+          order_line: number
+          order_num: number
+          order_rel_num: number | null
+          part_num: string | null
+          po_num: string | null
+          req_date: string | null
+          revision_num: string | null
+          selling_req_qty: number | null
+          ship_via_code: string | null
+          synced_at: string | null
+          unit_price: number | null
+        }
+        Insert: {
+          credit_hold?: boolean | null
+          credit_override?: boolean | null
+          customer_cust_id?: string | null
+          customer_name?: string | null
+          id?: string
+          line_desc?: string | null
+          need_by_date?: string | null
+          on_hand_qty?: number | null
+          open_qty?: number | null
+          open_value?: number | null
+          order_date?: string | null
+          order_held?: boolean | null
+          order_line: number
+          order_num: number
+          order_rel_num?: number | null
+          part_num?: string | null
+          po_num?: string | null
+          req_date?: string | null
+          revision_num?: string | null
+          selling_req_qty?: number | null
+          ship_via_code?: string | null
+          synced_at?: string | null
+          unit_price?: number | null
+        }
+        Update: {
+          credit_hold?: boolean | null
+          credit_override?: boolean | null
+          customer_cust_id?: string | null
+          customer_name?: string | null
+          id?: string
+          line_desc?: string | null
+          need_by_date?: string | null
+          on_hand_qty?: number | null
+          open_qty?: number | null
+          open_value?: number | null
+          order_date?: string | null
+          order_held?: boolean | null
+          order_line?: number
+          order_num?: number
+          order_rel_num?: number | null
+          part_num?: string | null
+          po_num?: string | null
+          req_date?: string | null
+          revision_num?: string | null
+          selling_req_qty?: number | null
+          ship_via_code?: string | null
+          synced_at?: string | null
+          unit_price?: number | null
         }
         Relationships: []
       }
@@ -4736,6 +6846,201 @@ export type Database = {
           id?: string
           name?: string | null
           updated_at?: string | null
+        }
+        Relationships: []
+      }
+      quote_history: {
+        Row: {
+          closed_date: string | null
+          confidence_pct: number | null
+          cust_id: string | null
+          customer_city: string | null
+          customer_country: string | null
+          customer_name: string | null
+          customer_state: string | null
+          date_quoted: string | null
+          days_to_decision: number | null
+          discount: number | null
+          entry_date: string | null
+          expiration_date: string | null
+          expired: boolean | null
+          ext_price: number | null
+          id: string
+          line_desc: string | null
+          mktg_campaign_id: string | null
+          order_qty: number | null
+          ordered: boolean | null
+          part_num: string | null
+          prod_code: string | null
+          quote_amt: number | null
+          quote_closed: boolean | null
+          quote_line: number
+          quote_num: number
+          quoted: boolean | null
+          reason_type: string | null
+          sales_rep: string | null
+          synced_at: string | null
+          territory_id: string | null
+          unit_price: number | null
+        }
+        Insert: {
+          closed_date?: string | null
+          confidence_pct?: number | null
+          cust_id?: string | null
+          customer_city?: string | null
+          customer_country?: string | null
+          customer_name?: string | null
+          customer_state?: string | null
+          date_quoted?: string | null
+          days_to_decision?: number | null
+          discount?: number | null
+          entry_date?: string | null
+          expiration_date?: string | null
+          expired?: boolean | null
+          ext_price?: number | null
+          id?: string
+          line_desc?: string | null
+          mktg_campaign_id?: string | null
+          order_qty?: number | null
+          ordered?: boolean | null
+          part_num?: string | null
+          prod_code?: string | null
+          quote_amt?: number | null
+          quote_closed?: boolean | null
+          quote_line: number
+          quote_num: number
+          quoted?: boolean | null
+          reason_type?: string | null
+          sales_rep?: string | null
+          synced_at?: string | null
+          territory_id?: string | null
+          unit_price?: number | null
+        }
+        Update: {
+          closed_date?: string | null
+          confidence_pct?: number | null
+          cust_id?: string | null
+          customer_city?: string | null
+          customer_country?: string | null
+          customer_name?: string | null
+          customer_state?: string | null
+          date_quoted?: string | null
+          days_to_decision?: number | null
+          discount?: number | null
+          entry_date?: string | null
+          expiration_date?: string | null
+          expired?: boolean | null
+          ext_price?: number | null
+          id?: string
+          line_desc?: string | null
+          mktg_campaign_id?: string | null
+          order_qty?: number | null
+          ordered?: boolean | null
+          part_num?: string | null
+          prod_code?: string | null
+          quote_amt?: number | null
+          quote_closed?: boolean | null
+          quote_line?: number
+          quote_num?: number
+          quoted?: boolean | null
+          reason_type?: string | null
+          sales_rep?: string | null
+          synced_at?: string | null
+          territory_id?: string | null
+          unit_price?: number | null
+        }
+        Relationships: []
+      }
+      quotes_active: {
+        Row: {
+          confidence_pct: number | null
+          current_stage: string | null
+          cust_num: number | null
+          customer_name: string | null
+          date_quoted: string | null
+          due_date: string | null
+          entry_date: string | null
+          expected_close: string | null
+          expected_revenue: number | null
+          expiration_date: string | null
+          expired: boolean | null
+          follow_up_date: string | null
+          id: string
+          lead_rating: string | null
+          line_desc: string | null
+          mktg_campaign_id: string | null
+          ordered: boolean | null
+          part_num: string | null
+          prod_code: string | null
+          quote_amt: number | null
+          quote_closed: boolean | null
+          quote_line: number | null
+          quote_num: number
+          quoted: boolean | null
+          sales_rep: string | null
+          synced_at: string | null
+          territory_desc: string | null
+          territory_id: string | null
+        }
+        Insert: {
+          confidence_pct?: number | null
+          current_stage?: string | null
+          cust_num?: number | null
+          customer_name?: string | null
+          date_quoted?: string | null
+          due_date?: string | null
+          entry_date?: string | null
+          expected_close?: string | null
+          expected_revenue?: number | null
+          expiration_date?: string | null
+          expired?: boolean | null
+          follow_up_date?: string | null
+          id?: string
+          lead_rating?: string | null
+          line_desc?: string | null
+          mktg_campaign_id?: string | null
+          ordered?: boolean | null
+          part_num?: string | null
+          prod_code?: string | null
+          quote_amt?: number | null
+          quote_closed?: boolean | null
+          quote_line?: number | null
+          quote_num: number
+          quoted?: boolean | null
+          sales_rep?: string | null
+          synced_at?: string | null
+          territory_desc?: string | null
+          territory_id?: string | null
+        }
+        Update: {
+          confidence_pct?: number | null
+          current_stage?: string | null
+          cust_num?: number | null
+          customer_name?: string | null
+          date_quoted?: string | null
+          due_date?: string | null
+          entry_date?: string | null
+          expected_close?: string | null
+          expected_revenue?: number | null
+          expiration_date?: string | null
+          expired?: boolean | null
+          follow_up_date?: string | null
+          id?: string
+          lead_rating?: string | null
+          line_desc?: string | null
+          mktg_campaign_id?: string | null
+          ordered?: boolean | null
+          part_num?: string | null
+          prod_code?: string | null
+          quote_amt?: number | null
+          quote_closed?: boolean | null
+          quote_line?: number | null
+          quote_num?: number
+          quoted?: boolean | null
+          sales_rep?: string | null
+          synced_at?: string | null
+          territory_desc?: string | null
+          territory_id?: string | null
         }
         Relationships: []
       }
@@ -5713,37 +8018,202 @@ export type Database = {
       }
       shipment_history: {
         Row: {
-          created_at: string | null
+          cust_id: string | null
+          customer_name: string | null
+          days_early_late: number | null
           id: string
-          month: string
-          month_index: number
-          monthly_value: number | null
-          target_value: number
-          updated_at: string | null
-          year: number
-          ytd_value: number
+          invoiced: boolean | null
+          job_num: string | null
+          line_desc: string | null
+          need_by_date: string | null
+          net_line_price: number | null
+          on_time: boolean | null
+          order_date: string | null
+          order_line: number | null
+          order_num: number | null
+          order_rel_num: number | null
+          pack_line: number
+          pack_num: number
+          part_num: string | null
+          prod_code: string | null
+          qty_shipped: number | null
+          req_date: string | null
+          revision_num: string | null
+          ship_date: string
+          ship_to_num: string | null
+          ship_via: string | null
+          synced_at: string | null
         }
         Insert: {
-          created_at?: string | null
+          cust_id?: string | null
+          customer_name?: string | null
+          days_early_late?: number | null
           id?: string
-          month: string
-          month_index: number
-          monthly_value?: number | null
-          target_value: number
-          updated_at?: string | null
-          year: number
-          ytd_value: number
+          invoiced?: boolean | null
+          job_num?: string | null
+          line_desc?: string | null
+          need_by_date?: string | null
+          net_line_price?: number | null
+          on_time?: boolean | null
+          order_date?: string | null
+          order_line?: number | null
+          order_num?: number | null
+          order_rel_num?: number | null
+          pack_line: number
+          pack_num: number
+          part_num?: string | null
+          prod_code?: string | null
+          qty_shipped?: number | null
+          req_date?: string | null
+          revision_num?: string | null
+          ship_date: string
+          ship_to_num?: string | null
+          ship_via?: string | null
+          synced_at?: string | null
         }
         Update: {
-          created_at?: string | null
+          cust_id?: string | null
+          customer_name?: string | null
+          days_early_late?: number | null
           id?: string
-          month?: string
-          month_index?: number
-          monthly_value?: number | null
-          target_value?: number
-          updated_at?: string | null
-          year?: number
-          ytd_value?: number
+          invoiced?: boolean | null
+          job_num?: string | null
+          line_desc?: string | null
+          need_by_date?: string | null
+          net_line_price?: number | null
+          on_time?: boolean | null
+          order_date?: string | null
+          order_line?: number | null
+          order_num?: number | null
+          order_rel_num?: number | null
+          pack_line?: number
+          pack_num?: number
+          part_num?: string | null
+          prod_code?: string | null
+          qty_shipped?: number | null
+          req_date?: string | null
+          revision_num?: string | null
+          ship_date?: string
+          ship_to_num?: string | null
+          ship_via?: string | null
+          synced_at?: string | null
+        }
+        Relationships: []
+      }
+      shop_load_current: {
+        Row: {
+          actual_hours: number | null
+          capacity: number | null
+          dept_description: string | null
+          hours_over: number | null
+          id: string
+          inform_overloaded: boolean | null
+          jc_dept: string | null
+          load_date: string
+          overloaded: boolean | null
+          perc_over: number | null
+          plant: string | null
+          resource_description: string | null
+          resource_grp_id: string
+          resource_id: string | null
+          synced_at: string | null
+          utilization_pct: number | null
+          wi_hours: number | null
+          wi_hours_over: number | null
+          wi_overloaded: boolean | null
+          wi_perc_over: number | null
+        }
+        Insert: {
+          actual_hours?: number | null
+          capacity?: number | null
+          dept_description?: string | null
+          hours_over?: number | null
+          id?: string
+          inform_overloaded?: boolean | null
+          jc_dept?: string | null
+          load_date: string
+          overloaded?: boolean | null
+          perc_over?: number | null
+          plant?: string | null
+          resource_description?: string | null
+          resource_grp_id: string
+          resource_id?: string | null
+          synced_at?: string | null
+          utilization_pct?: number | null
+          wi_hours?: number | null
+          wi_hours_over?: number | null
+          wi_overloaded?: boolean | null
+          wi_perc_over?: number | null
+        }
+        Update: {
+          actual_hours?: number | null
+          capacity?: number | null
+          dept_description?: string | null
+          hours_over?: number | null
+          id?: string
+          inform_overloaded?: boolean | null
+          jc_dept?: string | null
+          load_date?: string
+          overloaded?: boolean | null
+          perc_over?: number | null
+          plant?: string | null
+          resource_description?: string | null
+          resource_grp_id?: string
+          resource_id?: string | null
+          synced_at?: string | null
+          utilization_pct?: number | null
+          wi_hours?: number | null
+          wi_hours_over?: number | null
+          wi_overloaded?: boolean | null
+          wi_perc_over?: number | null
+        }
+        Relationships: []
+      }
+      shop_load_history: {
+        Row: {
+          actual_hours: number | null
+          capacity: number | null
+          hours_over: number | null
+          id: string
+          jc_dept: string | null
+          load_date: string
+          overloaded: boolean | null
+          perc_over: number | null
+          plant: string | null
+          resource_grp_id: string
+          resource_id: string | null
+          snapshot_timestamp: string
+          synced_at: string | null
+        }
+        Insert: {
+          actual_hours?: number | null
+          capacity?: number | null
+          hours_over?: number | null
+          id?: string
+          jc_dept?: string | null
+          load_date: string
+          overloaded?: boolean | null
+          perc_over?: number | null
+          plant?: string | null
+          resource_grp_id: string
+          resource_id?: string | null
+          snapshot_timestamp?: string
+          synced_at?: string | null
+        }
+        Update: {
+          actual_hours?: number | null
+          capacity?: number | null
+          hours_over?: number | null
+          id?: string
+          jc_dept?: string | null
+          load_date?: string
+          overloaded?: boolean | null
+          perc_over?: number | null
+          plant?: string | null
+          resource_grp_id?: string
+          resource_id?: string | null
+          snapshot_timestamp?: string
+          synced_at?: string | null
         }
         Relationships: []
       }
@@ -6107,6 +8577,194 @@ export type Database = {
             columns: ["response_id"]
             isOneToOne: false
             referencedRelation: "employee_survey_responses"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      sync_config: {
+        Row: {
+          baq_name: string
+          created_at: string | null
+          enabled: boolean | null
+          id: string
+          last_sync_at: string | null
+          schedule: string
+          sync_type: string
+          table_name: string
+          webhook_url: string | null
+        }
+        Insert: {
+          baq_name: string
+          created_at?: string | null
+          enabled?: boolean | null
+          id?: string
+          last_sync_at?: string | null
+          schedule: string
+          sync_type: string
+          table_name: string
+          webhook_url?: string | null
+        }
+        Update: {
+          baq_name?: string
+          created_at?: string | null
+          enabled?: boolean | null
+          id?: string
+          last_sync_at?: string | null
+          schedule?: string
+          sync_type?: string
+          table_name?: string
+          webhook_url?: string | null
+        }
+        Relationships: []
+      }
+      sync_jobs: {
+        Row: {
+          api_endpoint: string
+          baq_name: string | null
+          companies: string[] | null
+          created_at: string
+          day_of_week: number | null
+          description: string | null
+          frequency: Database["public"]["Enums"]["sync_frequency"]
+          hour_of_day: number | null
+          id: string
+          incremental_field: string | null
+          is_enabled: boolean
+          last_error: string | null
+          last_run_at: string | null
+          last_status: Database["public"]["Enums"]["sync_job_status"] | null
+          minute_of_hour: number | null
+          name: string
+          next_run_at: string | null
+          sync_mode: string | null
+          target_table: string | null
+          updated_at: string
+        }
+        Insert: {
+          api_endpoint: string
+          baq_name?: string | null
+          companies?: string[] | null
+          created_at?: string
+          day_of_week?: number | null
+          description?: string | null
+          frequency?: Database["public"]["Enums"]["sync_frequency"]
+          hour_of_day?: number | null
+          id?: string
+          incremental_field?: string | null
+          is_enabled?: boolean
+          last_error?: string | null
+          last_run_at?: string | null
+          last_status?: Database["public"]["Enums"]["sync_job_status"] | null
+          minute_of_hour?: number | null
+          name: string
+          next_run_at?: string | null
+          sync_mode?: string | null
+          target_table?: string | null
+          updated_at?: string
+        }
+        Update: {
+          api_endpoint?: string
+          baq_name?: string | null
+          companies?: string[] | null
+          created_at?: string
+          day_of_week?: number | null
+          description?: string | null
+          frequency?: Database["public"]["Enums"]["sync_frequency"]
+          hour_of_day?: number | null
+          id?: string
+          incremental_field?: string | null
+          is_enabled?: boolean
+          last_error?: string | null
+          last_run_at?: string | null
+          last_status?: Database["public"]["Enums"]["sync_job_status"] | null
+          minute_of_hour?: number | null
+          name?: string
+          next_run_at?: string | null
+          sync_mode?: string | null
+          target_table?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      sync_log: {
+        Row: {
+          baq_name: string | null
+          error_message: string | null
+          id: string
+          records_fetched: number | null
+          records_upserted: number | null
+          status: string | null
+          sync_completed_at: string | null
+          sync_started_at: string
+          table_name: string
+          triggered_by: string | null
+        }
+        Insert: {
+          baq_name?: string | null
+          error_message?: string | null
+          id?: string
+          records_fetched?: number | null
+          records_upserted?: number | null
+          status?: string | null
+          sync_completed_at?: string | null
+          sync_started_at?: string
+          table_name: string
+          triggered_by?: string | null
+        }
+        Update: {
+          baq_name?: string | null
+          error_message?: string | null
+          id?: string
+          records_fetched?: number | null
+          records_upserted?: number | null
+          status?: string | null
+          sync_completed_at?: string | null
+          sync_started_at?: string
+          table_name?: string
+          triggered_by?: string | null
+        }
+        Relationships: []
+      }
+      sync_runs: {
+        Row: {
+          completed_at: string | null
+          duration_ms: number | null
+          error_message: string | null
+          id: string
+          job_id: string
+          records_synced: number | null
+          started_at: string
+          status: Database["public"]["Enums"]["sync_job_status"]
+          triggered_by: string | null
+        }
+        Insert: {
+          completed_at?: string | null
+          duration_ms?: number | null
+          error_message?: string | null
+          id?: string
+          job_id: string
+          records_synced?: number | null
+          started_at?: string
+          status?: Database["public"]["Enums"]["sync_job_status"]
+          triggered_by?: string | null
+        }
+        Update: {
+          completed_at?: string | null
+          duration_ms?: number | null
+          error_message?: string | null
+          id?: string
+          job_id?: string
+          records_synced?: number | null
+          started_at?: string
+          status?: Database["public"]["Enums"]["sync_job_status"]
+          triggered_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sync_runs_job_id_fkey"
+            columns: ["job_id"]
+            isOneToOne: false
+            referencedRelation: "sync_jobs"
             referencedColumns: ["id"]
           },
         ]
@@ -6702,6 +9360,47 @@ export type Database = {
         }
         Relationships: []
       }
+      user_notifications: {
+        Row: {
+          alert_history_id: string | null
+          created_at: string
+          id: string
+          is_read: boolean
+          message: string
+          severity: Database["public"]["Enums"]["alert_severity"]
+          title: string
+          user_id: string
+        }
+        Insert: {
+          alert_history_id?: string | null
+          created_at?: string
+          id?: string
+          is_read?: boolean
+          message: string
+          severity?: Database["public"]["Enums"]["alert_severity"]
+          title: string
+          user_id: string
+        }
+        Update: {
+          alert_history_id?: string | null
+          created_at?: string
+          id?: string
+          is_read?: boolean
+          message?: string
+          severity?: Database["public"]["Enums"]["alert_severity"]
+          title?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_notifications_alert_history_id_fkey"
+            columns: ["alert_history_id"]
+            isOneToOne: false
+            referencedRelation: "alert_history"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       user_preferences: {
         Row: {
           created_at: string | null
@@ -6956,10 +9655,760 @@ export type Database = {
       }
     }
     Views: {
+      mto_v_cost_overruns: {
+        Row: {
+          act_burden_cost: number | null
+          act_labor_cost: number | null
+          act_material_cost: number | null
+          act_subcontract_cost: number | null
+          act_total_cost: number | null
+          company: string | null
+          cost_variance: number | null
+          delinquent: boolean | null
+          due_date: string | null
+          est_burden_cost: number | null
+          est_labor_cost: number | null
+          est_material_cost: number | null
+          est_subcontract_cost: number | null
+          est_total_cost: number | null
+          id: string | null
+          job_num: string | null
+          job_type: string | null
+          part_description: string | null
+          part_num: string | null
+          perc_of_est: number | null
+          prod_group_desc: string | null
+          prod_qty: number | null
+          req_due_date: string | null
+          synced_at: string | null
+          variance_pct: number | null
+        }
+        Insert: {
+          act_burden_cost?: number | null
+          act_labor_cost?: number | null
+          act_material_cost?: number | null
+          act_subcontract_cost?: number | null
+          act_total_cost?: number | null
+          company?: string | null
+          cost_variance?: never
+          delinquent?: boolean | null
+          due_date?: string | null
+          est_burden_cost?: number | null
+          est_labor_cost?: number | null
+          est_material_cost?: number | null
+          est_subcontract_cost?: number | null
+          est_total_cost?: number | null
+          id?: string | null
+          job_num?: string | null
+          job_type?: string | null
+          part_description?: string | null
+          part_num?: string | null
+          perc_of_est?: number | null
+          prod_group_desc?: string | null
+          prod_qty?: number | null
+          req_due_date?: string | null
+          synced_at?: string | null
+          variance_pct?: never
+        }
+        Update: {
+          act_burden_cost?: number | null
+          act_labor_cost?: number | null
+          act_material_cost?: number | null
+          act_subcontract_cost?: number | null
+          act_total_cost?: number | null
+          company?: string | null
+          cost_variance?: never
+          delinquent?: boolean | null
+          due_date?: string | null
+          est_burden_cost?: number | null
+          est_labor_cost?: number | null
+          est_material_cost?: number | null
+          est_subcontract_cost?: number | null
+          est_total_cost?: number | null
+          id?: string | null
+          job_num?: string | null
+          job_type?: string | null
+          part_description?: string | null
+          part_num?: string | null
+          perc_of_est?: number | null
+          prod_group_desc?: string | null
+          prod_qty?: number | null
+          req_due_date?: string | null
+          synced_at?: string | null
+          variance_pct?: never
+        }
+        Relationships: []
+      }
+      mto_v_expiring_quotes: {
+        Row: {
+          company: string | null
+          confidence_pct: number | null
+          current_stage: string | null
+          customer_name: string | null
+          date_quoted: string | null
+          days_to_expire: number | null
+          due_date: string | null
+          expected_close: string | null
+          expired: boolean | null
+          follow_up_date: string | null
+          id: string | null
+          lead_rating: string | null
+          mktg_campaign_desc: string | null
+          mktg_campaign_id: string | null
+          ordered: boolean | null
+          quote_closed: boolean | null
+          quote_num: number | null
+          quoted: boolean | null
+          synced_at: string | null
+          territory_desc: string | null
+        }
+        Insert: {
+          company?: string | null
+          confidence_pct?: number | null
+          current_stage?: string | null
+          customer_name?: string | null
+          date_quoted?: string | null
+          days_to_expire?: never
+          due_date?: string | null
+          expected_close?: string | null
+          expired?: boolean | null
+          follow_up_date?: string | null
+          id?: string | null
+          lead_rating?: string | null
+          mktg_campaign_desc?: string | null
+          mktg_campaign_id?: string | null
+          ordered?: boolean | null
+          quote_closed?: boolean | null
+          quote_num?: number | null
+          quoted?: boolean | null
+          synced_at?: string | null
+          territory_desc?: string | null
+        }
+        Update: {
+          company?: string | null
+          confidence_pct?: number | null
+          current_stage?: string | null
+          customer_name?: string | null
+          date_quoted?: string | null
+          days_to_expire?: never
+          due_date?: string | null
+          expected_close?: string | null
+          expired?: boolean | null
+          follow_up_date?: string | null
+          id?: string | null
+          lead_rating?: string | null
+          mktg_campaign_desc?: string | null
+          mktg_campaign_id?: string | null
+          ordered?: boolean | null
+          quote_closed?: boolean | null
+          quote_num?: number | null
+          quoted?: boolean | null
+          synced_at?: string | null
+          territory_desc?: string | null
+        }
+        Relationships: []
+      }
+      mto_v_late_risk_orders: {
+        Row: {
+          company: string | null
+          credit_hold: boolean | null
+          credit_override: boolean | null
+          customer_name: string | null
+          days_to_due: number | null
+          entry_person: string | null
+          id: string | null
+          late_risk: boolean | null
+          line_desc: string | null
+          need_by_date: string | null
+          on_hand_qty: number | null
+          open_qty: number | null
+          open_value: number | null
+          order_date: string | null
+          order_held: boolean | null
+          order_line: number | null
+          order_num: number | null
+          order_rel_num: number | null
+          part_num: string | null
+          po_num: string | null
+          req_date: string | null
+          revision_num: string | null
+          selling_req_qty: number | null
+          ship_via_code: string | null
+          synced_at: string | null
+          unit_price: number | null
+        }
+        Insert: {
+          company?: string | null
+          credit_hold?: boolean | null
+          credit_override?: boolean | null
+          customer_name?: string | null
+          days_to_due?: never
+          entry_person?: string | null
+          id?: string | null
+          late_risk?: never
+          line_desc?: string | null
+          need_by_date?: string | null
+          on_hand_qty?: number | null
+          open_qty?: number | null
+          open_value?: number | null
+          order_date?: string | null
+          order_held?: boolean | null
+          order_line?: number | null
+          order_num?: number | null
+          order_rel_num?: number | null
+          part_num?: string | null
+          po_num?: string | null
+          req_date?: string | null
+          revision_num?: string | null
+          selling_req_qty?: number | null
+          ship_via_code?: string | null
+          synced_at?: string | null
+          unit_price?: number | null
+        }
+        Update: {
+          company?: string | null
+          credit_hold?: boolean | null
+          credit_override?: boolean | null
+          customer_name?: string | null
+          days_to_due?: never
+          entry_person?: string | null
+          id?: string | null
+          late_risk?: never
+          line_desc?: string | null
+          need_by_date?: string | null
+          on_hand_qty?: number | null
+          open_qty?: number | null
+          open_value?: number | null
+          order_date?: string | null
+          order_held?: boolean | null
+          order_line?: number | null
+          order_num?: number | null
+          order_rel_num?: number | null
+          part_num?: string | null
+          po_num?: string | null
+          req_date?: string | null
+          revision_num?: string | null
+          selling_req_qty?: number | null
+          ship_via_code?: string | null
+          synced_at?: string | null
+          unit_price?: number | null
+        }
+        Relationships: []
+      }
+      mto_v_material_shortages: {
+        Row: {
+          asm_seq: number | null
+          company: string | null
+          description: string | null
+          id: string | null
+          issued_qty: number | null
+          job_num: string | null
+          mtl_seq: number | null
+          op_desc: string | null
+          part_num: string | null
+          po_due_date: string | null
+          po_line: number | null
+          po_num: number | null
+          po_rel_num: number | null
+          related_operation: number | null
+          required_qty: number | null
+          shortage_qty: number | null
+          synced_at: string | null
+        }
+        Insert: {
+          asm_seq?: number | null
+          company?: string | null
+          description?: string | null
+          id?: string | null
+          issued_qty?: number | null
+          job_num?: string | null
+          mtl_seq?: number | null
+          op_desc?: string | null
+          part_num?: string | null
+          po_due_date?: string | null
+          po_line?: number | null
+          po_num?: number | null
+          po_rel_num?: number | null
+          related_operation?: number | null
+          required_qty?: number | null
+          shortage_qty?: never
+          synced_at?: string | null
+        }
+        Update: {
+          asm_seq?: number | null
+          company?: string | null
+          description?: string | null
+          id?: string | null
+          issued_qty?: number | null
+          job_num?: string | null
+          mtl_seq?: number | null
+          op_desc?: string | null
+          part_num?: string | null
+          po_due_date?: string | null
+          po_line?: number | null
+          po_num?: number | null
+          po_rel_num?: number | null
+          related_operation?: number | null
+          required_qty?: number | null
+          shortage_qty?: never
+          synced_at?: string | null
+        }
+        Relationships: []
+      }
+      mto_v_otd_metrics: {
+        Row: {
+          company: string | null
+          on_time_count: number | null
+          otd_percent: number | null
+          ship_month: string | null
+          total_shipments: number | null
+        }
+        Relationships: []
+      }
+      mto_v_overloaded_resources: {
+        Row: {
+          actual_hours: number | null
+          capacity: number | null
+          company: string | null
+          dept_description: string | null
+          hours_over: number | null
+          id: string | null
+          jc_dept: string | null
+          load_date: string | null
+          overloaded: boolean | null
+          perc_over: number | null
+          plant: string | null
+          resource_description: string | null
+          resource_grp_desc: string | null
+          resource_grp_id: string | null
+          resource_id: string | null
+          synced_at: string | null
+          wi_hours: number | null
+          wi_overloaded: boolean | null
+        }
+        Insert: {
+          actual_hours?: number | null
+          capacity?: number | null
+          company?: string | null
+          dept_description?: string | null
+          hours_over?: number | null
+          id?: string | null
+          jc_dept?: string | null
+          load_date?: string | null
+          overloaded?: boolean | null
+          perc_over?: number | null
+          plant?: string | null
+          resource_description?: string | null
+          resource_grp_desc?: string | null
+          resource_grp_id?: string | null
+          resource_id?: string | null
+          synced_at?: string | null
+          wi_hours?: number | null
+          wi_overloaded?: boolean | null
+        }
+        Update: {
+          actual_hours?: number | null
+          capacity?: number | null
+          company?: string | null
+          dept_description?: string | null
+          hours_over?: number | null
+          id?: string | null
+          jc_dept?: string | null
+          load_date?: string | null
+          overloaded?: boolean | null
+          perc_over?: number | null
+          plant?: string | null
+          resource_description?: string | null
+          resource_grp_desc?: string | null
+          resource_grp_id?: string | null
+          resource_id?: string | null
+          synced_at?: string | null
+          wi_hours?: number | null
+          wi_overloaded?: boolean | null
+        }
+        Relationships: []
+      }
+      open_orders_with_risk: {
+        Row: {
+          credit_hold: boolean | null
+          credit_override: boolean | null
+          customer_cust_id: string | null
+          customer_name: string | null
+          days_to_due: number | null
+          id: string | null
+          late_risk: boolean | null
+          line_desc: string | null
+          need_by_date: string | null
+          on_hand_qty: number | null
+          open_qty: number | null
+          open_value: number | null
+          order_date: string | null
+          order_held: boolean | null
+          order_line: number | null
+          order_num: number | null
+          order_rel_num: number | null
+          part_num: string | null
+          po_num: string | null
+          req_date: string | null
+          revision_num: string | null
+          selling_req_qty: number | null
+          ship_via_code: string | null
+          synced_at: string | null
+          unit_price: number | null
+        }
+        Insert: {
+          credit_hold?: boolean | null
+          credit_override?: boolean | null
+          customer_cust_id?: string | null
+          customer_name?: string | null
+          days_to_due?: never
+          id?: string | null
+          late_risk?: never
+          line_desc?: string | null
+          need_by_date?: string | null
+          on_hand_qty?: number | null
+          open_qty?: number | null
+          open_value?: number | null
+          order_date?: string | null
+          order_held?: boolean | null
+          order_line?: number | null
+          order_num?: number | null
+          order_rel_num?: number | null
+          part_num?: string | null
+          po_num?: string | null
+          req_date?: string | null
+          revision_num?: string | null
+          selling_req_qty?: number | null
+          ship_via_code?: string | null
+          synced_at?: string | null
+          unit_price?: number | null
+        }
+        Update: {
+          credit_hold?: boolean | null
+          credit_override?: boolean | null
+          customer_cust_id?: string | null
+          customer_name?: string | null
+          days_to_due?: never
+          id?: string | null
+          late_risk?: never
+          line_desc?: string | null
+          need_by_date?: string | null
+          on_hand_qty?: number | null
+          open_qty?: number | null
+          open_value?: number | null
+          order_date?: string | null
+          order_held?: boolean | null
+          order_line?: number | null
+          order_num?: number | null
+          order_rel_num?: number | null
+          part_num?: string | null
+          po_num?: string | null
+          req_date?: string | null
+          revision_num?: string | null
+          selling_req_qty?: number | null
+          ship_via_code?: string | null
+          synced_at?: string | null
+          unit_price?: number | null
+        }
+        Relationships: []
+      }
+      quotes_with_expiry: {
+        Row: {
+          confidence_pct: number | null
+          current_stage: string | null
+          cust_num: number | null
+          customer_name: string | null
+          date_quoted: string | null
+          days_to_expire: number | null
+          due_date: string | null
+          entry_date: string | null
+          expected_close: string | null
+          expected_revenue: number | null
+          expiration_date: string | null
+          expired: boolean | null
+          expiring_soon: boolean | null
+          follow_up_date: string | null
+          id: string | null
+          lead_rating: string | null
+          line_desc: string | null
+          mktg_campaign_id: string | null
+          ordered: boolean | null
+          part_num: string | null
+          prod_code: string | null
+          quote_amt: number | null
+          quote_closed: boolean | null
+          quote_line: number | null
+          quote_num: number | null
+          quoted: boolean | null
+          sales_rep: string | null
+          synced_at: string | null
+          territory_desc: string | null
+          territory_id: string | null
+        }
+        Insert: {
+          confidence_pct?: number | null
+          current_stage?: string | null
+          cust_num?: number | null
+          customer_name?: string | null
+          date_quoted?: string | null
+          days_to_expire?: never
+          due_date?: string | null
+          entry_date?: string | null
+          expected_close?: string | null
+          expected_revenue?: number | null
+          expiration_date?: string | null
+          expired?: boolean | null
+          expiring_soon?: never
+          follow_up_date?: string | null
+          id?: string | null
+          lead_rating?: string | null
+          line_desc?: string | null
+          mktg_campaign_id?: string | null
+          ordered?: boolean | null
+          part_num?: string | null
+          prod_code?: string | null
+          quote_amt?: number | null
+          quote_closed?: boolean | null
+          quote_line?: number | null
+          quote_num?: number | null
+          quoted?: boolean | null
+          sales_rep?: string | null
+          synced_at?: string | null
+          territory_desc?: string | null
+          territory_id?: string | null
+        }
+        Update: {
+          confidence_pct?: number | null
+          current_stage?: string | null
+          cust_num?: number | null
+          customer_name?: string | null
+          date_quoted?: string | null
+          days_to_expire?: never
+          due_date?: string | null
+          entry_date?: string | null
+          expected_close?: string | null
+          expected_revenue?: number | null
+          expiration_date?: string | null
+          expired?: boolean | null
+          expiring_soon?: never
+          follow_up_date?: string | null
+          id?: string | null
+          lead_rating?: string | null
+          line_desc?: string | null
+          mktg_campaign_id?: string | null
+          ordered?: boolean | null
+          part_num?: string | null
+          prod_code?: string | null
+          quote_amt?: number | null
+          quote_closed?: boolean | null
+          quote_line?: number | null
+          quote_num?: number | null
+          quoted?: boolean | null
+          sales_rep?: string | null
+          synced_at?: string | null
+          territory_desc?: string | null
+          territory_id?: string | null
+        }
+        Relationships: []
+      }
       user_unread_messages: {
         Row: {
           recipient_id: string | null
           unread_count: number | null
+        }
+        Relationships: []
+      }
+      v_cron_job_status: {
+        Row: {
+          avg_duration_7d: number | null
+          baq_id: string | null
+          description: string | null
+          enabled: boolean | null
+          failures_7d: number | null
+          job_name: string | null
+          last_run_at: string | null
+          last_run_duration_seconds: number | null
+          last_run_records: number | null
+          last_run_status: string | null
+          runs_7d: number | null
+          schedule: string | null
+          target_table: string | null
+        }
+        Insert: {
+          avg_duration_7d?: never
+          baq_id?: string | null
+          description?: string | null
+          enabled?: boolean | null
+          failures_7d?: never
+          job_name?: string | null
+          last_run_at?: string | null
+          last_run_duration_seconds?: number | null
+          last_run_records?: number | null
+          last_run_status?: string | null
+          runs_7d?: never
+          schedule?: string | null
+          target_table?: string | null
+        }
+        Update: {
+          avg_duration_7d?: never
+          baq_id?: string | null
+          description?: string | null
+          enabled?: boolean | null
+          failures_7d?: never
+          job_name?: string | null
+          last_run_at?: string | null
+          last_run_duration_seconds?: number | null
+          last_run_records?: number | null
+          last_run_status?: string | null
+          runs_7d?: never
+          schedule?: string | null
+          target_table?: string | null
+        }
+        Relationships: []
+      }
+      v_cron_recent_failures: {
+        Row: {
+          company: string | null
+          completed_at: string | null
+          duration_seconds: number | null
+          error_message: string | null
+          job_name: string | null
+          records_extracted: number | null
+          started_at: string | null
+          triggered_by: string | null
+        }
+        Insert: {
+          company?: string | null
+          completed_at?: string | null
+          duration_seconds?: number | null
+          error_message?: string | null
+          job_name?: string | null
+          records_extracted?: number | null
+          started_at?: string | null
+          triggered_by?: string | null
+        }
+        Update: {
+          company?: string | null
+          completed_at?: string | null
+          duration_seconds?: number | null
+          error_message?: string | null
+          job_name?: string | null
+          records_extracted?: number | null
+          started_at?: string | null
+          triggered_by?: string | null
+        }
+        Relationships: []
+      }
+      v_cron_running: {
+        Row: {
+          company: string | null
+          job_name: string | null
+          records_extracted: number | null
+          records_loaded: number | null
+          running_seconds: number | null
+          started_at: string | null
+          timeout_seconds: number | null
+        }
+        Relationships: []
+      }
+      v_over_estimate_operations: {
+        Row: {
+          act_prod_hrs: number | null
+          company: string | null
+          cost_variance: number | null
+          est_prod_hrs: number | null
+          job_num: string | null
+          last_labor_date: string | null
+          op_code: string | null
+          op_desc: string | null
+          opr_seq: number | null
+          prod_efficiency_pct: number | null
+          prod_variance_hrs: number | null
+        }
+        Insert: {
+          act_prod_hrs?: number | null
+          company?: string | null
+          cost_variance?: number | null
+          est_prod_hrs?: number | null
+          job_num?: string | null
+          last_labor_date?: string | null
+          op_code?: string | null
+          op_desc?: string | null
+          opr_seq?: number | null
+          prod_efficiency_pct?: number | null
+          prod_variance_hrs?: number | null
+        }
+        Update: {
+          act_prod_hrs?: number | null
+          company?: string | null
+          cost_variance?: number | null
+          est_prod_hrs?: number | null
+          job_num?: string | null
+          last_labor_date?: string | null
+          op_code?: string | null
+          op_desc?: string | null
+          opr_seq?: number | null
+          prod_efficiency_pct?: number | null
+          prod_variance_hrs?: number | null
+        }
+        Relationships: []
+      }
+      v_past_due_operations: {
+        Row: {
+          act_prod_hrs: number | null
+          company: string | null
+          cost_variance: number | null
+          due_date: string | null
+          est_prod_hrs: number | null
+          job_num: string | null
+          op_code: string | null
+          op_desc: string | null
+          opr_seq: number | null
+          prod_variance_hrs: number | null
+          qty_completed: number | null
+          run_qty: number | null
+        }
+        Insert: {
+          act_prod_hrs?: number | null
+          company?: string | null
+          cost_variance?: number | null
+          due_date?: string | null
+          est_prod_hrs?: number | null
+          job_num?: string | null
+          op_code?: string | null
+          op_desc?: string | null
+          opr_seq?: number | null
+          prod_variance_hrs?: number | null
+          qty_completed?: number | null
+          run_qty?: number | null
+        }
+        Update: {
+          act_prod_hrs?: number | null
+          company?: string | null
+          cost_variance?: number | null
+          due_date?: string | null
+          est_prod_hrs?: number | null
+          job_num?: string | null
+          op_code?: string | null
+          op_desc?: string | null
+          opr_seq?: number | null
+          prod_variance_hrs?: number | null
+          qty_completed?: number | null
+          run_qty?: number | null
+        }
+        Relationships: []
+      }
+      v_work_center_summary: {
+        Row: {
+          avg_efficiency_pct: number | null
+          company: string | null
+          complete_count: number | null
+          op_code: string | null
+          operation_count: number | null
+          past_due_count: number | null
+          total_act_hrs: number | null
+          total_cost_variance: number | null
+          total_est_hrs: number | null
         }
         Relationships: []
       }
@@ -7022,6 +10471,18 @@ export type Database = {
         }[]
       }
       get_current_employee_id: { Args: never; Returns: string }
+      get_due_jobs: {
+        Args: never
+        Returns: {
+          baq_id: string
+          companies: string[]
+          job_id: string
+          job_name: string
+          load_method: string
+          schedule: string
+          target_table: string
+        }[]
+      }
       get_employee_by_user_id: {
         Args: { user_id_param: string }
         Returns: {
@@ -7141,6 +10602,7 @@ export type Database = {
           updated_managers: number
         }[]
       }
+      queue_baq_sync: { Args: { p_table_name: string }; Returns: undefined }
       rvw_calculate_competency_avg: {
         Args: { p_review_id: string }
         Returns: number
@@ -7275,6 +10737,17 @@ export type Database = {
       }
     }
     Enums: {
+      alert_category: "inventory" | "financial" | "operational" | "custom"
+      alert_operator:
+        | "greater_than"
+        | "less_than"
+        | "equals"
+        | "not_equals"
+        | "contains"
+        | "is_null"
+        | "is_not_null"
+      alert_severity: "low" | "medium" | "high" | "critical"
+      alert_status: "pending" | "sent" | "failed" | "acknowledged" | "dismissed"
       app_type: "application" | "calculator" | "sales_tool" | "report"
       document_type: "contact" | "company" | "sales" | "purchase_order"
       employee_location:
@@ -7308,6 +10781,8 @@ export type Database = {
       rvw_template_type: "hourly" | "salaried"
       rvw_user_role: "admin" | "manager" | "employee"
       scroll_pattern_type: "continuous" | "fade" | "slide"
+      sync_frequency: "hourly" | "daily" | "weekly" | "monthly" | "manual"
+      sync_job_status: "idle" | "running" | "success" | "failed" | "disabled"
       training_data_scope: "user" | "global"
       vote_type: "up" | "down"
     }
@@ -7442,6 +10917,18 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
+      alert_category: ["inventory", "financial", "operational", "custom"],
+      alert_operator: [
+        "greater_than",
+        "less_than",
+        "equals",
+        "not_equals",
+        "contains",
+        "is_null",
+        "is_not_null",
+      ],
+      alert_severity: ["low", "medium", "high", "critical"],
+      alert_status: ["pending", "sent", "failed", "acknowledged", "dismissed"],
       app_type: ["application", "calculator", "sales_tool", "report"],
       document_type: ["contact", "company", "sales", "purchase_order"],
       employee_location: [
@@ -7478,6 +10965,8 @@ export const Constants = {
       rvw_template_type: ["hourly", "salaried"],
       rvw_user_role: ["admin", "manager", "employee"],
       scroll_pattern_type: ["continuous", "fade", "slide"],
+      sync_frequency: ["hourly", "daily", "weekly", "monthly", "manual"],
+      sync_job_status: ["idle", "running", "success", "failed", "disabled"],
       training_data_scope: ["user", "global"],
       vote_type: ["up", "down"],
     },
