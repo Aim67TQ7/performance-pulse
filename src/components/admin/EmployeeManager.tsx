@@ -9,7 +9,8 @@ import { Switch } from '@/components/ui/switch';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Loader2, Pencil, Search, UserPlus, Users, ChevronLeft, ChevronRight } from 'lucide-react';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
+import { Loader2, Pencil, Search, UserPlus, Users, ChevronLeft, ChevronRight, KeyRound } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/useAuth';
 
@@ -84,7 +85,9 @@ export const EmployeeManager = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<'all' | 'active' | 'inactive'>('active');
   const [currentPage, setCurrentPage] = useState(1);
-  // State removed: importDialogOpen, syncDialogOpen (CSV/Sync features removed)
+  const [resetPasswordDialogOpen, setResetPasswordDialogOpen] = useState(false);
+  const [employeeToReset, setEmployeeToReset] = useState<Employee | null>(null);
+  const [isResettingPassword, setIsResettingPassword] = useState(false);
 
   useEffect(() => {
     if (token) {
@@ -281,6 +284,50 @@ export const EmployeeManager = () => {
     return `${manager.name_first} ${manager.name_last}`;
   };
 
+  const handleOpenResetPassword = (employee: Employee) => {
+    setEmployeeToReset(employee);
+    setResetPasswordDialogOpen(true);
+  };
+
+  const handleResetPassword = async () => {
+    if (!employeeToReset || !token) return;
+
+    setIsResettingPassword(true);
+    try {
+      const response = await fetch(`${SUPABASE_URL}/functions/v1/manage-employees/reset-password`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
+        body: JSON.stringify({ employee_id: employeeToReset.id }),
+      });
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        throw new Error(result.error || 'Failed to reset password');
+      }
+
+      toast({
+        title: 'Password Reset',
+        description: `Password for ${employeeToReset.name_first} ${employeeToReset.name_last} has been reset to the default. They can now log in with "1Bunting!" and set a new password.`,
+      });
+
+      setResetPasswordDialogOpen(false);
+      setEmployeeToReset(null);
+    } catch (error) {
+      console.error('Error resetting password:', error);
+      toast({
+        title: 'Error',
+        description: error instanceof Error ? error.message : 'Failed to reset password.',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsResettingPassword(false);
+    }
+  };
+
   if (isLoading) {
     return (
       <Card>
@@ -375,9 +422,14 @@ export const EmployeeManager = () => {
                         </Badge>
                       </TableCell>
                       <TableCell>
-                        <Button variant="ghost" size="icon" onClick={() => handleOpenEdit(employee)}>
-                          <Pencil className="w-4 h-4" />
-                        </Button>
+                        <div className="flex gap-1">
+                          <Button variant="ghost" size="icon" onClick={() => handleOpenEdit(employee)} title="Edit employee">
+                            <Pencil className="w-4 h-4" />
+                          </Button>
+                          <Button variant="ghost" size="icon" onClick={() => handleOpenResetPassword(employee)} title="Reset password">
+                            <KeyRound className="w-4 h-4" />
+                          </Button>
+                        </div>
                       </TableCell>
                     </TableRow>
                   ))
@@ -612,6 +664,32 @@ export const EmployeeManager = () => {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Reset Password Confirmation Dialog */}
+      <AlertDialog open={resetPasswordDialogOpen} onOpenChange={setResetPasswordDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center gap-2">
+              <KeyRound className="w-5 h-5" />
+              Reset Password
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to reset the password for{' '}
+              <strong>{employeeToReset?.name_first} {employeeToReset?.name_last}</strong>?
+              <br /><br />
+              Their password will be reset to the default <code className="bg-muted px-1 rounded">1Bunting!</code> and 
+              they will be required to set a new password on their next login.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={isResettingPassword}>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={handleResetPassword} disabled={isResettingPassword}>
+              {isResettingPassword && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
+              Reset Password
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </>
   );
 };

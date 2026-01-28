@@ -283,6 +283,41 @@ Deno.serve(async (req) => {
       );
     }
 
+    if (action === 'reset-password' && req.method === 'POST') {
+      const { employee_id } = await req.json();
+      
+      if (!employee_id) {
+        return new Response(
+          JSON.stringify({ error: 'Employee ID is required' }),
+          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+
+      // Clear the password hash and set to default state
+      const { error: resetError } = await supabase
+        .from('employees')
+        .update({
+          badge_pin_hash: null,
+          badge_pin_is_default: true,
+          badge_pin_attempts: 0,
+          badge_pin_locked_until: null
+        })
+        .eq('id', employee_id);
+
+      if (resetError) {
+        console.error('Password reset error:', resetError);
+        return new Response(
+          JSON.stringify({ error: resetError.message }),
+          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+
+      return new Response(
+        JSON.stringify({ success: true }),
+        { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
     return new Response(
       JSON.stringify({ error: 'Invalid action' }),
       { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
