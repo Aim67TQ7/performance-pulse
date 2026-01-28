@@ -1,62 +1,56 @@
 
-# Authentication System Repair Plan
+# Add Individual Password Reset to Employee Manager
 
 ## Summary
-The authentication system is mostly functional but had a deployment gap. I've already deployed the edge function, which should resolve the "network error" you were seeing. However, there are a few remaining improvements needed to ensure robust authentication.
+Add a "Reset Password" button to the Employee Management table in HR Administration. When clicked, it will reset the selected employee's password to the default `1Bunting!`, forcing them to set a new password on their next login.
 
-## Issues Found
+## What You'll See
+- A new "Reset Password" button (key icon) appears in each employee row in the Employee Management table
+- Clicking the button shows a confirmation dialog with the employee's name
+- After confirmation, the password is reset and a success message appears
+- The employee can then log in with `1Bunting!` and will be prompted to create a new password
 
-1. **Edge Function Was Not Deployed**: The `employee-auth` edge function wasn't deployed, causing network errors. I've already redeployed it and confirmed it's working.
+## Implementation Details
 
-2. **User `since@buntingmagnetics.com` Already Has a Custom Password**: This user previously set their password (badge_pin_is_default = false), so `1Bunting!` won't work. They need a password reset.
+### 1. Add New Endpoint to manage-employees Edge Function
+Create a new `/reset-password` action that uses JWT authentication (like the existing create/update/delete actions) instead of requiring the service role key:
 
-3. **CORS Headers Could Be More Comprehensive**: The current CORS headers don't include all the headers that Supabase client might send, which could cause issues on some browsers.
-
-## Implementation Steps
-
-### Step 1: Update CORS Headers in Edge Function
-Expand the `Access-Control-Allow-Headers` to include all Supabase client headers:
+**File:** `supabase/functions/manage-employees/index.ts`
 
 ```typescript
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
-};
+if (action === 'reset-password' && req.method === 'POST') {
+  const { employee_id } = await req.json();
+  
+  // Clear the password hash and set to default state
+  const { error } = await supabase
+    .from('employees')
+    .update({
+      badge_pin_hash: null,
+      badge_pin_is_default: true,
+      badge_pin_attempts: 0,
+      badge_pin_locked_until: null
+    })
+    .eq('id', employee_id);
+    
+  // Return success/error response
+}
 ```
 
-### Step 2: Reset Password for `since@buntingmagnetics.com`
-Execute a database migration to clear their password hash so they can log in with the default:
+### 2. Update EmployeeManager Component
+Add a reset password button and confirmation dialog:
 
-```sql
-UPDATE employees 
-SET badge_pin_hash = NULL, 
-    badge_pin_is_default = true, 
-    badge_pin_attempts = 0,
-    badge_pin_locked_until = NULL
-WHERE user_email_ci = 'since@buntingmagnetics.com';
-```
+**File:** `src/components/admin/EmployeeManager.tsx`
 
-### Step 3: Redeploy Edge Function
-Deploy the updated `employee-auth` function with the improved CORS headers.
+- Add state for reset confirmation dialog
+- Add `handleResetPassword` function to call the edge function
+- Add Key icon button in each table row
+- Add confirmation dialog with employee name
 
-## Technical Details
+### Files Modified
+1. `supabase/functions/manage-employees/index.ts` - Add reset-password endpoint
+2. `src/components/admin/EmployeeManager.tsx` - Add UI for password reset
 
-### Files to Modify:
-- `supabase/functions/employee-auth/index.ts` - Update CORS headers (line 4-7)
-
-### Database Change:
-- Reset password for specific user in `employees` table
-
-### Deployment:
-- Redeploy `employee-auth` edge function
-
-## Current Status
-- Edge function is now deployed and responding correctly
-- Authentication flow is working (verified via browser test)
-- Login attempts are being properly validated against the database
-
-## After Implementation
-Users will be able to:
-1. Log in with their email and password (either custom or default `1Bunting!`)
-2. Set a new password if using the default password for the first time
-3. Access protected routes once authenticated
+### Security
+- Uses existing JWT verification (same as create/update/delete)
+- Only HR admins with valid tokens can access
+- Clears password hash instead of setting one (employee logs in with default `1Bunting!` and sets their own)
