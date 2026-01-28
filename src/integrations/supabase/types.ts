@@ -97,107 +97,6 @@ export type Database = {
         }
         Relationships: []
       }
-      admin_sessions: {
-        Row: {
-          access_level: string
-          created_at: string
-          expires_at: string
-          id: string
-          last_activity: string | null
-          session_id: string
-        }
-        Insert: {
-          access_level: string
-          created_at?: string
-          expires_at: string
-          id?: string
-          last_activity?: string | null
-          session_id: string
-        }
-        Update: {
-          access_level?: string
-          created_at?: string
-          expires_at?: string
-          id?: string
-          last_activity?: string | null
-          session_id?: string
-        }
-        Relationships: []
-      }
-      agent_runs: {
-        Row: {
-          completed_at: string | null
-          error_log: string | null
-          id: string
-          input_context: Json | null
-          org_id: string | null
-          output_artifact: Json | null
-          parent_run_id: string | null
-          project_id: string | null
-          started_at: string | null
-          status: string
-          tool_id: string | null
-          user_id: string | null
-        }
-        Insert: {
-          completed_at?: string | null
-          error_log?: string | null
-          id?: string
-          input_context?: Json | null
-          org_id?: string | null
-          output_artifact?: Json | null
-          parent_run_id?: string | null
-          project_id?: string | null
-          started_at?: string | null
-          status: string
-          tool_id?: string | null
-          user_id?: string | null
-        }
-        Update: {
-          completed_at?: string | null
-          error_log?: string | null
-          id?: string
-          input_context?: Json | null
-          org_id?: string | null
-          output_artifact?: Json | null
-          parent_run_id?: string | null
-          project_id?: string | null
-          started_at?: string | null
-          status?: string
-          tool_id?: string | null
-          user_id?: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "agent_runs_org_id_fkey"
-            columns: ["org_id"]
-            isOneToOne: false
-            referencedRelation: "organizations"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "agent_runs_parent_run_id_fkey"
-            columns: ["parent_run_id"]
-            isOneToOne: false
-            referencedRelation: "agent_runs"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "agent_runs_project_id_fkey"
-            columns: ["project_id"]
-            isOneToOne: false
-            referencedRelation: "projects"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "agent_runs_tool_id_fkey"
-            columns: ["tool_id"]
-            isOneToOne: false
-            referencedRelation: "tools"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       ai_test_analyses: {
         Row: {
           analysis_text: string
@@ -283,44 +182,6 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "alert_history_alert_id_fkey"
-            columns: ["alert_id"]
-            isOneToOne: false
-            referencedRelation: "alerts"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      alert_recipients: {
-        Row: {
-          alert_id: string
-          created_at: string
-          email: string
-          id: string
-          notify_email: boolean
-          notify_inapp: boolean
-          user_id: string | null
-        }
-        Insert: {
-          alert_id: string
-          created_at?: string
-          email: string
-          id?: string
-          notify_email?: boolean
-          notify_inapp?: boolean
-          user_id?: string | null
-        }
-        Update: {
-          alert_id?: string
-          created_at?: string
-          email?: string
-          id?: string
-          notify_email?: boolean
-          notify_inapp?: boolean
-          user_id?: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "alert_recipients_alert_id_fkey"
             columns: ["alert_id"]
             isOneToOne: false
             referencedRelation: "alerts"
@@ -2525,6 +2386,54 @@ export type Database = {
           name?: string
           unit_number?: string
           updated_at?: string | null
+        }
+        Relationships: []
+      }
+      GeoCode: {
+        Row: {
+          company: string | null
+          customer_formatted_address: string | null
+          customer_latitude: number | null
+          customer_longitude: number | null
+          customer_name_cleaned: string | null
+          GEO_ID: number
+          quotes_amt_1yr: string | null
+          quotes_count_1yr: string | null
+          sales_2022: string | null
+          sales_2023: string | null
+          sales_2024: string | null
+          sales_2025: string | null
+          sales_4yr_total: string | null
+        }
+        Insert: {
+          company?: string | null
+          customer_formatted_address?: string | null
+          customer_latitude?: number | null
+          customer_longitude?: number | null
+          customer_name_cleaned?: string | null
+          GEO_ID: number
+          quotes_amt_1yr?: string | null
+          quotes_count_1yr?: string | null
+          sales_2022?: string | null
+          sales_2023?: string | null
+          sales_2024?: string | null
+          sales_2025?: string | null
+          sales_4yr_total?: string | null
+        }
+        Update: {
+          company?: string | null
+          customer_formatted_address?: string | null
+          customer_latitude?: number | null
+          customer_longitude?: number | null
+          customer_name_cleaned?: string | null
+          GEO_ID?: number
+          quotes_amt_1yr?: string | null
+          quotes_count_1yr?: string | null
+          sales_2022?: string | null
+          sales_2023?: string | null
+          sales_2024?: string | null
+          sales_2025?: string | null
+          sales_4yr_total?: string | null
         }
         Relationships: []
       }
@@ -4790,6 +4699,84 @@ export type Database = {
         }
         Relationships: []
       }
+      mto_open_po: {
+        Row: {
+          bto_order_line: number | null
+          bto_order_num: number | null
+          company: string
+          due_date: string | null
+          id: string
+          inspection_pending: boolean | null
+          job_num: string | null
+          line_desc: string | null
+          open_release: boolean | null
+          order_date: string | null
+          order_qty: number | null
+          part_num: string | null
+          po_line: number | null
+          po_num: number | null
+          promise_date: string | null
+          qty_balance: number | null
+          received_qty: number | null
+          refreshed_at: string | null
+          rel_qty: number | null
+          ship_name: string | null
+          unit_cost: number | null
+          vendor_id: string | null
+          vendor_name: string | null
+        }
+        Insert: {
+          bto_order_line?: number | null
+          bto_order_num?: number | null
+          company: string
+          due_date?: string | null
+          id?: string
+          inspection_pending?: boolean | null
+          job_num?: string | null
+          line_desc?: string | null
+          open_release?: boolean | null
+          order_date?: string | null
+          order_qty?: number | null
+          part_num?: string | null
+          po_line?: number | null
+          po_num?: number | null
+          promise_date?: string | null
+          qty_balance?: number | null
+          received_qty?: number | null
+          refreshed_at?: string | null
+          rel_qty?: number | null
+          ship_name?: string | null
+          unit_cost?: number | null
+          vendor_id?: string | null
+          vendor_name?: string | null
+        }
+        Update: {
+          bto_order_line?: number | null
+          bto_order_num?: number | null
+          company?: string
+          due_date?: string | null
+          id?: string
+          inspection_pending?: boolean | null
+          job_num?: string | null
+          line_desc?: string | null
+          open_release?: boolean | null
+          order_date?: string | null
+          order_qty?: number | null
+          part_num?: string | null
+          po_line?: number | null
+          po_num?: number | null
+          promise_date?: string | null
+          qty_balance?: number | null
+          received_qty?: number | null
+          refreshed_at?: string | null
+          rel_qty?: number | null
+          ship_name?: string | null
+          unit_cost?: number | null
+          vendor_id?: string | null
+          vendor_name?: string | null
+        }
+        Relationships: []
+      }
       mto_otd_history: {
         Row: {
           company: string
@@ -5015,7 +5002,9 @@ export type Database = {
         Row: {
           color: string | null
           created_at: string
+          entry_person: string | null
           id: string
+          industry_segment: string | null
           is_active: boolean
           name: string
           owner_id: string | null
@@ -5025,7 +5014,9 @@ export type Database = {
         Insert: {
           color?: string | null
           created_at?: string
+          entry_person?: string | null
           id?: string
+          industry_segment?: string | null
           is_active?: boolean
           name: string
           owner_id?: string | null
@@ -5035,7 +5026,9 @@ export type Database = {
         Update: {
           color?: string | null
           created_at?: string
+          entry_person?: string | null
           id?: string
+          industry_segment?: string | null
           is_active?: boolean
           name?: string
           owner_id?: string | null
@@ -5534,11 +5527,15 @@ export type Database = {
       }
       "MTO-openorders": {
         Row: {
-          _company: string | null
+          company: string | null
+          customer_credithold: boolean | null
           customer_custid: string | null
           customer_custnum: number | null
           customer_name: string | null
+          drop_ship: boolean | null
           id: number
+          industry_segment: string | null
+          on_hold: boolean | null
           orderdtl_linedesc: string | null
           orderdtl_openline: boolean | null
           orderhed_creditoverride: boolean | null
@@ -5556,6 +5553,7 @@ export type Database = {
           orderrel_poline: number | null
           orderrel_ponum: number | null
           orderrel_reqdate: string | null
+          refreshed_at: string | null
           rowident: string | null
           shipto_address1: string | null
           shipto_city: string | null
@@ -5564,11 +5562,15 @@ export type Database = {
           synced_at: string | null
         }
         Insert: {
-          _company?: string | null
+          company?: string | null
+          customer_credithold?: boolean | null
           customer_custid?: string | null
           customer_custnum?: number | null
           customer_name?: string | null
+          drop_ship?: boolean | null
           id?: number
+          industry_segment?: string | null
+          on_hold?: boolean | null
           orderdtl_linedesc?: string | null
           orderdtl_openline?: boolean | null
           orderhed_creditoverride?: boolean | null
@@ -5586,6 +5588,7 @@ export type Database = {
           orderrel_poline?: number | null
           orderrel_ponum?: number | null
           orderrel_reqdate?: string | null
+          refreshed_at?: string | null
           rowident?: string | null
           shipto_address1?: string | null
           shipto_city?: string | null
@@ -5594,11 +5597,15 @@ export type Database = {
           synced_at?: string | null
         }
         Update: {
-          _company?: string | null
+          company?: string | null
+          customer_credithold?: boolean | null
           customer_custid?: string | null
           customer_custnum?: number | null
           customer_name?: string | null
+          drop_ship?: boolean | null
           id?: number
+          industry_segment?: string | null
+          on_hold?: boolean | null
           orderdtl_linedesc?: string | null
           orderdtl_openline?: boolean | null
           orderhed_creditoverride?: boolean | null
@@ -5616,6 +5623,7 @@ export type Database = {
           orderrel_poline?: number | null
           orderrel_ponum?: number | null
           orderrel_reqdate?: string | null
+          refreshed_at?: string | null
           rowident?: string | null
           shipto_address1?: string | null
           shipto_city?: string | null
